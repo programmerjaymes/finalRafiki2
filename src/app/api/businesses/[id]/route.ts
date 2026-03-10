@@ -9,9 +9,12 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const business = await prisma.business.findUnique({
+    const business = await prisma.business.findFirst({
       where: {
-        id: id
+        id: id,
+        // Only show approved and verified businesses
+        isApproved: true,
+        isVerified: true
       },
       include: {
         category: true,
@@ -32,7 +35,7 @@ export async function GET(
 
     if (!business) {
       return NextResponse.json(
-        { error: 'Business not found' },
+        { error: 'Business not found or not approved' },
         { status: 404 }
       )
     }

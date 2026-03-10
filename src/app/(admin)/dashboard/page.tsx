@@ -61,12 +61,17 @@ async function getDashboardData() {
     ? ((lastMonthUsers - previousMonthUsers) / previousMonthUsers) * 100 
     : 0;
 
-  // Get business count
-  const businessCount = await prisma.business.count();
+  // Get verified business count
+  const businessCount = await prisma.business.count({
+    where: {
+      isVerified: true
+    }
+  });
   
-  // Get business growth
+  // Get verified business growth
   const lastMonthBusinesses = await prisma.business.count({
     where: {
+      isVerified: true,
       createdAt: {
         gte: lastMonthDate
       }
@@ -75,6 +80,7 @@ async function getDashboardData() {
 
   const previousMonthBusinesses = await prisma.business.count({
     where: {
+      isVerified: true,
       createdAt: {
         gte: previousMonthDate,
         lt: lastMonthDate
@@ -199,9 +205,12 @@ async function getDashboardData() {
     console.error("Error fetching top categories:", e);
   }
 
-  // Get most searched businesses 
+  // Get most searched verified businesses 
   const topBusinesses = await prisma.business.findMany({
     take: 5,
+    where: {
+      isVerified: true
+    },
     orderBy: {
       viewCount: 'desc'
     },
@@ -348,7 +357,7 @@ const DashboardMetrics = async () => {
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Registered Businesses</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Verified Businesses</span>
           <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">{data.businessCount.toLocaleString()}</h4>
           <div className="flex items-center mt-2">
             <span className={`px-1.5 py-0.5 text-xs ${data.businessGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
@@ -442,7 +451,7 @@ const MostSearchedBusinesses = async () => {
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Most Searched Businesses</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Most Searched Verified Businesses</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">

@@ -17,7 +17,17 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
     
     // Build the where condition
-    const where: Prisma.BusinessWhereInput = {};
+    const where: Prisma.BusinessWhereInput = {
+      // Only show approved and verified businesses to customers
+      // In MySQL, boolean true is stored as 1
+      isApproved: true,
+      isVerified: true,
+      // Explicitly exclude any non-boolean values
+      AND: [
+        { isApproved: { equals: true } },
+        { isVerified: { equals: true } }
+      ]
+    };
     
     if (search) {
       where.OR = [
@@ -41,6 +51,7 @@ export async function GET(request: Request) {
     }
     
     console.log('📋 Fetching businesses with params:', { page, limit, search, categoryId, regionId });
+    console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
     
     // Get businesses with pagination
     const businesses = await prisma.business.findMany({
@@ -91,11 +102,13 @@ export async function GET(request: Request) {
 
     console.log(`✅ Found ${businesses.length} businesses`);
     
-    // Log first business to check logo field
+    // Log first business to check logo field and approval status
     if (businesses.length > 0) {
       console.log('🔍 First business sample:', {
         id: businesses[0].id,
         name: businesses[0].name,
+        isApproved: businesses[0].isApproved,
+        isVerified: businesses[0].isVerified,
         hasLogo: !!businesses[0].logo,
         logoLength: businesses[0].logo?.length || 0,
         logoPreview: businesses[0].logo ? businesses[0].logo.substring(0, 50) + '...' : null
