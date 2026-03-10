@@ -1,0 +1,71 @@
+:root {
+  --color-primary: #b71131;
+  --color-primary-light: #c73351;
+  --color-primary-dark: #8f0e27;
+  
+  --color-secondary: #fdd00d;
+  --color-secondary-light: #fed63d;
+  --color-secondary-dark: #d1ac0b;
+}
+
+/* Explicit color overrides */
+.text-primary {
+  color: #b71131 !important;
+}
+
+.text-primary-light {
+  color: #c73351 !important;
+}
+
+.text-primary-dark {
+  color: #8f0e27 !important;
+}
+
+.text-secondary {
+  color: #fdd00d !important;
+}
+
+.text-secondary-light {
+  color: #fed63d !important;
+}
+
+.text-secondary-dark {
+  color: #d1ac0b !important;
+}
+
+.bg-primary {
+  background-color: #b71131 !important;
+}
+
+.bg-primary-light {
+  background-color: #c73351 !important;
+}
+
+.bg-primary-dark {
+  background-color: #8f0e27 !important;
+}
+
+.bg-secondary {
+  background-color: #fdd00d !important;
+}
+
+.bg-secondary-light {
+  background-color: #fed63d !important;
+}
+
+.bg-secondary-dark {
+  background-color: #d1ac0b !important;
+}
+
+.border-primary {
+  border-color: #b71131 !important;
+}
+
+.border-secondary {
+  border-color: #fdd00d !important;
+}
+
+/* Gradient overrides */
+.bg-gradient-primary-secondary {
+  background: linear-gradient(90deg, #b71131 0%, #fdd00d 100%) !important;
+} 

@@ -1,0 +1,95 @@
+Business Process for Your Business Listing System
+1. Business Owner Registration & Onboarding
+Business owners sign up and verify their accounts.
+
+They choose a bundle (Free, Standard, Premium, etc.).
+
+Allowed fields vary based on the selected bundle.
+
+Payment is processed (if applicable).
+
+Admin approves the listing (optional).
+
+2. Business Listing Management
+Business owners fill in details based on their bundle’s allowed fields (e.g., Name, Location, Services, Contact Info, Social Media, Images, Videos).
+
+They can edit their listings based on the bundle’s flexibility (e.g., Premium allows frequent updates).
+
+Listings expire after a set duration unless renewed.
+
+3. Customer Interaction
+Users (customers) search for businesses by category, location, or keywords.
+
+They view business details (based on the bundle’s visibility settings).
+
+Customers can contact businesses via chat, calls, or inquiries.
+
+4. Analytics & Insights for Business Owners
+Business owners can view analytics (e.g., profile views, inquiries, clicks).
+
+Higher-tier bundles provide more detailed insights.
+
+5. Payment & Subscription Management
+Business owners can upgrade/downgrade bundles anytime.
+
+Subscription renewal notifications are sent before expiry.
+
+Payment processing through mobile money, credit cards, or PayPal.
+
+6. Admin & Accountant Management
+Admins manage users, businesses, and bundle settings.
+
+Accountants handle financial records, revenue reports, and disputes.
+
+
+Updated Functional Requirements
+Business Management
+✅ Business owners can register and manage their businesses.
+✅ Businesses are linked to a region, district, ward, and street for location-based search.
+✅ Business Registrars can register businesses and link them to owners.
+✅ Each business has a verification and approval status (isVerified, isApproved).
+✅ Listings expire if the bundle is not renewed (bundleExpiresAt).
+
+Bundle & Subscription Management
+✅ Businesses must select a bundle that determines allowed fields.
+✅ Payment processing for premium bundles (paymentReference, paymentStatus).
+✅ Businesses can view last payment date and bundle expiration (lastPaymentDate, bundleExpiresAt).
+
+Search & Discovery
+✅ Customers can search businesses by name, category, and location (region, district, ward, street).
+✅ Map integration using latitude and longitude for nearby searches.
+
+User Roles & Permissions
+✅ Admins: Manage users, businesses, and bundle settings.
+✅ Business Registrars: Register businesses and link them to business owners.
+✅ Accountants: Handle financial records and payments.
+✅ Business Owners: Manage their business listings.
+
+Business Features
+✅ Businesses can list their contact info (phone, email, website).
+✅ Businesses can upload logo and cover image.
+✅ Businesses can specify if they allow online booking and delivery (allowsOnlineBooking, allowsDelivery).
+✅ Businesses have ratings and reviews (avgRating, numReviews).
+
+Analytics & Insights
+✅ Business owners can view profile views, clicks, and inquiries.
+✅ Higher-tier bundles provide advanced analytics.
+
+Updated Non-Functional Requirements
+🔹 Scalability: The system should handle a growing number of users, businesses, and locations.
+🔹 Performance: Fast loading times for search queries and business profiles.
+🔹 Security: Secure authentication, data encryption, and payment protection.
+🔹 Usability: Intuitive UI for both business owners and customers.
+🔹 Availability: 24/7 uptime with minimal downtime.
+
+
+Create a full functional System From database to the interface
+
+my system should have these colors
+#b71131
+#fdd00d
+
+-use prisma for database
+-use nextjs for frontend
+-use mysql database
+-i have already created .env file with database specifications

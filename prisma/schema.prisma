@@ -1,0 +1,369 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  name                  String
+  email                 String?                @unique
+  hashedPassword        String?
+  emailVerified         DateTime?
+  image                 String?
+  role                  UserRole               @default(BUSINESS_OWNER)
+  phone                 String?                @unique
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @default(now()) @map("updated_at")
+  accounts              Account[]
+  businessRegistrations BusinessRegistration[]
+  businesses            Business[]
+  registeredBusinesses  Business[]             @relation("Registrar")
+  payments              Payment[]
+  reviews               Review[]
+  searchQueries         SearchQuery[]
+  sessions              Session[]
+
+  @@map("users")
+}
+
+model Business {
+  id                  String                 @id @default(cuid())
+  name                String
+  description         String?                @db.Text
+  phone               String?
+  email               String?
+  website             String?
+  logo                String?                @db.LongText
+  coverImage          String?
+  facebook            String?
+  instagram           String?
+  twitter             String?
+  allowsOnlineBooking Boolean                @default(false)
+  allowsDelivery      Boolean                @default(false)
+  isVerified          Boolean                @default(false)
+  isApproved          Boolean                @default(false)
+  bundleId            String
+  bundleExpiresAt     DateTime
+  categoryId          String
+  latitude            Float?
+  longitude           Float?
+  regionId            String
+  districtId          String
+  wardId              String
+  street              String?
+  avgRating           Float                  @default(0)
+  numReviews          Int                    @default(0)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  ownerId             String
+  registrarId         String?
+  viewCount           Int                    @default(0)
+  clickCount          Int                    @default(0)
+  inquiryCount        Int                    @default(0)
+  categoryId2         String?                @db.VarChar(255)
+  deactivationReason  String?                @db.Text
+  bundle              Bundle                 @relation(fields: [bundleId], references: [id])
+  category            Category               @relation("PrimaryCategory", fields: [categoryId], references: [id])
+  district            District               @relation(fields: [districtId], references: [id])
+  owner               User                   @relation(fields: [ownerId], references: [id])
+  region              Region                 @relation(fields: [regionId], references: [id])
+  registrar           User?                  @relation("Registrar", fields: [registrarId], references: [id])
+  ward                Ward                   @relation(fields: [wardId], references: [id])
+  categories          CategoryOnBusiness[]
+  payments            Payment[]
+  reviews             Review[]
+  searchResults       SearchResultBusiness[]
+
+  @@index([bundleId], map: "businesses_bundleId_fkey")
+  @@index([categoryId], map: "businesses_categoryId_fkey")
+  @@index([districtId], map: "businesses_districtId_fkey")
+  @@index([ownerId], map: "businesses_ownerId_fkey")
+  @@index([regionId], map: "businesses_regionId_fkey")
+  @@index([registrarId], map: "businesses_registrarId_fkey")
+  @@index([wardId], map: "businesses_wardId_fkey")
+  @@map("businesses")
+}
+
+model BusinessRegistration {
+  id               String         @id @default(cuid())
+  userId           String
+  step             Int            @default(1)
+  bundleId         String?
+  paymentMethod    PaymentMethod?
+  paymentReference String?
+  businessData     String?        @db.Text
+  isCompleted      Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  bundle           Bundle?        @relation(fields: [bundleId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
+
+  @@index([bundleId], map: "business_registrations_bundleId_fkey")
+  @@index([userId], map: "business_registrations_userId_fkey")
+  @@map("business_registrations")
+}
+
+model Bundle {
+  id                    String                 @id @default(cuid())
+  name                  String                 @unique
+  price                 Float
+  duration              Int
+  description           String?                @db.Text
+  allowedFields         String                 @db.Text
+  maxImages             Int                    @default(1)
+  allowsVideo           Boolean                @default(false)
+  allowsAnalytics       Boolean                @default(false)
+  advancedAnalytics     Boolean                @default(false)
+  featured              Boolean                @default(false)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  allowedFormFields     String?                @db.Text
+  businessRegistrations BusinessRegistration[]
+  businesses            Business[]
+
+  @@map("bundles")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  amount           Float
+  currency         String        @default("TZS")
+  paymentReference String?
+  paymentStatus    PaymentStatus @default(PENDING)
+  paymentMethod    PaymentMethod
+  businessId       String
+  userId           String
+  bundleId         String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  business         Business      @relation(fields: [businessId], references: [id])
+  user             User          @relation(fields: [userId], references: [id])
+
+  @@index([businessId], map: "payments_businessId_fkey")
+  @@index([userId], map: "payments_userId_fkey")
+  @@map("payments")
+}
+
+model Category {
+  id                String               @id @default(cuid())
+  name              String               @unique
+  description       String?
+  icon              String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  primaryBusinesses Business[]           @relation("PrimaryCategory")
+  businesses        CategoryOnBusiness[]
+  categorySearches  CategorySearch[]
+
+  @@map("categories")
+}
+
+model CategoryOnBusiness {
+  businessId String
+  categoryId String
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([businessId, categoryId])
+  @@index([categoryId], map: "category_business_categoryId_fkey")
+  @@map("category_business")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int
+  comment    String?  @db.Text
+  businessId String
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([businessId], map: "reviews_businessId_fkey")
+  @@index([userId], map: "reviews_userId_fkey")
+  @@map("reviews")
+}
+
+model Region {
+  id               String           @id @default(cuid())
+  name             String
+  code             String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  businesses       Business[]
+  districts        District[]
+  locationSearches LocationSearch[]
+
+  @@unique([name, code])
+  @@map("regions")
+}
+
+model District {
+  id         String     @id @default(cuid())
+  name       String
+  code       String?
+  regionId   String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  businesses Business[]
+  region     Region     @relation(fields: [regionId], references: [id])
+  wards      Ward[]
+
+  @@unique([name, code])
+  @@index([regionId], map: "districts_regionId_fkey")
+  @@map("districts")
+}
+
+model Ward {
+  id         String     @id @default(cuid())
+  name       String
+  code       String?
+  districtId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  businesses Business[]
+  district   District   @relation(fields: [districtId], references: [id])
+
+  @@unique([name, code])
+  @@index([districtId], map: "wards_districtId_fkey")
+  @@map("wards")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "accounts_userId_fkey")
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "sessions_userId_fkey")
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model SearchQuery {
+  id            String                 @id @default(cuid())
+  queryText     String
+  userId        String?
+  regionId      String?
+  categoryId    String?
+  resultCount   Int                    @default(0)
+  createdAt     DateTime               @default(now())
+  user          User?                  @relation(fields: [userId], references: [id])
+  searchResults SearchResultBusiness[]
+
+  @@index([userId], map: "search_queries_userId_fkey")
+  @@map("search_queries")
+}
+
+model SearchResultBusiness {
+  id            String      @id @default(cuid())
+  searchQueryId String
+  businessId    String
+  position      Int
+  wasClicked    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  business      Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  searchQuery   SearchQuery @relation(fields: [searchQueryId], references: [id], onDelete: Cascade)
+
+  @@unique([searchQueryId, businessId])
+  @@index([businessId], map: "search_result_businesses_businessId_fkey")
+  @@map("search_result_businesses")
+}
+
+model CategorySearch {
+  id           String   @id @default(cuid())
+  categoryId   String
+  searchCount  Int      @default(1)
+  lastSearched DateTime @default(now())
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId], map: "category_searches_categoryId_fkey")
+  @@map("category_searches")
+}
+
+model LocationSearch {
+  id           String   @id @default(cuid())
+  regionId     String
+  searchCount  Int      @default(1)
+  lastSearched DateTime @default(now())
+  region       Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@index([regionId], map: "location_searches_regionId_fkey")
+  @@map("location_searches")
+}
+
+model business_events {
+  id         String   @id
+  businessId String
+  eventType  String   @db.VarChar(50)
+  createdAt  DateTime @default(now()) @db.DateTime(0)
+
+  @@index([businessId], map: "idx_biz")
+  @@index([eventType], map: "idx_type")
+}
+
+model business_images {
+  id         String   @id
+  businessId String
+  imageData  String   @db.LongText
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now()) @db.DateTime(0)
+
+  @@index([businessId], map: "idx_biz")
+}
+
+enum UserRole {
+  ADMIN
+  BUSINESS_OWNER
+  BUSINESS_REGISTRAR
+  ACCOUNTANT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  MOBILE_MONEY
+  CREDIT_CARD
+  PAYPAL
+  BANK_TRANSFER
+}

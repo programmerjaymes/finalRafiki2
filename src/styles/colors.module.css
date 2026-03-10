@@ -1,0 +1,37 @@
+.colors {
+  --color-primary: #b71131;
+  --color-primary-light: #c73351;
+  --color-primary-dark: #8f0e27;
+  
+  --color-secondary: #fdd00d;
+  --color-secondary-light: #fed63d;
+  --color-secondary-dark: #d1ac0b;
+}
+
+.primary {
+  color: #b71131;
+}
+
+.primaryBg {
+  background-color: #b71131;
+}
+
+.secondary {
+  color: #fdd00d;
+}
+
+.secondaryBg {
+  background-color: #fdd00d;
+}
+
+.gradientText {
+  background: linear-gradient(90deg, #b71131 0%, #fdd00d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradientBg {
+  background: linear-gradient(90deg, #b71131 0%, #fdd00d 100%);
+} 
