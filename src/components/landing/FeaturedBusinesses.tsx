@@ -35,14 +35,26 @@ export default function FeaturedBusinesses() {
 
   useEffect(() => {
     fetch(`/api/businesses?limit=${limit}&page=${currentPage}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch businesses: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then((data: BusinessResponse) => {
-        setBusinesses(data.businesses || []);
-        setTotalPages(data.pagination?.pages || 1);
+        if (data && typeof data === 'object') {
+          setBusinesses(Array.isArray(data.businesses) ? data.businesses : []);
+          setTotalPages(data.pagination?.pages || 1);
+        } else {
+          setBusinesses([]);
+          setTotalPages(1);
+        }
         setLoading(false);
       })
       .catch(err => {
         console.error('Error fetching businesses:', err);
+        alert('Unable to load businesses. Please check your internet connection and try again.');
+        setBusinesses([]);
         setLoading(false);
       });
   }, [currentPage]);

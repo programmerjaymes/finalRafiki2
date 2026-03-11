@@ -70,7 +70,7 @@ function SearchResults() {
 
       const response = await fetch(`/api/businesses?${params.toString()}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch businesses');
+        throw new Error(`Failed to fetch businesses: ${response.status}`);
       }
       
       const data: BusinessResponse = await response.json();
@@ -82,7 +82,10 @@ function SearchResults() {
       setTotalResults(data.pagination?.total || 0);
     } catch (err) {
       console.error('Error fetching businesses:', err);
+      alert('Unable to load businesses. Please check your connection and try again.');
       setBusinesses([]);
+      setTotalPages(1);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -103,10 +106,13 @@ function SearchResults() {
       const categoriesData = await categoriesResponse.json();
       const regionsData = await regionsResponse.json();
       
-      setCategories(categoriesData);
-      setRegions(regionsData);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setRegions(Array.isArray(regionsData) ? regionsData : []);
     } catch (err) {
       console.error('Error fetching reference data:', err);
+      alert('Unable to load search filters. Some features may be limited.');
+      setCategories([]);
+      setRegions([]);
     }
   }, []);
 

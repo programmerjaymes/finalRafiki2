@@ -16,7 +16,12 @@ export default function BusinessSearch() {
   useEffect(() => {
     // Fetch categories
     fetch('/api/categories')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch categories: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         // Ensure data is an array
         if (Array.isArray(data)) {
@@ -29,13 +34,19 @@ export default function BusinessSearch() {
       })
       .catch(err => {
         console.error('Error fetching categories:', err);
+        alert('Unable to load categories. The search feature may be limited.');
         setCategories([]);
         setIsLoaded(true);
       });
 
     // Fetch regions
     fetch('/api/regions')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch regions: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
         // Ensure data is an array
         if (Array.isArray(data)) {
@@ -47,6 +58,7 @@ export default function BusinessSearch() {
       })
       .catch(err => {
         console.error('Error fetching regions:', err);
+        alert('Unable to load regions. Location filtering may be limited.');
         setRegions([]);
       });
   }, []);
