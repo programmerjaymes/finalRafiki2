@@ -175,12 +175,25 @@ export async function GET(request: Request) {
     }
 
     // Serialize BigInt fields for JSON
-    const serializedBusinesses = businesses.map(business => ({
-      ...business,
-      regionId: business.regionId.toString(),
-      districtId: business.districtId.toString(),
-      wardId: business.wardId.toString(),
-    }));
+    const serializedBusinesses = businesses.map(business => {
+      try {
+        return {
+          ...business,
+          regionId: business.regionId ? business.regionId.toString() : null,
+          districtId: business.districtId ? business.districtId.toString() : null,
+          wardId: business.wardId ? business.wardId.toString() : null,
+        };
+      } catch (err) {
+        console.error('Error serializing business:', business.id, err);
+        // Return business with null IDs if serialization fails
+        return {
+          ...business,
+          regionId: null,
+          districtId: null,
+          wardId: null,
+        };
+      }
+    });
 
     return NextResponse.json({
       businesses: serializedBusinesses,
@@ -192,10 +205,27 @@ export async function GET(request: Request) {
       }
     });
   } catch (err) {
-    console.error('Error fetching businesses:', err);
+    console.error('❌ Error fetching businesses:', err);
+    
+    // Log detailed error information
+    if (err instanceof Error) {
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
+    }
+    
     const errorMessage = err instanceof Error ? err.message : 'Failed to fetch businesses';
     return NextResponse.json(
-      { error: errorMessage },
+      { 
+        error: errorMessage,
+        businesses: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          pages: 0
+        }
+      },
       { status: 500 }
     );
   }
