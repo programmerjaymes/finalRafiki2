@@ -10,7 +10,15 @@ export async function GET(request: Request) {
       }
     });
     
-    return NextResponse.json(regions);
+    // Convert BigInt to string for JSON serialization
+    const serializedRegions = regions.map(region => ({
+      ...region,
+      id: region.id.toString(),
+      tamisemiId: region.tamisemiId?.toString() || null,
+      parentArea: region.parentArea?.toString() || null,
+    }));
+    
+    return NextResponse.json(serializedRegions);
   } catch (error) {
     console.error('Error fetching regions:', error);
     return NextResponse.json(

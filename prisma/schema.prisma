@@ -51,9 +51,9 @@ model Business {
   categoryId          String
   latitude            Float?
   longitude           Float?
-  regionId            String
-  districtId          String
-  wardId              String
+  regionId            BigInt                 @db.UnsignedBigInt
+  districtId          BigInt                 @db.UnsignedBigInt
+  wardId              BigInt                 @db.UnsignedBigInt
   street              String?
   avgRating           Float                  @default(0)
   numReviews          Int                    @default(0)
@@ -191,48 +191,106 @@ model Review {
 }
 
 model Region {
-  id               String           @id @default(cuid())
-  name             String
-  code             String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  businesses       Business[]
-  districts        District[]
-  locationSearches LocationSearch[]
+  id                BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  tamisemiId        BigInt           @map("tamisemi_id") @db.UnsignedBigInt
+  parentArea        BigInt?          @map("parent_area") @db.UnsignedBigInt
+  description       String?          @db.Text
+  areaTypeId        Int?             @map("area_type_id") @db.UnsignedInt
+  areaTypeName      String?          @map("area_type_name")
+  areaTypeNameSw    String?          @map("area_type_name_sw")
+  areaTypeOrderId   Int?             @map("area_type_order_id") @db.UnsignedInt
+  code              String?          @unique @map("RegionCode")
+  name              String?          @map("RegionName")
+  zoneId            String?          @map("zone_id")
+  box               Int?             @default(0)
+  sqaZone           Int?             @map("sqa_zone") @db.TinyInt
+  createdAt         DateTime?        @map("created_at")
+  updatedAt         DateTime?        @map("updated_at")
+  businesses        Business[]
+  districts         District[]
+  locationSearches  LocationSearch[]
 
-  @@unique([name, code])
+  @@index([code], map: "idx_regions_RegionCode")
   @@map("regions")
 }
 
 model District {
-  id         String     @id @default(cuid())
-  name       String
-  code       String?
-  regionId   String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  businesses Business[]
-  region     Region     @relation(fields: [regionId], references: [id])
-  wards      Ward[]
+  id                             BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  regionId                       String     @map("RegionCode")
+  code                           String?    @unique @map("LgaCode")
+  name                           String?    @map("LgaName")
+  ngazi                          String?
+  sqaBox                         Int?       @map("sqa_box")
+  districtBox                    Int?       @map("district_box")
+  createdAt                      DateTime?  @map("created_at")
+  updatedAt                      DateTime?  @map("updated_at")
+  tamisemiId                     BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  parentArea                     BigInt?    @map("parent_area") @db.UnsignedBigInt
+  description                    String?
+  areaTypeId                     BigInt?    @map("area_type_id") @db.UnsignedBigInt
+  label                          String?
+  areaShortName                  String?    @map("area_short_name")
+  areaHqId                       BigInt?    @map("area_hq_id") @db.UnsignedBigInt
+  areaCode                       String?    @map("area_code")
+  establishmentDateApproximated  Boolean?   @default(false) @map("establishment_date_approximated") @db.TinyInt
+  mofCode                        String?    @map("mof_code")
+  businesses                     Business[]
+  region                         Region     @relation(fields: [regionId], references: [code])
+  wards                          Ward[]
 
-  @@unique([name, code])
   @@index([regionId], map: "districts_regionId_fkey")
+  @@index([code], map: "idx_districts_LgaCode")
   @@map("districts")
 }
 
 model Ward {
-  id         String     @id @default(cuid())
-  name       String
-  code       String?
-  districtId String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  businesses Business[]
-  district   District   @relation(fields: [districtId], references: [id])
+  id                            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  districtId                    String     @map("LgaCode")
+  code                          String?    @unique @map("WardCode")
+  name                          String?    @map("WardName")
+  createdAt                     DateTime?  @map("created_at")
+  updatedAt                     DateTime?  @map("updated_at")
+  tamisemiId                    BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  parentArea                    BigInt?    @map("parent_area") @db.UnsignedBigInt
+  description                   String?
+  areaTypeId                    BigInt?    @map("area_type_id") @db.UnsignedBigInt
+  label                         String?
+  areaShortName                 String?    @map("area_short_name")
+  areaHqId                      BigInt?    @map("area_hq_id") @db.UnsignedBigInt
+  areaCode                      String?    @map("area_code")
+  establishmentDateApproximated Boolean?   @default(false) @map("establishment_date_approximated") @db.TinyInt
+  mofCode                       String?    @map("mof_code")
+  businesses                    Business[]
+  district                      District   @relation(fields: [districtId], references: [code])
 
-  @@unique([name, code])
+  streets                       Street[]
   @@index([districtId], map: "wards_districtId_fkey")
+  @@index([code], map: "wards_code_index")
   @@map("wards")
+}
+
+model Street {
+  id                            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  code                          String?   @unique @map("StreetCode")
+  name                          String?   @map("StreetName")
+  wardId                        String    @map("WardCode")
+  createdAt                     DateTime? @map("created_at")
+  updatedAt                     DateTime? @map("updated_at")
+  tamisemiId                    BigInt    @map("tamisemi_id") @db.UnsignedBigInt
+  parentArea                    BigInt?   @map("parent_area") @db.UnsignedBigInt
+  description                   String?
+  areaTypeId                    BigInt?   @map("area_type_id") @db.UnsignedBigInt
+  label                         String?
+  areaShortName                 String?   @map("area_short_name")
+  areaHqId                      BigInt?   @map("area_hq_id") @db.UnsignedBigInt
+  areaCode                      String?   @map("area_code")
+  establishmentDateApproximated Boolean?  @default(false) @map("establishment_date_approximated") @db.TinyInt
+  mofCode                       String?   @map("mof_code")
+  ward                          Ward      @relation(fields: [wardId], references: [code])
+
+  @@index([wardId], map: "streets_wardId_fkey")
+  @@index([code], map: "idx_streets_StreetCode")
+  @@map("streets")
 }
 
 model Account {
@@ -318,7 +376,7 @@ model CategorySearch {
 
 model LocationSearch {
   id           String   @id @default(cuid())
-  regionId     String
+  regionId     BigInt   @db.UnsignedBigInt
   searchCount  Int      @default(1)
   lastSearched DateTime @default(now())
   region       Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)

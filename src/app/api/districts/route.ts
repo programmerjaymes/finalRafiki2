@@ -7,16 +7,50 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const regionId = url.searchParams.get('regionId');
     
-    const where = regionId ? { regionId } : {};
+    let districts: any[] = [];
     
-    const districts = await prisma.district.findMany({
-      where,
-      orderBy: {
-        name: 'asc'
+    if (regionId) {
+      // Find the region's tamisemi_id first
+      const region = await prisma.region.findUnique({
+        where: { id: BigInt(regionId) },
+        select: { tamisemiId: true }
+      });
+      
+      if (region && region.tamisemiId) {
+        // Find districts where parent_area matches region's tamisemi_id
+        districts = await prisma.district.findMany({
+          where: {
+            parentArea: region.tamisemiId
+          },
+          orderBy: {
+            name: 'asc'
+          }
+        });
+      } else {
+        districts = [];
       }
-    });
+    } else {
+      // Get all districts if no regionId provided
+      districts = await prisma.district.findMany({
+        orderBy: {
+          name: 'asc'
+        }
+      });
+    }
     
-    return NextResponse.json(districts);
+    console.log(`📍 Fetched ${districts.length} districts for regionId: ${regionId || 'all'}`);
+    
+    // Convert BigInt to string for JSON serialization
+    const serializedDistricts = districts.map(district => ({
+      ...district,
+      id: district.id.toString(),
+      tamisemiId: district.tamisemiId?.toString() || null,
+      parentArea: district.parentArea?.toString() || null,
+      areaTypeId: district.areaTypeId?.toString() || null,
+      areaHqId: district.areaHqId?.toString() || null,
+    }));
+    
+    return NextResponse.json(serializedDistricts);
   } catch (error) {
     console.error('Error fetching districts:', error);
     return NextResponse.json(

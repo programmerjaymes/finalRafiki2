@@ -1,0 +1,55 @@
+-- Drop and recreate businesses table with correct types
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS businesses;
+
+CREATE TABLE businesses (
+  id VARCHAR(191) NOT NULL PRIMARY KEY,
+  name VARCHAR(191) NOT NULL,
+  description TEXT,
+  phone VARCHAR(191),
+  email VARCHAR(191),
+  website VARCHAR(191),
+  logo LONGTEXT,
+  coverImage VARCHAR(191),
+  facebook VARCHAR(191),
+  instagram VARCHAR(191),
+  twitter VARCHAR(191),
+  allowsOnlineBooking BOOLEAN NOT NULL DEFAULT false,
+  allowsDelivery BOOLEAN NOT NULL DEFAULT false,
+  isVerified BOOLEAN NOT NULL DEFAULT false,
+  isApproved BOOLEAN NOT NULL DEFAULT false,
+  bundleId VARCHAR(191) NOT NULL,
+  bundleExpiresAt DATETIME(3) NOT NULL,
+  categoryId VARCHAR(191) NOT NULL,
+  latitude DOUBLE,
+  longitude DOUBLE,
+  regionId BIGINT UNSIGNED NOT NULL,
+  districtId BIGINT UNSIGNED NOT NULL,
+  wardId BIGINT UNSIGNED NOT NULL,
+  street VARCHAR(191),
+  avgRating DOUBLE NOT NULL DEFAULT 0,
+  numReviews INT NOT NULL DEFAULT 0,
+  createdAt DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updatedAt DATETIME(3) NOT NULL,
+  ownerId VARCHAR(191) NOT NULL,
+  registrarId VARCHAR(191),
+  viewCount INT NOT NULL DEFAULT 0,
+  clickCount INT NOT NULL DEFAULT 0,
+  inquiryCount INT NOT NULL DEFAULT 0,
+  categoryId2 VARCHAR(255),
+  deactivationReason TEXT,
+  INDEX businesses_bundleId_fkey (bundleId),
+  INDEX businesses_categoryId_fkey (categoryId),
+  INDEX businesses_districtId_fkey (districtId),
+  INDEX businesses_ownerId_fkey (ownerId),
+  INDEX businesses_regionId_fkey (regionId),
+  INDEX businesses_registrarId_fkey (registrarId),
+  INDEX businesses_wardId_fkey (wardId),
+  CONSTRAINT businesses_bundleId_fkey FOREIGN KEY (bundleId) REFERENCES bundles(id) ON UPDATE CASCADE,
+  CONSTRAINT businesses_categoryId_fkey FOREIGN KEY (categoryId) REFERENCES categories(id) ON UPDATE CASCADE,
+  CONSTRAINT businesses_ownerId_fkey FOREIGN KEY (ownerId) REFERENCES users(id) ON UPDATE CASCADE,
+  CONSTRAINT businesses_registrarId_fkey FOREIGN KEY (registrarId) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;

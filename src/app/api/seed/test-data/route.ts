@@ -324,13 +324,13 @@ export async function GET() {
       const region = regions[Math.floor(Math.random() * regions.length)];
       
       // Pick a random district from that region
-      const regionDistricts = districts.filter(d => d.regionId === region.id);
+      const regionDistricts = districts.filter(d => d.regionId === region.code);
       const district = regionDistricts.length > 0 
         ? regionDistricts[Math.floor(Math.random() * regionDistricts.length)]
         : districts[Math.floor(Math.random() * districts.length)];
       
       // Pick a random ward from that district
-      const districtWards = wards.filter(w => w.districtId === district.id);
+      const districtWards = wards.filter(w => w.districtId === district.code);
       const ward = districtWards.length > 0
         ? districtWards[Math.floor(Math.random() * districtWards.length)]
         : wards[Math.floor(Math.random() * wards.length)];

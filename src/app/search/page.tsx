@@ -179,7 +179,7 @@ function SearchResults() {
                 >
                   <option value="">All Locations</option>
                   {regions.map((region) => (
-                    <option key={region.id} value={region.id}>
+                    <option key={region.id.toString()} value={region.id.toString()}>
                       {region.name}
                     </option>
                   ))}

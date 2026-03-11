@@ -46,7 +46,38 @@ export async function GET(
       WHERE businessId = ${id} ORDER BY sortOrder ASC
     ` as Array<{ id: string; imageData: string; sortOrder: number }>
 
-    return NextResponse.json({ ...business, images })
+    // Serialize BigInt fields for JSON
+    const serializedBusiness = {
+      ...business,
+      regionId: business.regionId.toString(),
+      districtId: business.districtId.toString(),
+      wardId: business.wardId.toString(),
+      region: business.region ? {
+        ...business.region,
+        id: business.region.id.toString(),
+        tamisemiId: business.region.tamisemiId?.toString() || null,
+        parentArea: business.region.parentArea?.toString() || null,
+      } : null,
+      district: business.district ? {
+        ...business.district,
+        id: business.district.id.toString(),
+        tamisemiId: business.district.tamisemiId?.toString() || null,
+        parentArea: business.district.parentArea?.toString() || null,
+        areaTypeId: business.district.areaTypeId?.toString() || null,
+        areaHqId: business.district.areaHqId?.toString() || null,
+      } : null,
+      ward: business.ward ? {
+        ...business.ward,
+        id: business.ward.id.toString(),
+        tamisemiId: business.ward.tamisemiId?.toString() || null,
+        parentArea: business.ward.parentArea?.toString() || null,
+        areaTypeId: business.ward.areaTypeId?.toString() || null,
+        areaHqId: business.ward.areaHqId?.toString() || null,
+      } : null,
+      images
+    };
+
+    return NextResponse.json(serializedBusiness)
   } catch (error) {
     console.error('Error fetching business:', error)
     return NextResponse.json(
@@ -100,9 +131,9 @@ export async function PUT(
     if (body.categoryId2 !== undefined) updateData.categoryId2 = body.categoryId2 || null
     if (body.latitude !== undefined) updateData.latitude = body.latitude ? parseFloat(body.latitude) : null
     if (body.longitude !== undefined) updateData.longitude = body.longitude ? parseFloat(body.longitude) : null
-    if (body.regionId !== undefined) updateData.regionId = body.regionId || null
-    if (body.districtId !== undefined) updateData.districtId = body.districtId || null
-    if (body.wardId !== undefined) updateData.wardId = body.wardId || null
+    if (body.regionId !== undefined) updateData.regionId = body.regionId ? BigInt(body.regionId) : null
+    if (body.districtId !== undefined) updateData.districtId = body.districtId ? BigInt(body.districtId) : null
+    if (body.wardId !== undefined) updateData.wardId = body.wardId ? BigInt(body.wardId) : null
     if (body.street !== undefined) updateData.street = body.street
     if (body.ownerId !== undefined) updateData.ownerId = body.ownerId
 
@@ -158,12 +189,36 @@ export async function DELETE(
       )
     }
     
-    // Delete business
-    await prisma.business.delete({
-      where: {
-        id: id
-      }
-    })
+    // Delete all related records first to avoid foreign key constraint violations
+    await prisma.$transaction(async (tx) => {
+      // Delete business images
+      await tx.$executeRaw`DELETE FROM business_images WHERE businessId = ${id}`;
+      
+      // Delete category relationships
+      await tx.categoryOnBusiness.deleteMany({
+        where: { businessId: id }
+      });
+      
+      // Delete search results
+      await tx.searchResultBusiness.deleteMany({
+        where: { businessId: id }
+      });
+      
+      // Delete reviews
+      await tx.review.deleteMany({
+        where: { businessId: id }
+      });
+      
+      // Delete payments
+      await tx.payment.deleteMany({
+        where: { businessId: id }
+      });
+      
+      // Finally delete the business
+      await tx.business.delete({
+        where: { id: id }
+      });
+    });
     
     return NextResponse.json({ success: true })
   } catch (error) {

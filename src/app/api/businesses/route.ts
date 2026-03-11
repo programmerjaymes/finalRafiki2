@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     }
     
     if (regionId) {
-      where.regionId = regionId;
+      where.regionId = BigInt(regionId);
       
       // Track location search
       await trackLocationSearch(regionId);
@@ -174,8 +174,16 @@ export async function GET(request: Request) {
       }
     }
 
+    // Serialize BigInt fields for JSON
+    const serializedBusinesses = businesses.map(business => ({
+      ...business,
+      regionId: business.regionId.toString(),
+      districtId: business.districtId.toString(),
+      wardId: business.wardId.toString(),
+    }));
+
     return NextResponse.json({
-      businesses,
+      businesses: serializedBusinesses,
       pagination: {
         page,
         limit,
@@ -335,16 +343,16 @@ export async function POST(request: Request) {
     // Determine the owner
     const finalOwnerId = isAdmin && ownerId ? ownerId : currentUser.id;
 
-    // Build business data
+    // Build business data - convert location IDs to BigInt
     const businessData: any = {
       name,
       description: description || null,
       email: email || null,
       phone: phone || null,
       street: street || null,
-      regionId: regionId || undefined,
-      districtId: districtId || undefined,
-      wardId: wardId || undefined,
+      regionId: regionId ? BigInt(regionId) : undefined,
+      districtId: districtId ? BigInt(districtId) : undefined,
+      wardId: wardId ? BigInt(wardId) : undefined,
       bundleId,
       categoryId,
       categoryId2: categoryId2 || null,
@@ -392,7 +400,20 @@ export async function POST(request: Request) {
         }
       });
 
-      return NextResponse.json(createdBiz, { status: 201 });
+      // Serialize BigInt fields to strings for JSON response
+      const serializedCreatedBiz = createdBiz ? {
+        ...createdBiz,
+        id: createdBiz.id.toString(),
+        regionId: createdBiz.regionId?.toString() || null,
+        districtId: createdBiz.districtId?.toString() || null,
+        wardId: createdBiz.wardId?.toString() || null,
+        bundle: createdBiz.bundle ? {
+          ...createdBiz.bundle,
+          id: createdBiz.bundle.id.toString(),
+        } : null,
+      } : null;
+
+      return NextResponse.json(serializedCreatedBiz, { status: 201 });
     }
 
     // Standard creation with all foreign keys present
@@ -435,7 +456,20 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(business, { status: 201 });
+    // Serialize BigInt fields to strings for JSON response
+    const serializedBusiness = {
+      ...business,
+      id: business.id.toString(),
+      regionId: business.regionId?.toString() || null,
+      districtId: business.districtId?.toString() || null,
+      wardId: business.wardId?.toString() || null,
+      bundle: business.bundle ? {
+        ...business.bundle,
+        id: business.bundle.id.toString(),
+      } : null,
+    };
+    
+    return NextResponse.json(serializedBusiness, { status: 201 });
   } catch (err) {
     console.error('Error creating business:', err);
     const errorMessage = err instanceof Error ? err.message : 'Failed to create business';

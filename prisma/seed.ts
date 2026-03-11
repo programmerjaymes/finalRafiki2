@@ -86,17 +86,17 @@ async function main() {
 
   // Create regions
   const regions = [
-    { name: 'Dar es Salaam', code: 'DSM' },
-    { name: 'Arusha', code: 'ARU' },
-    { name: 'Mwanza', code: 'MWZ' },
-    { name: 'Zanzibar', code: 'ZNZ' },
-    { name: 'Dodoma', code: 'DDM' },
+    { name: 'Dar es Salaam', code: 'DSM', tamisemiId: BigInt(3849) },
+    { name: 'Arusha', code: 'ARU', tamisemiId: BigInt(3850) },
+    { name: 'Mwanza', code: 'MWZ', tamisemiId: BigInt(3851) },
+    { name: 'Zanzibar', code: 'ZNZ', tamisemiId: BigInt(3852) },
+    { name: 'Dodoma', code: 'DDM', tamisemiId: BigInt(3853) },
   ];
 
   for (const region of regions) {
     await prisma.region.upsert({
-      where: { name_code: region },
-      update: region,
+      where: { code: region.code },
+      update: { name: region.name },
       create: region,
     });
     console.log(`Created/updated region: ${region.name}`);
@@ -109,17 +109,17 @@ async function main() {
 
   if (darRegion) {
     const districts = [
-      { name: 'Ilala', code: 'ILA', regionId: darRegion.id },
-      { name: 'Kinondoni', code: 'KIN', regionId: darRegion.id },
-      { name: 'Temeke', code: 'TEM', regionId: darRegion.id },
-      { name: 'Kigamboni', code: 'KIG', regionId: darRegion.id },
-      { name: 'Ubungo', code: 'UBG', regionId: darRegion.id },
+      { name: 'Ilala', code: 'ILA', regionId: 'DSM', tamisemiId: BigInt(4034), parentArea: darRegion.tamisemiId },
+      { name: 'Kinondoni', code: 'KIN', regionId: 'DSM', tamisemiId: BigInt(4035), parentArea: darRegion.tamisemiId },
+      { name: 'Temeke', code: 'TEM', regionId: 'DSM', tamisemiId: BigInt(4036), parentArea: darRegion.tamisemiId },
+      { name: 'Kigamboni', code: 'KIG', regionId: 'DSM', tamisemiId: BigInt(4037), parentArea: darRegion.tamisemiId },
+      { name: 'Ubungo', code: 'UBG', regionId: 'DSM', tamisemiId: BigInt(4038), parentArea: darRegion.tamisemiId },
     ];
 
     for (const district of districts) {
       await prisma.district.upsert({
-        where: { name_code: { name: district.name, code: district.code } },
-        update: district,
+        where: { code: district.code },
+        update: { name: district.name },
         create: district,
       });
       console.log(`Created/updated district: ${district.name}`);
@@ -132,17 +132,17 @@ async function main() {
 
     if (ilalaDistrict) {
       const wards = [
-        { name: 'Kariakoo', code: 'KAR', districtId: ilalaDistrict.id },
-        { name: 'Kisutu', code: 'KIS', districtId: ilalaDistrict.id },
-        { name: 'Pugu', code: 'PUG', districtId: ilalaDistrict.id },
-        { name: 'Vingunguti', code: 'VIN', districtId: ilalaDistrict.id },
-        { name: 'Buguruni', code: 'BUG', districtId: ilalaDistrict.id },
+        { name: 'Kariakoo', code: 'KAR', districtId: 'ILA', tamisemiId: BigInt(5001), parentArea: ilalaDistrict.tamisemiId },
+        { name: 'Kisutu', code: 'KIS', districtId: 'ILA', tamisemiId: BigInt(5002), parentArea: ilalaDistrict.tamisemiId },
+        { name: 'Pugu', code: 'PUG', districtId: 'ILA', tamisemiId: BigInt(5003), parentArea: ilalaDistrict.tamisemiId },
+        { name: 'Vingunguti', code: 'VIN', districtId: 'ILA', tamisemiId: BigInt(5004), parentArea: ilalaDistrict.tamisemiId },
+        { name: 'Buguruni', code: 'BUG', districtId: 'ILA', tamisemiId: BigInt(5005), parentArea: ilalaDistrict.tamisemiId },
       ];
 
       for (const ward of wards) {
         await prisma.ward.upsert({
-          where: { name_code: { name: ward.name, code: ward.code } },
-          update: ward,
+          where: { code: ward.code },
+          update: { name: ward.name },
           create: ward,
         });
         console.log(`Created/updated ward: ${ward.name}`);

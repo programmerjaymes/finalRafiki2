@@ -18,7 +18,17 @@ export async function GET(
       }
     });
     
-    return NextResponse.json(wards);
+    // Convert BigInt to string for JSON serialization
+    const serializedWards = wards.map(ward => ({
+      ...ward,
+      id: ward.id.toString(),
+      tamisemiId: ward.tamisemiId?.toString() || null,
+      parentArea: ward.parentArea?.toString() || null,
+      areaTypeId: ward.areaTypeId?.toString() || null,
+      areaHqId: ward.areaHqId?.toString() || null,
+    }));
+    
+    return NextResponse.json(serializedWards);
   } catch (error) {
     console.error('Error fetching wards:', error);
     return NextResponse.json(

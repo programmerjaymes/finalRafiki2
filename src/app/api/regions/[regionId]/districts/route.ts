@@ -18,7 +18,17 @@ export async function GET(
       }
     });
     
-    return NextResponse.json(districts);
+    // Convert BigInt to string for JSON serialization
+    const serializedDistricts = districts.map(district => ({
+      ...district,
+      id: district.id.toString(),
+      tamisemiId: district.tamisemiId?.toString() || null,
+      parentArea: district.parentArea?.toString() || null,
+      areaTypeId: district.areaTypeId?.toString() || null,
+      areaHqId: district.areaHqId?.toString() || null,
+    }));
+    
+    return NextResponse.json(serializedDistricts);
   } catch (error) {
     console.error('Error fetching districts:', error);
     return NextResponse.json(

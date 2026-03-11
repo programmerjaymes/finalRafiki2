@@ -227,14 +227,14 @@ async function getDashboardData() {
   try {
     // Get popular locations
     const locationResults = await prisma.$queryRaw`
-      SELECT ls.id, ls.regionId, ls.searchCount, ls.lastSearched, r.name as regionName
+      SELECT ls.id, ls.regionId, ls.searchCount, ls.lastSearched, r.RegionName as regionName
       FROM location_searches ls
       JOIN regions r ON ls.regionId = r.id
       ORDER BY ls.searchCount DESC
       LIMIT 5
     ` as Array<{
       id: string;
-      regionId: string;
+      regionId: bigint;
       searchCount: number;
       lastSearched: Date;
       regionName: string;
@@ -243,7 +243,7 @@ async function getDashboardData() {
     // Transform the result to match the expected format
     topLocations = locationResults.map(item => ({
       id: item.id,
-      regionId: item.regionId,
+      regionId: item.regionId.toString(),
       searchCount: item.searchCount,
       lastSearched: item.lastSearched,
       region: {

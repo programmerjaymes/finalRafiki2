@@ -53,7 +53,7 @@ export default function Modal({
   return (
     <dialog
       ref={dialogRef}
-      className={`rounded-lg shadow-xl p-0 backdrop:bg-gray-500/20 dark:backdrop:bg-gray-900/50 backdrop:backdrop-blur-sm w-full ${sizeClasses[size]}`}
+      className={`rounded-lg shadow-xl p-0 backdrop:bg-gray-500/20 dark:backdrop:bg-gray-900/50 w-full ${sizeClasses[size]}`}
       onClick={handleClose} // Close when clicking on the backdrop
       onClose={handleClose}
     >
