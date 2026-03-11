@@ -18,19 +18,37 @@ export default function BusinessSearch() {
     fetch('/api/categories')
       .then(res => res.json())
       .then(data => {
-        setCategories(data);
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          console.error('Categories API returned non-array:', data);
+          setCategories([]);
+        }
         setIsLoaded(true);
       })
       .catch(err => {
         console.error('Error fetching categories:', err);
+        setCategories([]);
         setIsLoaded(true);
       });
 
     // Fetch regions
     fetch('/api/regions')
       .then(res => res.json())
-      .then(data => setRegions(data))
-      .catch(err => console.error('Error fetching regions:', err));
+      .then(data => {
+        // Ensure data is an array
+        if (Array.isArray(data)) {
+          setRegions(data);
+        } else {
+          console.error('Regions API returned non-array:', data);
+          setRegions([]);
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching regions:', err);
+        setRegions([]);
+      });
   }, []);
 
   const handleSearch = () => {

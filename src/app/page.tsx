@@ -9,17 +9,35 @@ import { motion } from 'framer-motion';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 dark:bg-primary/10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/5 dark:bg-secondary/10 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-primary/3 dark:bg-primary/5 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+      </div>
+      
       <Navbar />
-      <main className="flex-grow">
+      <main className="flex-grow relative z-10">
         <Hero />
         <BusinessSearch />
-        <div className="py-12 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-          <FeaturedBusinesses />
+        <div className="py-12 bg-gradient-to-b from-transparent via-white/50 to-transparent dark:from-transparent dark:via-gray-800/50 dark:to-transparent backdrop-blur-sm relative">
+          {/* Decorative dots pattern */}
+          <div className="absolute inset-0 opacity-30 dark:opacity-20" style={{
+            backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px)',
+            backgroundSize: '20px 20px'
+          }}></div>
+          <div className="relative z-10">
+            <FeaturedBusinesses />
+          </div>
         </div>
         
         {/* Testimonials section */}
-        <section className="py-16 bg-primary/5 dark:bg-primary/10">
+        <section className="py-16 bg-gradient-to-br from-primary/5 via-secondary/5 to-primary/5 dark:from-primary/10 dark:via-secondary/10 dark:to-primary/10 relative overflow-hidden">
+          {/* Decorative shapes */}
+          <div className="absolute top-10 right-10 w-32 h-32 border-2 border-primary/20 dark:border-primary/30 rounded-full"></div>
+          <div className="absolute bottom-10 left-10 w-24 h-24 border-2 border-secondary/20 dark:border-secondary/30 rounded-lg rotate-45"></div>
+          <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 dark:bg-primary/10 rounded-full blur-xl"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <motion.span 
@@ -93,7 +111,16 @@ export default function Home() {
         </section>
         
         {/* CTA Section */}
-        <section className="py-16 bg-gradient-to-r from-primary to-primary-dark dark:from-gray-800 dark:to-gray-900 text-white">
+        <section className="py-16 bg-gradient-to-r from-primary via-primary-dark to-primary dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 text-white relative overflow-hidden">
+          {/* Animated background pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: 'linear-gradient(30deg, transparent 12%, rgba(255,255,255,0.1) 12.5%, rgba(255,255,255,0.1) 13%, transparent 13.5%, transparent)',
+              backgroundSize: '40px 40px'
+            }}></div>
+          </div>
+          <div className="absolute top-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.h2 
               initial={{ opacity: 0, y: 20 }}
