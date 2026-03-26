@@ -4,7 +4,7 @@ import AppHeader from "@/layout/AppHeader";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useSidebar } from "@/context/SidebarContext";
-import BusinessOwnerAuthWrapper from "@/components/auth/BusinessOwnerAuthWrapper";
+import { BusinessOwnerAuthWrapper } from "@/components/auth/BusinessOwnerAuthWrapper";
 
 function MainContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered } = useSidebar();

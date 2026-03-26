@@ -1,3 +1,5 @@
+'use client';
+
 import GridShape from "@/components/common/GridShape";
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
@@ -5,12 +7,17 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = useLocale();
+  const messages = t(locale);
+
   return (
     <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <ThemeProvider>
@@ -33,28 +40,28 @@ export default function AuthLayout({
                   <h1 className="text-3xl font-bold text-white text-center">Rafiki</h1>
                 </Link>
                 <div className="text-center space-y-6">
-                  <h2 className="text-xl font-semibold text-white">Tanzania's Premier Business Directory</h2>
+                  <h2 className="text-xl font-semibold text-white">{messages.auth.panelTitle}</h2>
                   <p className="text-white/80">
-                    Connect with customers, grow your business, and join the vibrant community of businesses across Tanzania.
+                    {messages.auth.panelSubtitle}
                   </p>
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center space-x-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
                         <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-white">Easily reach more customers</span>
+                      <span className="text-white">{messages.auth.panelPointReach}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
                         <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-white">Track business analytics</span>
+                      <span className="text-white">{messages.auth.panelPointAnalytics}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white">
                         <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-white">Manage your business listings</span>
+                      <span className="text-white">{messages.auth.panelPointManage}</span>
                     </div>
                   </div>
                 </div>

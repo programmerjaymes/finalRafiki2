@@ -15,8 +15,11 @@ import {
   FaMoneyBillWave as PaymentIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
+  FaMapMarkedAlt as LocationIcon,
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
 
 type NavItem = {
   icon: React.ReactNode;
@@ -25,42 +28,54 @@ type NavItem = {
   subItems?: { name: string; path: string; pro: boolean }[];
 };
 
-const navItems: NavItem[] = [
-  {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    path: "/dashboard",
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "Bundles",
-    path: "/bundles",
-  },
-  {
-    icon: <BusinessIcon />,
-    name: "Businesses",
-    path: "/businesses",
-  },
-  {
-    icon: <CategoryIcon />,
-    name: "Categories",
-    path: "/categories",
-  },
-  {
-    icon: <PaymentIcon />,
-    name: "Payments",
-    path: "/payments",
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "Users",
-    path: "/users",
-  },
-];
-
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const locale = useLocale();
+  const messages = t(locale);
+
+  const navItems: NavItem[] = [
+    {
+      icon: <GridIcon />,
+      name: messages.admin.dashboard,
+      path: "/dashboard",
+    },
+    {
+      icon: <BoxCubeIcon />,
+      name: messages.admin.bundles,
+      path: "/bundles",
+    },
+    {
+      icon: <BusinessIcon />,
+      name: messages.admin.businesses,
+      path: "/businesses",
+    },
+    {
+      icon: <CategoryIcon />,
+      name: messages.admin.categories,
+      path: "/categories",
+    },
+    {
+      icon: <LocationIcon />,
+      name: messages.admin.locations,
+      subItems: [
+        { name: messages.admin.regions, path: "/regions", pro: false },
+        { name: messages.admin.districts, path: "/districts", pro: false },
+        { name: messages.admin.wards, path: "/wards", pro: false },
+        { name: messages.admin.streets, path: "/streets", pro: false },
+      ],
+    },
+    {
+      icon: <PaymentIcon />,
+      name: messages.admin.payments,
+      path: "/payments",
+    },
+    {
+      icon: <UserCircleIcon />,
+      name: messages.admin.users,
+      path: "/users",
+    },
+  ];
 
   const renderMenuItems = (navItems: NavItem[]) => (
     <ul className="flex flex-col gap-4">

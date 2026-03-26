@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { usePathname } from 'next/navigation';
+import { t, type Locale } from '@/lib/i18n';
+import { useLocale, useSetLocale } from '@/lib/useLocale';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,6 +15,18 @@ export default function Navbar() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const locale = useLocale();
+  const setLocale = useSetLocale();
+  const messages = t(locale);
+  const isHome = pathname === '/';
+  const solidNav = scrolled || !isHome;
+
+  const langSelectClass = `rounded-lg text-sm font-medium border py-2 pl-3 pr-9 max-w-[11rem] cursor-pointer transition ${
+    solidNav
+      ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200'
+      : 'border-white/35 bg-white/10 text-white'
+  }`;
 
   // Handle scroll effect
   useEffect(() => {
@@ -35,7 +50,7 @@ export default function Navbar() {
   return (
     <motion.nav 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled 
+        solidNav
           ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md' 
           : 'bg-transparent'
       }`}
@@ -48,7 +63,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <span className={`text-2xl font-bold transition-colors duration-300
-                ${scrolled 
+                ${solidNav
                   ? 'text-primary dark:text-white' 
                   : 'text-white dark:text-white'}`}>
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
@@ -60,48 +75,69 @@ export default function Navbar() {
 
           {/* Desktop menu */}
           <div className="hidden md:flex md:items-center md:space-x-8">
-            <NavLink href="/search" scrolled={scrolled}>
-              Search
+            <NavLink href="/search" scrolled={solidNav}>
+              {messages.nav.search}
             </NavLink>
-            <NavLink href="/business-create" scrolled={scrolled}>
-              Register Business
+            <NavLink href="/business-create" scrolled={solidNav}>
+              {messages.nav.registerBusiness}
             </NavLink>
             
             {session ? (
               <>
-                <NavLink href="/business-my-businesses" scrolled={scrolled}>
-                  My Businesses
+                <NavLink href="/business-my-businesses" scrolled={solidNav}>
+                  {messages.nav.myBusinesses}
                 </NavLink>
                 {session.user.role === 'ADMIN' && (
-                  <NavLink href="/admin" scrolled={scrolled}>
-                    Admin Dashboard
+                  <NavLink href="/dashboard" scrolled={solidNav}>
+                    {messages.nav.adminDashboard}
                   </NavLink>
                 )}
-                <NavLink href="/api/auth/signout" scrolled={scrolled}>
-                  Sign Out
+                <NavLink href="/api/auth/signout" scrolled={solidNav}>
+                  {messages.nav.signOut}
                 </NavLink>
               </>
             ) : (
               <Link 
                 href="/signin"
                 className={`
-                  ${scrolled 
+                  ${solidNav
                     ? 'bg-primary text-white hover:bg-primary-dark' 
                     : 'bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border border-white/30'
                   } 
                   px-4 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-sm hover:shadow-md
                 `}
-                style={scrolled ? {} : {}}
+                style={solidNav ? {} : {}}
               >
-                Sign In
+                {messages.nav.signIn}
               </Link>
             )}
+
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`text-xs font-medium whitespace-nowrap ${
+                  solidNav
+                    ? 'text-gray-600 dark:text-gray-400'
+                    : 'text-white/85'
+                }`}
+              >
+                {messages.nav.language}
+              </span>
+              <select
+                value={locale}
+                onChange={(e) => setLocale(e.target.value as Locale)}
+                className={langSelectClass}
+                aria-label={messages.nav.language}
+              >
+                <option value="en">English</option>
+                <option value="sw">Kiswahili</option>
+              </select>
+            </div>
             
             {/* Theme toggle */}
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className={`p-2 rounded-full ${
-                scrolled 
+                solidNav
                   ? 'bg-gray-100 dark:bg-gray-800' 
                   : 'bg-white/20 dark:bg-gray-800/40'
               }`}
@@ -125,7 +161,7 @@ export default function Navbar() {
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className={`p-2 rounded-full ${
-                scrolled 
+                solidNav
                   ? 'bg-gray-100 dark:bg-gray-800' 
                   : 'bg-white/20 dark:bg-gray-800/40'
               }`}
@@ -144,7 +180,7 @@ export default function Navbar() {
             
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`p-2 rounded-md ${scrolled ? 'text-primary dark:text-white' : 'text-white'} hover:bg-primary-light/20`}
+              className={`p-2 rounded-md ${solidNav ? 'text-primary dark:text-white' : 'text-white'} hover:bg-primary-light/20`}
               aria-expanded={isMenuOpen}
             >
               <span className="sr-only">Open main menu</span>
@@ -186,35 +222,51 @@ export default function Navbar() {
           >
             <div className="flex flex-col space-y-1 px-2">
               <MobileNavLink href="/search" onClick={() => setIsMenuOpen(false)}>
-                Search
+                {messages.nav.search}
               </MobileNavLink>
               <MobileNavLink href="/business-create" onClick={() => setIsMenuOpen(false)}>
-                Register Business
+                {messages.nav.registerBusiness}
               </MobileNavLink>
               
               {session ? (
                 <>
                   <MobileNavLink href="/business-my-businesses" onClick={() => setIsMenuOpen(false)}>
-                    My Businesses
+                    {messages.nav.myBusinesses}
                   </MobileNavLink>
                   {session.user.role === 'ADMIN' && (
-                    <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>
-                      Admin Dashboard
+                    <MobileNavLink href="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      {messages.nav.adminDashboard}
                     </MobileNavLink>
                   )}
                   <MobileNavLink href="/api/auth/signout" onClick={() => setIsMenuOpen(false)}>
-                    Sign Out
+                    {messages.nav.signOut}
                   </MobileNavLink>
                 </>
               ) : (
                 <Link
-                  href="/auth/login"
+                  href="/signin"
                   className="w-full text-center bg-primary text-white px-3 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors duration-200 my-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Sign In
+                  {messages.nav.signIn}
                 </Link>
               )}
+
+              <label className="block px-3 pt-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                {messages.nav.language}
+              </label>
+              <select
+                value={locale}
+                onChange={(e) => {
+                  setLocale(e.target.value as Locale);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full mx-2 mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 px-3 py-3 text-base font-medium"
+                aria-label={messages.nav.language}
+              >
+                <option value="en">English</option>
+                <option value="sw">Kiswahili</option>
+              </select>
             </div>
           </motion.div>
         )}

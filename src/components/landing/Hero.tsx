@@ -4,8 +4,13 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/styles/colors.module.css';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 
 export default function Hero() {
+  const locale = useLocale();
+  const messages = t(locale);
+
   return (
     <div 
       className="relative overflow-hidden bg-gradient-to-br from-primary dark:from-primary-dark via-primary-dark dark:via-gray-900 to-gray-900 dark:to-black text-white"
@@ -69,7 +74,9 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Discover Great <span className={`${styles.gradientText}`}>Businesses</span> Near You
+              {messages.home.heroTitleBefore}{' '}
+              <span className={`${styles.gradientText}`}>{messages.home.heroTitleHighlight}</span>{' '}
+              {messages.home.heroTitleAfter}
             </motion.h1>
             <motion.p 
               className="text-lg sm:text-xl md:text-2xl mb-8 text-gray-200 dark:text-gray-300 max-w-lg"
@@ -77,7 +84,7 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              Connect with trusted local businesses and service providers in your area
+              {messages.home.heroSubtitle}
             </motion.p>
             <motion.div 
               className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start"
@@ -89,14 +96,14 @@ export default function Hero() {
                 href="#search"
                 className={`bg-secondary text-gray-900 dark:text-gray-900 px-8 py-4 rounded-lg font-semibold hover:bg-secondary-light transition duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl ${styles.secondaryBg}`}
               >
-                Find Services
+                {messages.home.heroPrimary}
               </Link>
               <Link
                 href="/business-create"
                 className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary transition duration-200 transform hover:scale-105"
                 style={{ borderColor: 'white' }}
               >
-                Register Your Business
+                {messages.home.heroSecondary}
               </Link>
             </motion.div>
             
@@ -114,7 +121,7 @@ export default function Hero() {
                 ))}
               </div>
               <p className="text-sm text-gray-200 dark:text-gray-300">
-                Join <span className="font-bold">1,000+</span> businesses already on our platform
+                {messages.home.heroSocialProof}
               </p>
             </motion.div>
           </motion.div>

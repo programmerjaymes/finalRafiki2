@@ -62,6 +62,4 @@ export const BusinessOwnerAuthWrapper: React.FC<BusinessOwnerAuthWrapperProps> =
 
   // If the user is authenticated and is a business owner, render children
   return <>{children}</>;
-};
-
-export default BusinessOwnerAuthWrapper; 
+}; 

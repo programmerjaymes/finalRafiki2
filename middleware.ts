@@ -2,96 +2,107 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// TEMPORARY: Middleware is disabled to fix CSS loading issues
-// Once CSS loading is fixed, remove the comments and restore this functionality
+const LOCALE_COOKIE = 'rafiki_locale';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  
-  // Get the token
-  const token = await getToken({ 
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  
-  // Debug: Log pathname and token information
-  console.log(`Middleware executing for path: ${pathname}`);
-  console.log(`Token present: ${!!token}`);
-  if (token) {
-    console.log(`Token role: ${token.role}`);
-    console.log(`Token user: ${JSON.stringify(token.user || {})}`);
+
+  // Old bookmarks: /en/... or /sw/... → same path without prefix, locale saved in cookie
+  const seg = pathname.split('/')[1];
+  if (seg === 'en' || seg === 'sw') {
+    const stripped =
+      pathname.replace(new RegExp(`^/${seg}(?=/|$)`), '') || '/';
+    const url = request.nextUrl.clone();
+    url.pathname = stripped;
+    const res = NextResponse.redirect(url);
+    res.cookies.set(LOCALE_COOKIE, seg, { path: '/', sameSite: 'lax' });
+    return res;
   }
 
-  // If the user is logged in as a business owner, always redirect to business dashboard
-  // unless they're already on a business owner route
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  const isPublicBusinessDetails = /^\/businesses\/[^/]+$/.test(pathname);
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname.startsWith('/search') ||
+    isPublicBusinessDetails ||
+    pathname.startsWith('/signin') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/error-404');
+
+  // Deny by default: if route is not explicitly public, login is required.
+  if (!isPublicRoute && !token) {
+    const url = new URL('/signin', request.url);
+    url.searchParams.set('callbackUrl', encodeURI(request.url));
+    return NextResponse.redirect(url);
+  }
+
   if (token && token.role === 'BUSINESS_OWNER') {
-    const isAlreadyOnBusinessRoute = pathname.startsWith('/business-dashboard') || 
-                                     pathname.startsWith('/business-instructions') || 
-                                     pathname.startsWith('/business-create') ||
-                                     pathname.startsWith('/business-my-businesses');
-                                     
-    if (pathname === '/' || (!isAlreadyOnBusinessRoute && !pathname.startsWith('/api/'))) {
-      console.log('Redirecting business owner to dashboard');
-      return NextResponse.redirect(new URL('/business-dashboard', request.url));
+    const isAlreadyOnBusinessRoute =
+      pathname.startsWith('/business-dashboard') ||
+      pathname.startsWith('/business-instructions') ||
+      pathname.startsWith('/business-create') ||
+      pathname.startsWith('/business-my-businesses') ||
+      pathname.startsWith('/businessowner-dashboard');
+
+    if (
+      pathname === '/' ||
+      (!isAlreadyOnBusinessRoute && !pathname.startsWith('/api/'))
+    ) {
+      return NextResponse.redirect(
+        new URL('/business-dashboard', request.url)
+      );
     }
   }
-  
-  // Check if the route is an admin route that should be protected
-  const isAdminRoute = pathname.startsWith('/dashboard') || 
-                      pathname.startsWith('/users') || 
-                      pathname.startsWith('/businesses') || 
-                      pathname.startsWith('/bundles') || 
-                      pathname.startsWith('/categories') || 
-                      pathname.startsWith('/payments') || 
-                      pathname === '/profile';
-  
-  // Check if the route is a business owner route that should be protected
-  const isBusinessOwnerRoute = pathname.startsWith('/business-dashboard') || 
-                             pathname.startsWith('/business-instructions') || 
-                             pathname.startsWith('/business-create') ||
-                             pathname.startsWith('/business-my-businesses');
-  
-  // If it's an admin route, check if the user is an admin
+
+  const isAdminRoute =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/users') ||
+    pathname === '/businesses' ||
+    pathname.startsWith('/bundles') ||
+    pathname.startsWith('/categories') ||
+    pathname.startsWith('/payments') ||
+    pathname.startsWith('/regions') ||
+    pathname.startsWith('/districts') ||
+    pathname.startsWith('/wards') ||
+    pathname.startsWith('/streets') ||
+    pathname === '/profile';
+
+  const isBusinessOwnerRoute =
+    pathname.startsWith('/business-dashboard') ||
+    pathname.startsWith('/business-instructions') ||
+    pathname.startsWith('/business-create') ||
+    pathname.startsWith('/business-my-businesses');
+
   if (isAdminRoute) {
-    // If not logged in or not an admin, redirect to login
     if (!token || token.role !== 'ADMIN') {
-      // Redirect to login page with a return URL
       const url = new URL('/signin', request.url);
       url.searchParams.set('callbackUrl', encodeURI(request.url));
       return NextResponse.redirect(url);
     }
   }
-  
-  // If it's a business owner route, check if the user is a business owner
+
   if (isBusinessOwnerRoute) {
-    // If not logged in or not a business owner, redirect to login
     if (!token || token.role !== 'BUSINESS_OWNER') {
-      // Redirect to login page with a return URL
       const url = new URL('/signin', request.url);
       url.searchParams.set('callbackUrl', encodeURI(request.url));
       return NextResponse.redirect(url);
     }
   }
-  
-  // If the user is an admin on the home page, redirect to dashboard
+
   if (pathname === '/' && token && token.role === 'ADMIN') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-  
-  // Otherwise, continue with the request
+
   return NextResponse.next();
 }
 
-// Configure middleware to only run on specific page routes, excluding all static assets
 export const config = {
   matcher: [
-    /*
-     * Match all paths except for:
-     * 1. /api routes
-     * 2. /_next (Next.js internals)
-     * 3. /fonts (inside /public)
-     * 4. all root files inside /public (e.g. /favicon.ico)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
-}; 
+};

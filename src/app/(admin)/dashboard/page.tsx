@@ -6,6 +6,13 @@ import {
   MostSelectedBundlesChartClient 
 } from '@/components/dashboard/ChartComponents';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { t } from '@/lib/i18n';
+
+async function getMessages() {
+  const locale = (await cookies()).get('rafiki_locale')?.value === 'sw' ? 'sw' : 'en';
+  return t(locale);
+}
 
 // Define interfaces for our custom types
 interface CategoryWithSearchCount {
@@ -61,17 +68,12 @@ async function getDashboardData() {
     ? ((lastMonthUsers - previousMonthUsers) / previousMonthUsers) * 100 
     : 0;
 
-  // Get verified business count
-  const businessCount = await prisma.business.count({
-    where: {
-      isVerified: true
-    }
-  });
+  // Get business count
+  const businessCount = await prisma.business.count();
   
-  // Get verified business growth
+  // Get business growth
   const lastMonthBusinesses = await prisma.business.count({
     where: {
-      isVerified: true,
       createdAt: {
         gte: lastMonthDate
       }
@@ -80,7 +82,6 @@ async function getDashboardData() {
 
   const previousMonthBusinesses = await prisma.business.count({
     where: {
-      isVerified: true,
       createdAt: {
         gte: previousMonthDate,
         lt: lastMonthDate
@@ -205,12 +206,9 @@ async function getDashboardData() {
     console.error("Error fetching top categories:", e);
   }
 
-  // Get most searched verified businesses 
+  // Get most searched businesses 
   const topBusinesses = await prisma.business.findMany({
     take: 5,
-    where: {
-      isVerified: true
-    },
     orderBy: {
       viewCount: 'desc'
     },
@@ -237,7 +235,7 @@ async function getDashboardData() {
       regionId: bigint;
       searchCount: number;
       lastSearched: Date;
-      regionName: string;
+      regionName: string | null;
     }>;
     
     // Transform the result to match the expected format
@@ -247,7 +245,7 @@ async function getDashboardData() {
       searchCount: item.searchCount,
       lastSearched: item.lastSearched,
       region: {
-        name: item.regionName
+        name: item.regionName || 'Unknown'
       }
     }));
   } catch (e) {
@@ -327,6 +325,7 @@ async function getDashboardData() {
 // Metrics Component
 const DashboardMetrics = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -338,13 +337,13 @@ const DashboardMetrics = async () => {
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Registered Users</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{messages.admin.registeredUsers}</span>
           <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">{data.userCount.toLocaleString()}</h4>
           <div className="flex items-center mt-2">
             <span className={`px-1.5 py-0.5 text-xs ${data.userGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
               {data.userGrowthPercent >= 0 ? '+' : ''}{data.userGrowthPercent.toFixed(1)}%
             </span>
-            <span className="ml-2 text-xs text-gray-500">vs last month</span>
+            <span className="ml-2 text-xs text-gray-500">{messages.admin.vsLastMonth}</span>
           </div>
         </div>
       </Card>
@@ -357,13 +356,13 @@ const DashboardMetrics = async () => {
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Verified Businesses</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{messages.admin.registeredBusinesses}</span>
           <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">{data.businessCount.toLocaleString()}</h4>
           <div className="flex items-center mt-2">
             <span className={`px-1.5 py-0.5 text-xs ${data.businessGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
               {data.businessGrowthPercent >= 0 ? '+' : ''}{data.businessGrowthPercent.toFixed(1)}%
             </span>
-            <span className="ml-2 text-xs text-gray-500">vs last month</span>
+            <span className="ml-2 text-xs text-gray-500">{messages.admin.vsLastMonth}</span>
           </div>
         </div>
       </Card>
@@ -376,13 +375,13 @@ const DashboardMetrics = async () => {
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Total Money Paid</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{messages.admin.totalMoneyPaid}</span>
           <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">${data.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
           <div className="flex items-center mt-2">
             <span className={`px-1.5 py-0.5 text-xs ${data.paymentGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
               {data.paymentGrowthPercent >= 0 ? '+' : ''}{data.paymentGrowthPercent.toFixed(1)}%
             </span>
-            <span className="ml-2 text-xs text-gray-500">vs last month</span>
+            <span className="ml-2 text-xs text-gray-500">{messages.admin.vsLastMonth}</span>
           </div>
         </div>
       </Card>
@@ -395,13 +394,13 @@ const DashboardMetrics = async () => {
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Active Bundles</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{messages.admin.activeBundles}</span>
           <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">{data.activeBundlesCount.toLocaleString()}</h4>
           <div className="flex items-center mt-2">
             <span className={`px-1.5 py-0.5 text-xs ${data.bundleGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
               {data.bundleGrowthPercent >= 0 ? '+' : ''}{data.bundleGrowthPercent.toFixed(1)}%
             </span>
-            <span className="ml-2 text-xs text-gray-500">vs last month</span>
+            <span className="ml-2 text-xs text-gray-500">{messages.admin.vsLastMonth}</span>
           </div>
         </div>
       </Card>
@@ -412,11 +411,12 @@ const DashboardMetrics = async () => {
 // Monthly Registrations Chart
 const MonthlyRegistrationsChart = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Monthly Registrations</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{messages.admin.monthlyRegistrations}</h3>
       </div>
       <MonthlyRegistrationsChartClient 
         data={data.monthlyRegistrations} 
@@ -428,11 +428,12 @@ const MonthlyRegistrationsChart = async () => {
 // Business Categories Chart
 const BusinessCategoriesChart = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Most Popular Business Categories</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{messages.admin.mostPopularBusinessCategories}</h3>
       </div>
       <BusinessCategoriesChartClient 
         data={data.topCategories.map((item) => ({
@@ -447,27 +448,28 @@ const BusinessCategoriesChart = async () => {
 // Most Searched Businesses Table
 const MostSearchedBusinesses = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Most Searched Verified Businesses</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{messages.admin.mostSearchedBusinesses}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Business Name
+                {messages.admin.businessName}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Category
+                {messages.admin.category}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Views
+                {messages.admin.views}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-400">
-                Rating
+                {messages.admin.rating}
               </th>
             </tr>
           </thead>
@@ -478,7 +480,7 @@ const MostSearchedBusinesses = async () => {
                   {business.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {business.category?.name || 'Uncategorized'}
+                  {business.category?.name || messages.admin.uncategorized}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   {business.viewCount.toLocaleString()}
@@ -494,7 +496,7 @@ const MostSearchedBusinesses = async () => {
             {data.topBusinesses.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No business data available
+                  {messages.admin.noBusinessData}
                 </td>
               </tr>
             )}
@@ -508,6 +510,7 @@ const MostSearchedBusinesses = async () => {
 // Popular Locations Map
 const PopularLocationsMap = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   // Calculate percentages
   const totalSearches = data.topLocations.reduce((sum: number, location) => sum + location.searchCount, 0);
@@ -519,7 +522,7 @@ const PopularLocationsMap = async () => {
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Popular Locations</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{messages.admin.popularLocations}</h3>
       </div>
       <div className="mt-4">
         {locationsWithPercentage.map((location, index) => (
@@ -536,7 +539,7 @@ const PopularLocationsMap = async () => {
         
         {locationsWithPercentage.length === 0 && (
           <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-            No location data available
+            {messages.admin.noLocationData}
           </div>
         )}
       </div>
@@ -547,11 +550,12 @@ const PopularLocationsMap = async () => {
 // Most Selected Bundles Chart
 const MostSelectedBundlesChart = async () => {
   const data = await getDashboardData();
+  const messages = await getMessages();
   
   return (
     <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">Most Selected Bundles</h3>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">{messages.admin.mostSelectedBundles}</h3>
       </div>
       <MostSelectedBundlesChartClient 
         data={data.bundleData}
@@ -561,11 +565,12 @@ const MostSelectedBundlesChart = async () => {
 };
 
 const DashboardPage = async () => {
+  const messages = await getMessages();
   return (
     <>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">Admin Dashboard</h1>
-        <p className="mt-1 text-gray-600 dark:text-gray-400">Welcome back! Here's an overview of your platform's metrics.</p>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white/90">{messages.admin.adminDashboardTitle}</h1>
+        <p className="mt-1 text-gray-600 dark:text-gray-400">{messages.admin.adminDashboardSubtitle}</p>
       </div>
 
       {/* Dashboard Metrics */}

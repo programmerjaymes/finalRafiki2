@@ -12,8 +12,6 @@ import toast from "@/utils/toast";
 import { useRouter } from "next/navigation";
 import type { Bundle, Category, Region, District, Ward } from "@prisma/client";
 
-interface Street { id: string; name: string; code: string | null; wardId: string; }
-
 // Step interface to track progress
 interface Step {
   id: number;
@@ -75,7 +73,6 @@ export default function CreateBusinessPage() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
-  const [streets, setStreets] = useState<Street[]>([]);
   const [selectedBundle, setSelectedBundle] = useState<Bundle | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BusinessFormData>({
@@ -167,7 +164,8 @@ export default function CreateBusinessPage() {
         if (!response.ok) throw new Error('Failed to fetch wards');
         const data = await response.json();
         setWards(data);
-        setFormData(prev => ({ ...prev, wardId: '', street: '' }));
+        // Clear ward selection when district changes
+        setFormData(prev => ({ ...prev, wardId: '' }));
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load wards';
         toast.error(errorMessage);
@@ -176,29 +174,6 @@ export default function CreateBusinessPage() {
 
     fetchWards();
   }, [formData.districtId]);
-
-  // Fetch streets when ward changes
-  useEffect(() => {
-    const fetchStreets = async () => {
-      if (!formData.wardId) {
-        setStreets([]);
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/wards/${formData.wardId}/streets`);
-        if (!response.ok) throw new Error('Failed to fetch streets');
-        const data = await response.json();
-        setStreets(data);
-        setFormData(prev => ({ ...prev, street: '' }));
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load streets';
-        toast.error(errorMessage);
-      }
-    };
-
-    fetchStreets();
-  }, [formData.wardId]);
 
   const handleBundleSelect = (bundle: Bundle) => {
     setSelectedBundle(bundle);
@@ -444,7 +419,7 @@ export default function CreateBusinessPage() {
               >
                 <option value="">Select a region</option>
                 {regions.map(region => (
-                  <option key={region.id.toString()} value={region.id.toString()}>
+                  <option key={String(region.id)} value={String(region.id)}>
                     {region.name}
                   </option>
                 ))}
@@ -462,7 +437,7 @@ export default function CreateBusinessPage() {
               >
                 <option value="">Select a district</option>
                 {districts.map(district => (
-                  <option key={district.id.toString()} value={district.id.toString()}>
+                  <option key={String(district.id)} value={String(district.id)}>
                     {district.name}
                   </option>
                 ))}
@@ -480,29 +455,21 @@ export default function CreateBusinessPage() {
               >
                 <option value="">Select a ward</option>
                 {wards.map(ward => (
-                  <option key={ward.id.toString()} value={ward.id.toString()}>
+                  <option key={String(ward.id)} value={String(ward.id)}>
                     {ward.name}
                   </option>
                 ))}
               </Select>
             </div>
             <div>
-              <Label htmlFor="street">Street / Village *</Label>
-              <Select
+              <Label htmlFor="street">Street Address *</Label>
+              <Input
                 id="street"
                 name="street"
                 value={formData.street}
                 onChange={handleInputChange}
                 required
-                disabled={!formData.wardId}
-              >
-                <option value="">{formData.wardId ? 'Select a street/village' : 'Select a ward first'}</option>
-                {streets.map(s => (
-                  <option key={s.id} value={s.name}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
             {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('coordinates') && (
               <>

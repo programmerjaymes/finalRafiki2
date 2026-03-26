@@ -79,7 +79,7 @@ export default function ConfirmDialog({
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-lg shadow-xl p-0 backdrop:bg-gray-500/20 dark:backdrop:bg-gray-900/50 w-full max-w-md"
+      className="rounded-lg shadow-xl p-0 backdrop:bg-gray-500/20 dark:backdrop:bg-gray-900/50 backdrop:backdrop-blur-sm w-full max-w-md"
       onClick={handleClick}
       onClose={handleClose}
     >

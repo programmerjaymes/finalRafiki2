@@ -16,6 +16,7 @@ export async function GET(
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         emailVerified: true,
         image: true,
@@ -121,61 +122,6 @@ export async function PUT(
       // For example: updateData.hashedPassword = await bcrypt.hash(body.password, 10);
       updateData.hashedPassword = body.password; // This is just a placeholder
     }
-    
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        image: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    
-    return NextResponse.json({ user: updatedUser });
-  } catch (error: any) {
-    console.error('Error updating user:', error);
-    
-    return NextResponse.json(
-      { error: 'Failed to update user', details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// PATCH: Partial update a user (e.g., role change)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
-    
-    if (!existingUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Prepare update data
-    const updateData: any = {};
-    
-    if (body.name !== undefined) updateData.name = body.name;
-    if (body.email !== undefined) updateData.email = body.email;
-    if (body.role !== undefined) updateData.role = body.role;
     
     // Update user
     const updatedUser = await prisma.user.update({

@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Select from '@/components/form/select/Select';
 import { Category, Region } from '@prisma/client';
-
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 export default function BusinessSearch() {
+  const locale = useLocale();
+  const messages = t(locale);
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -14,53 +17,49 @@ export default function BusinessSearch() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Fetch categories
-    fetch('/api/categories')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch categories: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then(data => {
-        // Ensure data is an array
-        if (Array.isArray(data)) {
-          setCategories(data);
-        } else {
-          console.error('Categories API returned non-array:', data);
-          setCategories([]);
-        }
-        setIsLoaded(true);
-      })
-      .catch(err => {
-        console.error('Error fetching categories:', err);
-        alert('Unable to load categories. The search feature may be limited.');
-        setCategories([]);
-        setIsLoaded(true);
-      });
+    let cancelled = false;
 
-    // Fetch regions
-    fetch('/api/regions')
-      .then(res => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch regions: ${res.status}`);
+    const safeArray = <T,>(value: unknown, fallback: T[] = []): T[] => {
+      if (Array.isArray(value)) return value as T[];
+      if (value && typeof value === 'object') {
+        const maybeArray = (value as Record<string, unknown>).data ?? (value as Record<string, unknown>).regions;
+        if (Array.isArray(maybeArray)) return maybeArray as T[];
+      }
+      return fallback;
+    };
+
+    const load = async () => {
+      try {
+        const [categoriesRes, regionsRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/regions'),
+        ]);
+
+        const [categoriesJson, regionsJson] = await Promise.all([
+          categoriesRes.json().catch(() => null),
+          regionsRes.json().catch(() => null),
+        ]);
+
+        if (!cancelled) {
+          setCategories(categoriesRes.ok ? safeArray<Category>(categoriesJson) : []);
+          setRegions(regionsRes.ok ? safeArray<Region>(regionsJson) : []);
+          setIsLoaded(true);
         }
-        return res.json();
-      })
-      .then(data => {
-        // Ensure data is an array
-        if (Array.isArray(data)) {
-          setRegions(data);
-        } else {
-          console.error('Regions API returned non-array:', data);
+      } catch (err) {
+        console.error('Error fetching search filters:', err);
+        if (!cancelled) {
+          setCategories([]);
           setRegions([]);
+          setIsLoaded(true);
         }
-      })
-      .catch(err => {
-        console.error('Error fetching regions:', err);
-        alert('Unable to load regions. Location filtering may be limited.');
-        setRegions([]);
-      });
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSearch = () => {
@@ -112,13 +111,14 @@ export default function BusinessSearch() {
             transition={{ duration: 0.5 }}
           >
             <span className="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light font-medium text-sm mb-4">
-              Quick Search
+              {messages.home.finderPill}
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Find Perfect <span className="text-primary dark:text-secondary">Business Solutions</span>
+              {messages.home.finderTitleBefore}{' '}
+              <span className="text-primary dark:text-secondary">{messages.home.finderTitleHighlight}</span>
             </h2>
             <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Search through thousands of businesses to find the service that best fits your needs
+              {messages.home.finderSubtitle}
             </p>
           </motion.div>
           
@@ -131,7 +131,7 @@ export default function BusinessSearch() {
           >
             <motion.div variants={itemVariants} className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Category
+                {messages.search.category}
               </label>
               <div className="relative">
                 <Select
@@ -139,7 +139,7 @@ export default function BusinessSearch() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full py-3 pl-4 pr-10 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary dark:focus:border-secondary focus:ring focus:ring-primary/20 dark:focus:ring-secondary/20 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{messages.search.allCategories}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -156,7 +156,7 @@ export default function BusinessSearch() {
             
             <motion.div variants={itemVariants} className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Location
+                {messages.search.location}
               </label>
               <div className="relative">
                 <Select
@@ -164,9 +164,9 @@ export default function BusinessSearch() {
                   onChange={(e) => setSelectedRegion(e.target.value)}
                   className="w-full py-3 pl-4 pr-10 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary dark:focus:border-secondary focus:ring focus:ring-primary/20 dark:focus:ring-secondary/20 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">All Locations</option>
+                  <option value="">{messages.search.allLocations}</option>
                   {regions.map((region) => (
-                    <option key={region.id.toString()} value={region.id.toString()}>
+                    <option key={String(region.id)} value={String(region.id)}>
                       {region.name}
                     </option>
                   ))}
@@ -181,7 +181,7 @@ export default function BusinessSearch() {
             
             <motion.div variants={itemVariants} className="relative">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Price Range
+                {messages.search.priceRange}
               </label>
               <div className="relative">
                 <Select
@@ -189,10 +189,10 @@ export default function BusinessSearch() {
                   onChange={(e) => setPriceRange(e.target.value)}
                   className="w-full py-3 pl-4 pr-10 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary dark:focus:border-secondary focus:ring focus:ring-primary/20 dark:focus:ring-secondary/20 transition duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="">Any Price</option>
-                  <option value="low">Budget (Below $100)</option>
-                  <option value="medium">Standard ($100 - $500)</option>
-                  <option value="high">Premium (Above $500)</option>
+                  <option value="">{messages.search.anyPrice}</option>
+                  <option value="low">{messages.search.budget}</option>
+                  <option value="medium">{messages.search.standard}</option>
+                  <option value="high">{messages.search.premium}</option>
                 </Select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400 dark:text-gray-500">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

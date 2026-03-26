@@ -15,9 +15,9 @@ model User {
   emailVerified         DateTime?
   image                 String?
   role                  UserRole               @default(BUSINESS_OWNER)
-  phone                 String?                @unique
   createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @default(now()) @map("updated_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  phone                 String?                @unique
   accounts              Account[]
   businessRegistrations BusinessRegistration[]
   businesses            Business[]
@@ -150,8 +150,14 @@ model Payment {
 
 model Category {
   id                String               @id @default(cuid())
+  // Legacy fields (kept for backward compatibility)
   name              String               @unique
   description       String?
+  // Bilingual fields (required for new categories)
+  nameEn            String               @map("name_en")
+  nameSw            String               @map("name_sw")
+  descriptionEn     String?              @map("description_en")
+  descriptionSw     String?              @map("description_sw")
   icon              String?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
@@ -191,105 +197,62 @@ model Review {
 }
 
 model Region {
-  id                BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
-  tamisemiId        BigInt           @map("tamisemi_id") @db.UnsignedBigInt
-  parentArea        BigInt?          @map("parent_area") @db.UnsignedBigInt
-  description       String?          @db.Text
-  areaTypeId        Int?             @map("area_type_id") @db.UnsignedInt
-  areaTypeName      String?          @map("area_type_name")
-  areaTypeNameSw    String?          @map("area_type_name_sw")
-  areaTypeOrderId   Int?             @map("area_type_order_id") @db.UnsignedInt
-  code              String?          @unique @map("RegionCode")
-  name              String?          @map("RegionName")
-  zoneId            String?          @map("zone_id")
-  box               Int?             @default(0)
-  sqaZone           Int?             @map("sqa_zone") @db.TinyInt
-  createdAt         DateTime?        @map("created_at")
-  updatedAt         DateTime?        @map("updated_at")
-  businesses        Business[]
-  districts         District[]
-  locationSearches  LocationSearch[]
+  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  name             String?          @map("RegionName")
+  code             String?          @map("RegionCode")
+  tamisemiId       BigInt           @map("tamisemi_id") @db.UnsignedBigInt
+  createdAt        DateTime?        @map("created_at")
+  updatedAt        DateTime?        @map("updated_at")
+  businesses       Business[]
+  districts        District[]
+  locationSearches LocationSearch[]
 
-  @@index([code], map: "idx_regions_RegionCode")
   @@map("regions")
 }
 
 model District {
-  id                             BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  regionId                       String     @map("RegionCode")
-  code                           String?    @unique @map("LgaCode")
-  name                           String?    @map("LgaName")
-  ngazi                          String?
-  sqaBox                         Int?       @map("sqa_box")
-  districtBox                    Int?       @map("district_box")
-  createdAt                      DateTime?  @map("created_at")
-  updatedAt                      DateTime?  @map("updated_at")
-  tamisemiId                     BigInt     @map("tamisemi_id") @db.UnsignedBigInt
-  parentArea                     BigInt?    @map("parent_area") @db.UnsignedBigInt
-  description                    String?
-  areaTypeId                     BigInt?    @map("area_type_id") @db.UnsignedBigInt
-  label                          String?
-  areaShortName                  String?    @map("area_short_name")
-  areaHqId                       BigInt?    @map("area_hq_id") @db.UnsignedBigInt
-  areaCode                       String?    @map("area_code")
-  establishmentDateApproximated  Boolean?   @default(false) @map("establishment_date_approximated") @db.TinyInt
-  mofCode                        String?    @map("mof_code")
-  businesses                     Business[]
-  region                         Region     @relation(fields: [regionId], references: [code])
-  wards                          Ward[]
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String?    @map("LgaName")
+  code       String?    @map("LgaCode")
+  regionCode String     @map("RegionCode") @db.VarChar(100)
+  regionId   BigInt?    @map("parent_area") @db.UnsignedBigInt
+  tamisemiId BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  createdAt  DateTime?  @map("created_at")
+  updatedAt  DateTime?  @map("updated_at")
+  businesses Business[]
+  region     Region?    @relation(fields: [regionId], references: [id])
+  wards      Ward[]
 
   @@index([regionId], map: "districts_regionId_fkey")
-  @@index([code], map: "idx_districts_LgaCode")
   @@map("districts")
 }
 
 model Ward {
-  id                            BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
-  districtId                    String     @map("LgaCode")
-  code                          String?    @unique @map("WardCode")
-  name                          String?    @map("WardName")
-  createdAt                     DateTime?  @map("created_at")
-  updatedAt                     DateTime?  @map("updated_at")
-  tamisemiId                    BigInt     @map("tamisemi_id") @db.UnsignedBigInt
-  parentArea                    BigInt?    @map("parent_area") @db.UnsignedBigInt
-  description                   String?
-  areaTypeId                    BigInt?    @map("area_type_id") @db.UnsignedBigInt
-  label                         String?
-  areaShortName                 String?    @map("area_short_name")
-  areaHqId                      BigInt?    @map("area_hq_id") @db.UnsignedBigInt
-  areaCode                      String?    @map("area_code")
-  establishmentDateApproximated Boolean?   @default(false) @map("establishment_date_approximated") @db.TinyInt
-  mofCode                       String?    @map("mof_code")
-  businesses                    Business[]
-  district                      District   @relation(fields: [districtId], references: [code])
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String?    @map("WardName")
+  code       String?    @map("WardCode")
+  districtId BigInt?    @map("parent_area") @db.UnsignedBigInt
+  tamisemiId BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  createdAt  DateTime?  @map("created_at")
+  updatedAt  DateTime?  @map("updated_at")
+  businesses Business[]
+  district   District?  @relation(fields: [districtId], references: [id])
+  streets    Street[]
 
-  streets                       Street[]
   @@index([districtId], map: "wards_districtId_fkey")
-  @@index([code], map: "wards_code_index")
   @@map("wards")
 }
 
 model Street {
-  id                            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  code                          String?   @unique @map("StreetCode")
-  name                          String?   @map("StreetName")
-  wardId                        String    @map("WardCode")
-  createdAt                     DateTime? @map("created_at")
-  updatedAt                     DateTime? @map("updated_at")
-  tamisemiId                    BigInt    @map("tamisemi_id") @db.UnsignedBigInt
-  parentArea                    BigInt?   @map("parent_area") @db.UnsignedBigInt
-  description                   String?
-  areaTypeId                    BigInt?   @map("area_type_id") @db.UnsignedBigInt
-  label                         String?
-  areaShortName                 String?   @map("area_short_name")
-  areaHqId                      BigInt?   @map("area_hq_id") @db.UnsignedBigInt
-  areaCode                      String?   @map("area_code")
-  establishmentDateApproximated Boolean?  @default(false) @map("establishment_date_approximated") @db.TinyInt
-  mofCode                       String?   @map("mof_code")
-  ward                          Ward      @relation(fields: [wardId], references: [code])
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String
+  wardId    BigInt   @map("ward_id") @db.UnsignedBigInt
+  code      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ward      Ward     @relation(fields: [wardId], references: [id], onDelete: Cascade)
 
   @@index([wardId], map: "streets_wardId_fkey")
-  @@index([code], map: "idx_streets_StreetCode")
   @@map("streets")
 }
 

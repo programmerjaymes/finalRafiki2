@@ -22,8 +22,12 @@ import Swal from 'sweetalert2';
 interface Category {
   id: string;
   name: string;
+  nameEn: string;
+  nameSw: string;
   icon: string | null;
   description: string | null;
+  descriptionEn: string | null;
+  descriptionSw: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,16 +48,17 @@ const CategoryList = () => {
   // Modal states
   const { isOpen: isAddModalOpen, openModal: openAddModal, closeModal: closeAddModal } = useModal();
   const { isOpen: isEditModalOpen, openModal: openEditModal, closeModal: closeEditModal } = useModal();
-  const { isOpen: isDeleteModalOpen, openModal: openDeleteModal, closeModal: closeDeleteModal } = useModal();
   
   // Current category for edit/delete
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   
   // Form data
   const [formData, setFormData] = useState({
-    name: '',
+    nameEn: '',
+    nameSw: '',
     icon: '',
-    description: ''
+    descriptionEn: '',
+    descriptionSw: '',
   });
   
   // Fetch categories
@@ -63,7 +68,8 @@ const CategoryList = () => {
       // Show loading indicator for long operations
       const loadingToast = toast.loading('Loading Categories', 'Fetching category data...');
       
-      const response = await fetch('/api/categories');
+      // Use nocache so admin always sees the latest categories immediately
+      const response = await fetch('/api/categories?nocache=1&allLang=1');
       
       // Close loading indicator
       toast.close();
@@ -93,19 +99,39 @@ const CategoryList = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   };
+
+  // When filters/search changes, go back to page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
   
   // Filter categories based on search
-  const filteredCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(search.toLowerCase()) ||
-    (category.description && category.description.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredCategories = categories.filter((category) => {
+    const q = search.toLowerCase();
+    return (
+      category.nameEn.toLowerCase().includes(q) ||
+      category.nameSw.toLowerCase().includes(q) ||
+      category.name.toLowerCase().includes(q) ||
+      (category.descriptionEn && category.descriptionEn.toLowerCase().includes(q)) ||
+      (category.descriptionSw && category.descriptionSw.toLowerCase().includes(q)) ||
+      (category.description && category.description.toLowerCase().includes(q))
+    );
+  });
+
+  // Clamp current page if filtered results shrink
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredCategories.length / pageSize));
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, filteredCategories.length, pageSize]);
   
   // Reset form data for new category
   const resetFormData = () => {
     setFormData({
-      name: '',
+      nameEn: '',
+      nameSw: '',
       icon: '',
-      description: ''
+      descriptionEn: '',
+      descriptionSw: '',
     });
   };
   
@@ -129,9 +155,11 @@ const CategoryList = () => {
   const handleEdit = (category: Category) => {
     setCurrentCategory(category);
     setFormData({
-      name: category.name,
+      nameEn: category.nameEn || category.name,
+      nameSw: category.nameSw || category.name,
       icon: category.icon || '',
-      description: category.description || ''
+      descriptionEn: category.descriptionEn ?? category.description ?? '',
+      descriptionSw: category.descriptionSw ?? '',
     });
     openEditModal();
   };
@@ -139,18 +167,18 @@ const CategoryList = () => {
   // Open delete modal
   const handleDelete = (category: Category) => {
     setCurrentCategory(category);
-    openDeleteModal();
+    handleConfirmDelete(category);
   };
   
   // Add new category
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
-      toast.error('Category name is required');
+    if (!formData.nameEn.trim() || !formData.nameSw.trim()) {
+      toast.error('English and Swahili names are required');
       return;
     }
-    
+
     try {
       const response = await fetch('/api/categories', {
         method: 'POST',
@@ -180,11 +208,11 @@ const CategoryList = () => {
     
     if (!currentCategory) return;
     
-    if (!formData.name.trim()) {
-      toast.error('Category name is required');
+    if (!formData.nameEn.trim() || !formData.nameSw.trim()) {
+      toast.error('English and Swahili names are required');
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/categories/${currentCategory.id}`, {
         method: 'PUT',
@@ -208,8 +236,7 @@ const CategoryList = () => {
   };
   
   // Confirm delete
-  const handleConfirmDelete = async () => {
-    if (!currentCategory) return;
+  const handleConfirmDelete = async (category: Category) => {
     
     try {
       // Use HTML format for richer confirmation dialog with category details
@@ -218,15 +245,16 @@ const CategoryList = () => {
           <p class="mb-4">You are about to delete:</p>
           <div class="flex items-center justify-center mb-4">
             <div class="flex items-center justify-center h-12 w-12 bg-gray-100 dark:bg-gray-800 rounded-full text-center">
-              ${currentCategory.icon ? 
-                `<span class="text-xl">${currentCategory.icon}</span>` : 
-                `<span class="text-gray-400 dark:text-gray-500 text-xl font-bold">${currentCategory.name.charAt(0)}</span>`
+              ${category.icon ? 
+                `<span class="text-xl">${category.icon}</span>` : 
+                `<span class="text-gray-400 dark:text-gray-500 text-xl font-bold">${category.nameEn.charAt(0)}</span>`
               }
             </div>
           </div>
-          <p class="text-lg font-semibold mb-1">${currentCategory.name}</p>
-          ${currentCategory.description ? 
-            `<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${currentCategory.description}</p>` : 
+          <p class="text-lg font-semibold mb-1">${category.nameEn}</p>
+          <p class="text-md text-gray-600 dark:text-gray-300 mb-1">${category.nameSw}</p>
+          ${category.descriptionEn || category.descriptionSw ? 
+            `<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${[category.descriptionEn, category.descriptionSw].filter(Boolean).join(' · ')}</p>` : 
             ''
           }
           <p class="mt-4 text-error-500 font-medium">This action cannot be undone.</p>
@@ -251,7 +279,7 @@ const CategoryList = () => {
       });
       
       if (result.isConfirmed) {
-        const response = await fetch(`/api/categories/${currentCategory.id}`, {
+        const response = await fetch(`/api/categories/${category.id}`, {
           method: 'DELETE'
         });
         
@@ -260,11 +288,9 @@ const CategoryList = () => {
         }
         
         await fetchCategories();
-        closeDeleteModal();
         toast.crud('delete', 'category');
       } else {
         // User cancelled delete
-        closeDeleteModal();
       }
     } catch (err) {
       console.error('Error deleting category:', err);
@@ -293,7 +319,7 @@ const CategoryList = () => {
             <span className="text-xl">{category.icon}</span>
           ) : (
             <span className="text-gray-400 dark:text-gray-500 text-xl font-bold">
-              {category.name.charAt(0)}
+              {category.nameEn.charAt(0)}
             </span>
           )}
         </div>
@@ -301,24 +327,43 @@ const CategoryList = () => {
       sortable: false
     },
     {
-      key: 'name',
-      header: 'Name',
+      key: 'nameEn',
+      header: 'Name (EN)',
       cell: (category) => (
-        <span className="font-medium text-gray-800 dark:text-white">{category.name}</span>
+        <span className="font-medium text-gray-800 dark:text-white">{category.nameEn}</span>
       ),
-      sortable: true
+      sortable: true,
+    },
+    {
+      key: 'nameSw',
+      header: 'Name (SW)',
+      cell: (category) => (
+        <span className="font-medium text-gray-800 dark:text-white">{category.nameSw}</span>
+      ),
+      sortable: true,
     },
     {
       key: 'description',
-      header: 'Description',
+      header: 'Descriptions',
       cell: (category) => (
-        category.description ? (
-          <span>{category.description}</span>
+        category.descriptionEn || category.descriptionSw ? (
+          <div className="text-sm space-y-1">
+            {category.descriptionEn ? (
+              <div>
+                <span className="text-gray-500">EN:</span> {category.descriptionEn}
+              </div>
+            ) : null}
+            {category.descriptionSw ? (
+              <div>
+                <span className="text-gray-500">SW:</span> {category.descriptionSw}
+              </div>
+            ) : null}
+          </div>
         ) : (
           <span className="text-gray-400 dark:text-gray-600 italic">No description</span>
         )
       ),
-      sortable: true
+      sortable: false,
     },
     {
       key: 'actions',
@@ -407,21 +452,31 @@ const CategoryList = () => {
       <Modal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        className="max-w-[500px] p-6"
+        className="max-w-[520px] p-6"
       >
-        <form onSubmit={handleAdd}>
+        <form id="add-category-form" onSubmit={handleAdd}>
           <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-6">
             Add New Category
           </h4>
           
           <div className="space-y-4">
             <div>
-              <Label>Category Name*</Label>
+              <Label>Name (English)*</Label>
               <Input 
                 type="text" 
-                name="name" 
-                placeholder="e.g. Restaurants, Hotels, etc." 
-                defaultValue={formData.name}
+                name="nameEn" 
+                placeholder="e.g. Restaurants" 
+                value={formData.nameEn}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label>Name (Swahili)*</Label>
+              <Input 
+                type="text" 
+                name="nameSw" 
+                placeholder="e.g. Migahawa" 
+                value={formData.nameSw}
                 onChange={handleChange}
               />
             </div>
@@ -432,28 +487,38 @@ const CategoryList = () => {
                 type="text" 
                 name="icon" 
                 placeholder="e.g. 🍔 or fa-utensils" 
-                defaultValue={formData.icon}
+                value={formData.icon}
                 onChange={handleChange}
               />
             </div>
             
             <div>
-              <Label>Description</Label>
+              <Label>Description (English)</Label>
               <textarea 
-                name="description" 
-                placeholder="Brief description of this category" 
-                value={formData.description}
+                name="descriptionEn" 
+                placeholder="Brief description in English" 
+                value={formData.descriptionEn}
                 onChange={handleChange}
-                className="h-24 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                className="h-20 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <Label>Description (Swahili)</Label>
+              <textarea 
+                name="descriptionSw" 
+                placeholder="Maelezo mafupi kwa Kiswahili" 
+                value={formData.descriptionSw}
+                onChange={handleChange}
+                className="h-20 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
           </div>
           
           <div className="flex items-center justify-end w-full gap-3 mt-8">
-            <Button size="sm" variant="outline" onClick={closeAddModal}>
+            <Button type="button" size="sm" variant="outline" onClick={closeAddModal}>
               Cancel
             </Button>
-            <Button size="sm" onClick={() => document.forms[0].requestSubmit()}>
+            <Button type="submit" size="sm">
               Add Category
             </Button>
           </div>
@@ -464,21 +529,31 @@ const CategoryList = () => {
       <Modal
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        className="max-w-[500px] p-6"
+        className="max-w-[520px] p-6"
       >
-        <form onSubmit={handleUpdate}>
+        <form id="edit-category-form" onSubmit={handleUpdate}>
           <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-6">
             Edit Category
           </h4>
           
           <div className="space-y-4">
             <div>
-              <Label>Category Name*</Label>
+              <Label>Name (English)*</Label>
               <Input 
                 type="text" 
-                name="name" 
-                placeholder="e.g. Restaurants, Hotels, etc." 
-                defaultValue={formData.name}
+                name="nameEn" 
+                placeholder="e.g. Restaurants" 
+                value={formData.nameEn}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label>Name (Swahili)*</Label>
+              <Input 
+                type="text" 
+                name="nameSw" 
+                placeholder="e.g. Migahawa" 
+                value={formData.nameSw}
                 onChange={handleChange}
               />
             </div>
@@ -489,57 +564,44 @@ const CategoryList = () => {
                 type="text" 
                 name="icon" 
                 placeholder="e.g. 🍔 or fa-utensils" 
-                defaultValue={formData.icon}
+                value={formData.icon}
                 onChange={handleChange}
               />
             </div>
             
             <div>
-              <Label>Description</Label>
+              <Label>Description (English)</Label>
               <textarea 
-                name="description" 
-                placeholder="Brief description of this category" 
-                value={formData.description}
+                name="descriptionEn" 
+                placeholder="Brief description in English" 
+                value={formData.descriptionEn}
                 onChange={handleChange}
-                className="h-24 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                className="h-20 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+              />
+            </div>
+            <div>
+              <Label>Description (Swahili)</Label>
+              <textarea 
+                name="descriptionSw" 
+                placeholder="Maelezo mafupi kwa Kiswahili" 
+                value={formData.descriptionSw}
+                onChange={handleChange}
+                className="h-20 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
               />
             </div>
           </div>
           
           <div className="flex items-center justify-end w-full gap-3 mt-8">
-            <Button size="sm" variant="outline" onClick={closeEditModal}>
+            <Button type="button" size="sm" variant="outline" onClick={closeEditModal}>
               Cancel
             </Button>
-            <Button size="sm" onClick={() => document.forms[1].requestSubmit()}>
+            <Button type="submit" size="sm">
               Update Category
             </Button>
           </div>
         </form>
       </Modal>
       
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={closeDeleteModal}
-        className="max-w-[400px] p-6"
-      >
-        <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">
-          Confirm Delete
-        </h4>
-        
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
-          Are you sure you want to delete the <span className="font-semibold">{currentCategory?.name}</span> category? This action cannot be undone.
-        </p>
-        
-        <div className="flex items-center justify-end w-full gap-3">
-          <Button size="sm" variant="outline" onClick={closeDeleteModal}>
-            Cancel
-          </Button>
-          <Button size="sm" variant="outline" className="bg-error-500 text-white hover:bg-error-600 ring-error-500" onClick={handleConfirmDelete}>
-            Delete
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 };

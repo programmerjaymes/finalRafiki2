@@ -1,24 +1,43 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+
+export const revalidate = 3600 // 1 hour
+
+function toJsonRegion(r: { id: bigint; name: string | null; code: string | null }) {
+  return {
+    ...r,
+    id: r.id.toString(),
+  };
+}
 
 // GET all regions
 export async function GET(request: Request) {
   try {
-    const regions = await prisma.region.findMany({
-      orderBy: {
-        name: 'asc'
-      }
+    const getRegions = unstable_cache(
+      async () => {
+        const rows = await prisma.region.findMany({
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+          orderBy: { name: 'asc' },
+        });
+        // Must return JSON-serializable data: unstable_cache stringifies the result (BigInt breaks).
+        return rows.map(toJsonRegion);
+      },
+      ['regions:v3'],
+      { revalidate, tags: ['regions'] }
+    );
+
+    const regions = await getRegions();
+
+    return NextResponse.json(regions, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
     });
-    
-    // Convert BigInt to string for JSON serialization
-    const serializedRegions = regions.map(region => ({
-      ...region,
-      id: region.id.toString(),
-      tamisemiId: region.tamisemiId?.toString() || null,
-      parentArea: region.parentArea?.toString() || null,
-    }));
-    
-    return NextResponse.json(serializedRegions);
   } catch (error) {
     console.error('Error fetching regions:', error);
     return NextResponse.json(

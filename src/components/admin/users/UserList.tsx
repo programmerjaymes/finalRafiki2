@@ -13,7 +13,6 @@ import {
   PencilIcon,
   TrashIcon,
   PlusIcon,
-  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 import {
@@ -62,7 +61,6 @@ export default function UserList() {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [changingRoleUserId, setChangingRoleUserId] = useState<string | null>(null);
   
   // Modal state
   const [showUserModal, setShowUserModal] = useState(false);
@@ -150,36 +148,6 @@ export default function UserList() {
     } finally {
       setShowDeleteConfirm(false);
       setUserToDelete(null);
-    }
-  };
-
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setChangingRoleUserId(userId);
-    try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update user role: ${response.statusText}`);
-      }
-      
-      // Update the user in the list
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, role: newRole as User['role'] } : user
-        )
-      );
-      toast.success('User role updated successfully');
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast.error('Failed to update user role');
-    } finally {
-      setChangingRoleUserId(null);
     }
   };
 
@@ -321,30 +289,7 @@ export default function UserList() {
                         {user.email}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={user.role}
-                            onValueChange={(value) => handleRoleChange(user.id, value)}
-                            disabled={changingRoleUserId === user.id}
-                          >
-                            <SelectTrigger className="w-[180px]" onClick={(e) => e.stopPropagation()}>
-                              <SelectValue>
-                                {renderRoleBadge(user.role)}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectItem value="ADMIN">Admin</SelectItem>
-                                <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
-                                <SelectItem value="BUSINESS_REGISTRAR">Business Registrar</SelectItem>
-                                <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
-                          {changingRoleUserId === user.id && (
-                            <ArrowPathIcon className="h-4 w-4 animate-spin text-gray-500" />
-                          )}
-                        </div>
+                        {renderRoleBadge(user.role)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         {user.emailVerified ? (

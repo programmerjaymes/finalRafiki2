@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+function toBigInt(value: string) {
+  return BigInt(value);
+}
+
+function toJsonDistrict(d: { id: bigint; name: string | null; code: string | null; regionId: bigint | null }) {
+  return {
+    ...d,
+    id: d.id.toString(),
+    regionId: d.regionId ? d.regionId.toString() : null,
+  };
+}
+
 // GET districts by region ID
 export async function GET(
   request: Request,
@@ -11,24 +23,20 @@ export async function GET(
     
     const districts = await prisma.district.findMany({
       where: {
-        regionId: regionId
+        regionId: toBigInt(regionId)
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        regionId: true,
       },
       orderBy: {
         name: 'asc'
       }
     });
     
-    // Convert BigInt to string for JSON serialization
-    const serializedDistricts = districts.map(district => ({
-      ...district,
-      id: district.id.toString(),
-      tamisemiId: district.tamisemiId?.toString() || null,
-      parentArea: district.parentArea?.toString() || null,
-      areaTypeId: district.areaTypeId?.toString() || null,
-      areaHqId: district.areaHqId?.toString() || null,
-    }));
-    
-    return NextResponse.json(serializedDistricts);
+    return NextResponse.json(districts.map(toJsonDistrict));
   } catch (error) {
     console.error('Error fetching districts:', error);
     return NextResponse.json(

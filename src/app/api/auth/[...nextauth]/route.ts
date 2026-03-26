@@ -65,6 +65,14 @@ const handler = NextAuth({
   ],
   session: {
     strategy: 'jwt',
+    // Session expires after 2 hours of inactivity
+    maxAge: 60 * 60 * 2,
+    // Refresh the session token every 15 minutes (when active)
+    updateAge: 60 * 15,
+  },
+  jwt: {
+    // Keep JWT lifetime aligned with session lifetime
+    maxAge: 60 * 60 * 2,
   },
   pages: {
     signIn: '/signin',

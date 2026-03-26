@@ -3,6 +3,21 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { getLocaleFromRequest, localizedCategoryFields } from '@/lib/categoryLocale';
+
+function toBigIntOrUndefined(value: unknown) {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number') return BigInt(value);
+  if (typeof value === 'string') return BigInt(value);
+  return undefined;
+}
+
+function jsonSafe<T>(data: T): T {
+  return JSON.parse(
+    JSON.stringify(data, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))
+  );
+}
 
 // GET all businesses with pagination and search
 export async function GET(request: Request) {
@@ -17,17 +32,7 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
     
     // Build the where condition
-    const where: Prisma.BusinessWhereInput = {
-      // Only show approved and verified businesses to customers
-      // In MySQL, boolean true is stored as 1
-      isApproved: true,
-      isVerified: true,
-      // Explicitly exclude any non-boolean values
-      AND: [
-        { isApproved: { equals: true } },
-        { isVerified: { equals: true } }
-      ]
-    };
+    const where: Prisma.BusinessWhereInput = {};
     
     if (search) {
       where.OR = [
@@ -44,14 +49,13 @@ export async function GET(request: Request) {
     }
     
     if (regionId) {
-      where.regionId = BigInt(regionId);
+      where.regionId = toBigIntOrUndefined(regionId);
       
       // Track location search
-      await trackLocationSearch(regionId);
+      await trackLocationSearch(BigInt(regionId));
     }
     
     console.log('📋 Fetching businesses with params:', { page, limit, search, categoryId, regionId });
-    console.log('🔍 Where clause:', JSON.stringify(where, null, 2));
     
     // Get businesses with pagination
     const businesses = await prisma.business.findMany({
@@ -65,8 +69,8 @@ export async function GET(request: Request) {
         category: {
           select: {
             name: true,
-            icon: true
-          }
+            icon: true,
+          },
         },
         owner: {
           select: {
@@ -102,13 +106,11 @@ export async function GET(request: Request) {
 
     console.log(`✅ Found ${businesses.length} businesses`);
     
-    // Log first business to check logo field and approval status
+    // Log first business to check logo field
     if (businesses.length > 0) {
       console.log('🔍 First business sample:', {
         id: businesses[0].id,
         name: businesses[0].name,
-        isApproved: businesses[0].isApproved,
-        isVerified: businesses[0].isVerified,
         hasLogo: !!businesses[0].logo,
         logoLength: businesses[0].logo?.length || 0,
         logoPreview: businesses[0].logo ? businesses[0].logo.substring(0, 50) + '...' : null
@@ -174,58 +176,32 @@ export async function GET(request: Request) {
       }
     }
 
-    // Serialize BigInt fields for JSON
-    const serializedBusinesses = businesses.map(business => {
-      try {
-        return {
-          ...business,
-          regionId: business.regionId ? business.regionId.toString() : null,
-          districtId: business.districtId ? business.districtId.toString() : null,
-          wardId: business.wardId ? business.wardId.toString() : null,
-        };
-      } catch (err) {
-        console.error('Error serializing business:', business.id, err);
-        // Return business with null IDs if serialization fails
-        return {
-          ...business,
-          regionId: null,
-          districtId: null,
-          wardId: null,
-        };
-      }
-    });
+    const locale = getLocaleFromRequest(request);
+    const businessesOut = businesses.map((b) => ({
+      ...b,
+      category: {
+        icon: b.category.icon,
+        name: localizedCategoryFields(b.category, locale).name,
+      },
+    }));
 
-    return NextResponse.json({
-      businesses: serializedBusinesses,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    return NextResponse.json(
+      jsonSafe({
+        businesses: businessesOut,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      }),
+      { headers: { Vary: 'Cookie' } }
+    );
   } catch (err) {
-    console.error('❌ Error fetching businesses:', err);
-    
-    // Log detailed error information
-    if (err instanceof Error) {
-      console.error('Error name:', err.name);
-      console.error('Error message:', err.message);
-      console.error('Error stack:', err.stack);
-    }
-    
+    console.error('Error fetching businesses:', err);
     const errorMessage = err instanceof Error ? err.message : 'Failed to fetch businesses';
     return NextResponse.json(
-      { 
-        error: errorMessage,
-        businesses: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0
-        }
-      },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -261,7 +237,7 @@ async function trackCategorySearch(categoryId: string) {
 }
 
 // Helper function to track location searches
-async function trackLocationSearch(regionId: string) {
+async function trackLocationSearch(regionId: bigint) {
   try {
     // Check if record exists using raw SQL
     const existingRecords = await prisma.$queryRaw`
@@ -373,16 +349,16 @@ export async function POST(request: Request) {
     // Determine the owner
     const finalOwnerId = isAdmin && ownerId ? ownerId : currentUser.id;
 
-    // Build business data - convert location IDs to BigInt
+    // Build business data
     const businessData: any = {
       name,
       description: description || null,
       email: email || null,
       phone: phone || null,
       street: street || null,
-      regionId: regionId ? BigInt(regionId) : undefined,
-      districtId: districtId ? BigInt(districtId) : undefined,
-      wardId: wardId ? BigInt(wardId) : undefined,
+      regionId: toBigIntOrUndefined(regionId),
+      districtId: toBigIntOrUndefined(districtId),
+      wardId: toBigIntOrUndefined(wardId),
       bundleId,
       categoryId,
       categoryId2: categoryId2 || null,
@@ -424,26 +400,30 @@ export async function POST(request: Request) {
       const createdBiz = await prisma.business.findUnique({
         where: { id },
         include: {
-          category: { select: { name: true, icon: true } },
+          category: {
+            select: { name: true, icon: true },
+          },
           owner: { select: { name: true, email: true } },
           bundle: true,
-        }
+        },
       });
 
-      // Serialize BigInt fields to strings for JSON response
-      const serializedCreatedBiz = createdBiz ? {
-        ...createdBiz,
-        id: createdBiz.id.toString(),
-        regionId: createdBiz.regionId?.toString() || null,
-        districtId: createdBiz.districtId?.toString() || null,
-        wardId: createdBiz.wardId?.toString() || null,
-        bundle: createdBiz.bundle ? {
-          ...createdBiz.bundle,
-          id: createdBiz.bundle.id.toString(),
-        } : null,
-      } : null;
+      const loc = getLocaleFromRequest(request);
+      const bizOut =
+        createdBiz && createdBiz.category
+          ? {
+              ...createdBiz,
+              category: {
+                icon: createdBiz.category.icon,
+                name: localizedCategoryFields(createdBiz.category, loc).name,
+              },
+            }
+          : createdBiz;
 
-      return NextResponse.json(serializedCreatedBiz, { status: 201 });
+      return NextResponse.json(jsonSafe(bizOut), {
+        status: 201,
+        headers: { Vary: 'Cookie' },
+      });
     }
 
     // Standard creation with all foreign keys present
@@ -486,20 +466,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Serialize BigInt fields to strings for JSON response
-    const serializedBusiness = {
-      ...business,
-      id: business.id.toString(),
-      regionId: business.regionId?.toString() || null,
-      districtId: business.districtId?.toString() || null,
-      wardId: business.wardId?.toString() || null,
-      bundle: business.bundle ? {
-        ...business.bundle,
-        id: business.bundle.id.toString(),
-      } : null,
-    };
-    
-    return NextResponse.json(serializedBusiness, { status: 201 });
+    return NextResponse.json(jsonSafe(business), { status: 201 });
   } catch (err) {
     console.error('Error creating business:', err);
     const errorMessage = err instanceof Error ? err.message : 'Failed to create business';

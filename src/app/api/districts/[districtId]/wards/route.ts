@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+function toBigInt(value: string) {
+  return BigInt(value);
+}
+
+function toJsonWard(w: { id: bigint; name: string | null; code: string | null; districtId: bigint | null }) {
+  return {
+    ...w,
+    id: w.id.toString(),
+    districtId: w.districtId ? w.districtId.toString() : null,
+  };
+}
+
 // GET wards by district ID
 export async function GET(
   request: Request,
@@ -11,24 +23,20 @@ export async function GET(
     
     const wards = await prisma.ward.findMany({
       where: {
-        districtId: districtId
+        districtId: toBigInt(districtId)
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        districtId: true,
       },
       orderBy: {
         name: 'asc'
       }
     });
     
-    // Convert BigInt to string for JSON serialization
-    const serializedWards = wards.map(ward => ({
-      ...ward,
-      id: ward.id.toString(),
-      tamisemiId: ward.tamisemiId?.toString() || null,
-      parentArea: ward.parentArea?.toString() || null,
-      areaTypeId: ward.areaTypeId?.toString() || null,
-      areaHqId: ward.areaHqId?.toString() || null,
-    }));
-    
-    return NextResponse.json(serializedWards);
+    return NextResponse.json(wards.map(toJsonWard));
   } catch (error) {
     console.error('Error fetching wards:', error);
     return NextResponse.json(

@@ -8,6 +8,8 @@ import Navbar from '@/components/landing/Navbar';
 import type { Business, Category, Region } from '@prisma/client';
 import Link from 'next/link';
 import { FaPhone } from 'react-icons/fa';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 
 interface BusinessWithCategory extends Business {
   category: {
@@ -32,6 +34,8 @@ interface BusinessResponse {
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const locale = useLocale();
+  const messages = t(locale);
   const [businesses, setBusinesses] = useState<BusinessWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -70,7 +74,7 @@ function SearchResults() {
 
       const response = await fetch(`/api/businesses?${params.toString()}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch businesses: ${response.status}`);
+        throw new Error('Failed to fetch businesses');
       }
       
       const data: BusinessResponse = await response.json();
@@ -82,10 +86,7 @@ function SearchResults() {
       setTotalResults(data.pagination?.total || 0);
     } catch (err) {
       console.error('Error fetching businesses:', err);
-      alert('Unable to load businesses. Please check your connection and try again.');
       setBusinesses([]);
-      setTotalPages(1);
-      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -106,13 +107,10 @@ function SearchResults() {
       const categoriesData = await categoriesResponse.json();
       const regionsData = await regionsResponse.json();
       
-      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-      setRegions(Array.isArray(regionsData) ? regionsData : []);
+      setCategories(categoriesData);
+      setRegions(regionsData);
     } catch (err) {
       console.error('Error fetching reference data:', err);
-      alert('Unable to load search filters. Some features may be limited.');
-      setCategories([]);
-      setRegions([]);
     }
   }, []);
 
@@ -139,6 +137,16 @@ function SearchResults() {
     router.push(`/search?${params.toString()}`);
   };
 
+  const clearFilters = () => {
+    setSelectedCategory('');
+    setSelectedRegion('');
+    setPriceRange('');
+    setCurrentPage(1);
+    router.push('/search');
+  };
+
+  const activeFiltersCount = (selectedCategory ? 1 : 0) + (selectedRegion ? 1 : 0) + (priceRange ? 1 : 0);
+
   // Debug active selections
   console.log('Current selections:', { 
     categoryParam: searchParams.get('category'),
@@ -150,208 +158,302 @@ function SearchResults() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar />
-      <main className="py-24"> {/* Increased padding-top to account for fixed navbar */}
+      <main className="pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Search Filters */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Category
-                </label>
-                <Select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Location
-                </label>
-                <Select
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="w-full"
-                >
-                  <option value="">All Locations</option>
-                  {regions.map((region) => (
-                    <option key={region.id.toString()} value={region.id.toString()}>
-                      {region.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Price Range
-                </label>
-                <Select
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
-                  className="w-full"
-                >
-                  <option value="">Any Price</option>
-                  <option value="low">Low (Below $100)</option>
-                  <option value="medium">Medium ($100 - $500)</option>
-                  <option value="high">High (Above $500)</option>
-                </Select>
-              </div>
+          {/* Header */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {messages.search.title}
+              </h1>
+              <p className="mt-1 text-gray-600 dark:text-gray-300">
+                {messages.search.subtitle}
+              </p>
             </div>
-            <div className="mt-6 text-center">
-              <button
-                onClick={handleSearch}
-                className="bg-primary text-white dark:bg-secondary dark:text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-primary-dark dark:hover:bg-secondary-light transition duration-200"
+            <div className="flex items-center gap-3">
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                >
+                  {messages.search.clearFilters}
+                </button>
+              )}
+              <Link
+                href="/business-create"
+                className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-4 py-2.5 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
               >
-                Update Search
-              </button>
+                {messages.search.registerBusiness}
+              </Link>
             </div>
           </div>
 
-          {/* Results Header */}
-          {!loading && (
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {totalResults} Result{totalResults !== 1 ? 's' : ''} Found
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Page {currentPage} of {totalPages}
-              </p>
-            </div>
-          )}
-          
-          {/* Results */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-pulse">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Filters */}
+            <aside className="lg:col-span-4 xl:col-span-3">
+              <div className="lg:sticky lg:top-24 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">{messages.search.filters}</h2>
+                  {activeFiltersCount > 0 && (
+                    <span className="text-xs rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-1 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-700">
+                      {activeFiltersCount} {messages.search.active}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.isArray(businesses) && businesses.map((business) => (
-                  <motion.div
-                    key={business.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden border border-gray-100 dark:border-gray-700"
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {messages.search.category}
+                    </label>
+                    <Select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full"
+                    >
+                      <option value="">{messages.search.allCategories}</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {messages.search.location}
+                    </label>
+                    <Select
+                      value={selectedRegion}
+                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      className="w-full"
+                    >
+                      <option value="">{messages.search.allLocations}</option>
+                      {regions.map((region) => (
+                        <option key={String(region.id)} value={String(region.id)}>
+                          {region.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {messages.search.priceRange}
+                    </label>
+                    <Select
+                      value={priceRange}
+                      onChange={(e) => setPriceRange(e.target.value)}
+                      className="w-full"
+                    >
+                      <option value="">{messages.search.anyPrice}</option>
+                      <option value="low">{messages.search.budget}</option>
+                      <option value="medium">{messages.search.standard}</option>
+                      <option value="high">{messages.search.premium}</option>
+                    </Select>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Price range is optional and may not be supported for all listings.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleSearch}
+                    className="w-full inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-4 py-3 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
                   >
-                    <Link href={`/businesses/${business.id}`}>
-                      <div className="p-4">
-                        {/* Business Logo */}
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-                            {business.logo ? (
-                              <img 
-                                src={business.logo.startsWith('data:') ? business.logo : `data:image/jpeg;base64,${business.logo}`} 
-                                alt={business.name} 
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-500 text-xl font-bold">
-                                {business.name.charAt(0)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center line-clamp-1">
-                          {business.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2 text-center">
-                          {business.description}
-                        </p>
-                        
-                        {/* Phone number */}
-                        {business.phone && (
-                          <div className="flex items-center justify-center mb-2 text-sm text-gray-600 dark:text-gray-300">
-                            <FaPhone className="mr-1.5 text-primary dark:text-secondary text-xs" />
-                            <span className="truncate">{business.phone}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-100 dark:border-gray-700">
-                          <span className="text-primary dark:text-secondary font-medium truncate">
-                            {business.category?.name || 'Uncategorized'}
-                          </span>
-                          <span className="text-gray-500 dark:text-gray-400 truncate ml-2">
-                            {business.region?.name || 'Unknown location'}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
+                    {messages.search.applyFilters}
+                  </button>
+                </div>
               </div>
-              {businesses.length === 0 && (
-                <div className="col-span-full text-center py-12">
-                  <h3 className="text-xl text-gray-600 dark:text-gray-300">
-                    No businesses found matching your criteria
-                  </h3>
+            </aside>
+
+            {/* Results */}
+            <section className="lg:col-span-8 xl:col-span-9">
+              {!loading && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {totalResults.toLocaleString()} {totalResults === 1 ? messages.search.result : messages.search.results}
+                  </h2>
+                  {totalPages > 1 && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {messages.search.page} {currentPage} {messages.search.of} {totalPages}
+                    </p>
+                  )}
                 </div>
               )}
-              
-              {/* Pagination */}
-              {totalPages > 1 && businesses.length > 0 && (
-                <div className="col-span-full mt-8 flex justify-center items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    Previous
-                  </button>
-                  <div className="flex gap-2">
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                      let page;
-                      if (totalPages <= 5) {
-                        page = i + 1;
-                      } else if (currentPage <= 3) {
-                        page = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        page = totalPages - 4 + i;
-                      } else {
-                        page = currentPage - 2 + i;
-                      }
+
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {[...Array(9)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5 animate-pulse"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-gray-200 dark:bg-gray-800" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3" />
+                          <div className="mt-2 h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
+                        </div>
+                      </div>
+                      <div className="mt-4 h-3 bg-gray-200 dark:bg-gray-800 rounded w-full" />
+                      <div className="mt-2 h-3 bg-gray-200 dark:bg-gray-800 rounded w-5/6" />
+                      <div className="mt-5 flex items-center justify-between">
+                        <div className="h-6 w-24 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                        <div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {Array.isArray(businesses) && businesses.map((business) => {
+                      const logoSrc =
+                        business.logo && business.logo.startsWith('data:')
+                          ? business.logo
+                          : business.logo
+                            ? `data:image/jpeg;base64,${business.logo}`
+                            : null;
+
                       return (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-4 py-2 rounded-lg transition ${
-                            currentPage === page
-                              ? 'bg-primary text-white dark:bg-secondary dark:text-gray-900'
-                              : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
+                        <Link
+                          key={business.id}
+                          href={`/businesses/${business.id}`}
+                          className="group block rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-xl transition-shadow"
                         >
-                          {page}
-                        </button>
+                          <div className="p-5">
+                            <div className="flex items-start gap-4">
+                              <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-800">
+                                {logoSrc ? (
+                                  <img
+                                    src={logoSrc}
+                                    alt={business.name}
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <span className="text-gray-700 dark:text-gray-200 font-bold">
+                                    {business.name?.charAt(0)?.toUpperCase() || 'B'}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-3">
+                                  <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                                    {business.name}
+                                  </h3>
+                                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-700">
+                                    <span aria-hidden>{business.category?.icon || '•'}</span>
+                                    <span className="truncate max-w-[120px]">{business.category?.name || 'Category'}</span>
+                                  </span>
+                                </div>
+
+                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                                  {business.description || messages.search.viewDetails}
+                                </p>
+
+                                <div className="mt-4 flex items-center justify-between gap-3">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {business.region?.name || messages.search.unknownLocation}
+                                  </span>
+
+                                  {business.phone ? (
+                                    <span className="inline-flex items-center text-xs font-medium text-primary dark:text-secondary">
+                                      <FaPhone className="mr-1.5 text-[11px]" />
+                                      <span className="truncate max-w-[140px]">{business.phone}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">{messages.search.noPhone}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 h-px bg-gray-100 dark:bg-gray-800" />
+                            <div className="mt-4 flex items-center justify-between">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary dark:group-hover:text-secondary transition-colors">
+                                {messages.search.viewDetails}
+                              </span>
+                              <span className="text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                                →
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
                       );
                     })}
                   </div>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                  >
-                    Next
-                  </button>
-                </div>
+
+                  {businesses.length === 0 && (
+                    <div className="mt-10 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {messages.search.noResultsTitle}
+                      </h3>
+                      <p className="mt-2 text-gray-600 dark:text-gray-300">
+                        {messages.search.noResultsDesc}
+                      </p>
+                      <div className="mt-6 flex justify-center">
+                        <button
+                          onClick={clearFilters}
+                          className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-6 py-3 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
+                        >
+                          {messages.search.clearFilters}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {totalPages > 1 && businesses.length > 0 && (
+                    <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        Previous
+                      </button>
+
+                      <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                          let page;
+                          if (totalPages <= 7) page = i + 1;
+                          else if (currentPage <= 4) page = i + 1;
+                          else if (currentPage >= totalPages - 3) page = totalPages - 6 + i;
+                          else page = currentPage - 3 + i;
+
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`h-10 min-w-10 px-3 rounded-xl transition border ${
+                                currentPage === page
+                                  ? 'bg-primary text-white dark:bg-secondary dark:text-gray-900 border-transparent'
+                                  : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </section>
+          </div>
         </div>
       </main>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaPhone, FaEnvelope, FaGlobe, FaFacebook, FaInstagram, FaTwitter, FaStar, FaMapMarkerAlt } from 'react-icons/fa';
@@ -73,21 +73,22 @@ interface Business {
   };
 }
 
-export default function BusinessDetails() {
+export default function BusinessDetails({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const params = useParams();
-  const businessId = params?.id as string;
 
   // Fetch business data
   useEffect(() => {
-    if (!businessId) return;
-    
     async function fetchBusinessData() {
       try {
-        const response = await fetch(`/api/businesses/${businessId}`);
+        const response = await fetch(`/api/businesses/${id}`);
         
         if (!response.ok) {
           if (response.status === 404) {
@@ -104,7 +105,7 @@ export default function BusinessDetails() {
         
         // Track view
         try {
-          await fetch(`/api/businesses/${businessId}/view`, {
+          await fetch(`/api/businesses/${id}/view`, {
             method: 'POST'
           });
         } catch (err) {
@@ -119,7 +120,7 @@ export default function BusinessDetails() {
     }
     
     fetchBusinessData();
-  }, [businessId]);
+  }, [id]);
 
   if (loading) {
     return (

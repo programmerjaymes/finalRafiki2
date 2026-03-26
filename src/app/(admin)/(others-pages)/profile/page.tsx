@@ -1,6 +1,4 @@
-import UserAddressCard from "@/components/user-profile/UserAddressCard";
-import UserInfoCard from "@/components/user-profile/UserInfoCard";
-import UserMetaCard from "@/components/user-profile/UserMetaCard";
+import ProfileClient from "@/components/user-profile/ProfileClient";
 import { Metadata } from "next";
 import React from "react";
 
@@ -17,11 +15,7 @@ export default function Profile() {
         <h3 className="mb-5 text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-7">
           Profile
         </h3>
-        <div className="space-y-6">
-          <UserMetaCard />
-          <UserInfoCard />
-          <UserAddressCard />
-        </div>
+        <ProfileClient />
       </div>
     </div>
   );

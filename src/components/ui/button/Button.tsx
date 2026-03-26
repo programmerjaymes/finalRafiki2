@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 
 interface ButtonProps {
   children: ReactNode; // Button text or content
+  type?: "button" | "submit" | "reset";
   size?: "sm" | "md"; // Button size
   variant?: "primary" | "outline"; // Button variant
   startIcon?: ReactNode; // Icon before the text
@@ -14,6 +15,7 @@ interface ButtonProps {
 
 const Button: React.FC<ButtonProps> = ({
   children,
+  type = "button",
   size = "md",
   variant = "primary",
   startIcon,
@@ -63,6 +65,7 @@ const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
+      type={type}
       className={`inline-flex items-center justify-center font-medium gap-2 rounded-lg transition ${className} ${
         sizeClasses[size]
       } ${variantClasses[variant]} ${

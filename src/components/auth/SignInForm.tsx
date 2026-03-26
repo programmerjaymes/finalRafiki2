@@ -13,6 +13,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { signIn } from "next-auth/react";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/lib/useLocale";
 
 // Define login schema with validation
 const loginSchema = z.object({
@@ -24,6 +26,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function SignInForm() {
+  const locale = useLocale();
+  const messages = t(locale);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -61,7 +65,7 @@ export default function SignInForm() {
       }
       
       // Show success message
-      toast.success("Login successful");
+      toast.success(messages.auth.loginSuccess);
       
       // Get the user session to determine role
       const response = await fetch('/api/auth/session');
@@ -83,7 +87,7 @@ export default function SignInForm() {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error(error instanceof Error ? error.message : "Invalid email or password");
+      toast.error(error instanceof Error ? error.message : messages.auth.loginFailed);
     } finally {
       setIsLoading(false);
     }
@@ -118,7 +122,7 @@ export default function SignInForm() {
                 strokeLinejoin="round"
               />
           </svg>
-          Back to Home
+          {messages.auth.backHome}
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -133,10 +137,10 @@ export default function SignInForm() {
               </div>
             </div>
             <h1 className="mb-2 font-bold text-gray-800 text-2xl dark:text-white/90">
-              Welcome to Rafiki
+              {messages.auth.welcomeTitle}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-              Sign in to your account to manage your business listings and analytics
+              {messages.auth.welcomeSubtitle}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800/40 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
@@ -144,10 +148,10 @@ export default function SignInForm() {
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Email <span className="text-error-500">*</span>{" "}
+                    {messages.auth.email} <span className="text-error-500">*</span>{" "}
                   </Label>
                   <Input 
-                    placeholder="your@email.com" 
+                    placeholder={messages.auth.emailPlaceholder}
                     type="email" 
                     name="email"
                     onChange={(e) => setValue("email", e.target.value)}
@@ -157,12 +161,12 @@ export default function SignInForm() {
                 </div>
                 <div>
                   <Label>
-                    Password <span className="text-error-500">*</span>{" "}
+                    {messages.auth.password} <span className="text-error-500">*</span>{" "}
                   </Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder={messages.auth.passwordPlaceholder}
                       name="password"
                       onChange={(e) => setValue("password", e.target.value)}
                       error={!!errors.password}
@@ -192,14 +196,14 @@ export default function SignInForm() {
                   <div className="flex items-center gap-3">
                     <Checkbox checked={!!isChecked} onChange={handleCheckboxChange} />
                     <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
-                      Keep me logged in
+                      {messages.auth.keepLoggedIn}
                     </span>
                   </div>
                   <Link
                     href="/reset-password"
                     className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
                   >
-                    Forgot password?
+                    {messages.auth.forgotPassword}
                   </Link>
                 </div>
                 <div>
@@ -215,9 +219,9 @@ export default function SignInForm() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Signing in...
+                        {messages.auth.signingIn}
                       </div>
-                    ) : "Sign in"}
+                    ) : messages.auth.signIn}
                   </Button>
                 </div>
               </div>
@@ -225,7 +229,7 @@ export default function SignInForm() {
 
             <div className="mt-6 text-center">
               <p className="text-sm font-normal text-gray-700 dark:text-gray-400">
-                Don&apos;t have an account? {""}
+                {messages.auth.noAccount} {""}
                 <button
                   onClick={handleNavigateToSignup}
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline focus:outline-none"
@@ -237,9 +241,9 @@ export default function SignInForm() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Redirecting...
+                      {messages.auth.redirecting}
                     </span>
-                  ) : "Sign up"}
+                  ) : messages.auth.signUp}
                 </button>
               </p>
             </div>
