@@ -18,20 +18,18 @@ export default function Home() {
       <Navbar />
       <main className="flex-grow">
         <Hero />
-        <section id="search" className="-mt-14 relative z-20">
+        <section id="search" className="-mt-10 sm:-mt-11 relative z-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="rounded-3xl border border-gray-100 dark:border-gray-800 bg-white/90 dark:bg-gray-900/80 backdrop-blur-xl shadow-xl p-5 sm:p-7">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    {messages.home.searchCardTitle}
-                  </h2>
-                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300">
-                    {messages.home.searchCardDesc}
-                  </p>
-                </div>
+            <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900/90 backdrop-blur-xl shadow-lg p-4 sm:p-5">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-snug">
+                  {messages.home.searchCardTitle}
+                </h2>
+                <p className="mt-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-snug">
+                  {messages.home.searchCardDesc}
+                </p>
               </div>
-              <div className="mt-5">
+              <div className="mt-3 sm:mt-4">
                 <BusinessSearch />
               </div>
             </div>
