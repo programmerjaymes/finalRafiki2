@@ -225,7 +225,7 @@ async function getDashboardData() {
   try {
     // Get popular locations
     const locationResults = await prisma.$queryRaw`
-      SELECT ls.id, ls.regionId, ls.searchCount, ls.lastSearched, r.RegionName as regionName
+      SELECT ls.id, ls.regionId, ls.searchCount, ls.lastSearched, r."RegionName" as regionName
       FROM location_searches ls
       JOIN regions r ON ls.regionId = r.id
       ORDER BY ls.searchCount DESC

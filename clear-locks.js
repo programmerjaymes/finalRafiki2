@@ -1,3 +1,7 @@
+/**
+ * Inspect Postgres activity (Netlify DB / local Postgres).
+ * For MySQL legacy tooling, use git history or a MySQL client.
+ */
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -5,29 +9,22 @@ const prisma = new PrismaClient();
 async function clearLocks() {
   try {
     console.log('Checking database connection...');
-    
-    // Execute a simple query to check connection
+
     const result = await prisma.$queryRaw`SELECT 1 as test`;
-    console.log('✅ Database connection OK');
-    
-    // Show current processes
-    console.log('\nChecking for locks...');
-    const processes = await prisma.$queryRaw`SHOW PROCESSLIST`;
-    console.log('Active processes:', processes.length);
-    
+    console.log('✅ Database connection OK', result);
+
+    const processes = await prisma.$queryRaw`
+      SELECT pid, usename, state, query_start, left(query, 120) AS query_preview
+      FROM pg_stat_activity
+      WHERE datname = current_database()
+        AND pid <> pg_backend_pid()
+      ORDER BY query_start NULLS LAST
+    `;
+
+    console.log('\nActive sessions:', processes.length);
     processes.forEach((proc, idx) => {
-      if (proc.Info && proc.Info.includes('user')) {
-        console.log(`Process ${idx + 1}:`, {
-          Id: proc.Id,
-          User: proc.User,
-          Command: proc.Command,
-          Time: proc.Time,
-          State: proc.State,
-          Info: proc.Info?.substring(0, 100)
-        });
-      }
+      console.log(`Session ${idx + 1}:`, proc);
     });
-    
   } catch (error) {
     console.error('❌ Error:', error.message);
   } finally {

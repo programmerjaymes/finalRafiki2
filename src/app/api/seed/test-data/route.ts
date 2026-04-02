@@ -593,13 +593,16 @@ export async function GET() {
             const resultCount = Math.floor(Math.random() * 20) + 1;
             
             // Insert search query
+            const regionIdStr =
+              Math.random() > 0.5 ? String(region.id) : null;
+            const categoryIdStr = Math.random() > 0.5 ? category.id : null;
             await prisma.$executeRaw`
               INSERT INTO search_queries (
                 id, queryText, userId, regionId, categoryId, resultCount, createdAt
               ) VALUES (
-                ${searchQueryId}, ${queryText}, ${searcher.id}, 
-                ${Math.random() > 0.5 ? region.id : null}, 
-                ${Math.random() > 0.5 ? category.id : null}, 
+                ${searchQueryId}, ${queryText}, ${searcher.id},
+                ${regionIdStr},
+                ${categoryIdStr},
                 ${resultCount}, ${searchDate}
               )
             `;
@@ -633,13 +636,13 @@ export async function GET() {
       
       try {
         // Create category search record directly
-        await prisma.$executeRaw`
-          INSERT INTO category_searches (id, categoryId, searchCount, lastSearched)
-          VALUES (${`cs-${category.id}`}, ${category.id}, ${searchCount}, ${searchDate})
-          ON DUPLICATE KEY UPDATE 
-            searchCount = ${searchCount},
-            lastSearched = ${searchDate}
-        `;
+            await prisma.$executeRaw`
+              INSERT INTO category_searches (id, categoryId, searchCount, lastSearched)
+              VALUES (${`cs-${category.id}`}, ${category.id}, ${searchCount}, ${searchDate})
+              ON CONFLICT (id) DO UPDATE SET
+                searchCount = ${searchCount},
+                lastSearched = ${searchDate}
+            `;
         
         console.log(`Updated search count for category ${category.name}: ${searchCount}`);
       } catch (error) {
@@ -654,13 +657,13 @@ export async function GET() {
       
       try {
         // Create location search record directly
-        await prisma.$executeRaw`
-          INSERT INTO location_searches (id, regionId, searchCount, lastSearched)
-          VALUES (${`ls-${region.id}`}, ${region.id}, ${searchCount}, ${searchDate})
-          ON DUPLICATE KEY UPDATE 
-            searchCount = ${searchCount},
-            lastSearched = ${searchDate}
-        `;
+            await prisma.$executeRaw`
+              INSERT INTO location_searches (id, regionId, searchCount, lastSearched)
+              VALUES (${`ls-${region.id}`}, ${region.id}, ${searchCount}, ${searchDate})
+              ON CONFLICT (id) DO UPDATE SET
+                searchCount = ${searchCount},
+                lastSearched = ${searchDate}
+            `;
         
         console.log(`Updated search count for region ${region.name}: ${searchCount}`);
       } catch (error) {

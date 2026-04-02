@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -37,7 +37,7 @@ model Business {
   phone               String?
   email               String?
   website             String?
-  logo                String?                @db.LongText
+  logo                String?                @db.Text
   coverImage          String?
   facebook            String?
   instagram           String?
@@ -51,9 +51,9 @@ model Business {
   categoryId          String
   latitude            Float?
   longitude           Float?
-  regionId            BigInt                 @db.UnsignedBigInt
-  districtId          BigInt                 @db.UnsignedBigInt
-  wardId              BigInt                 @db.UnsignedBigInt
+  regionId            BigInt?
+  districtId          BigInt?
+  wardId              BigInt?
   street              String?
   avgRating           Float                  @default(0)
   numReviews          Int                    @default(0)
@@ -68,23 +68,23 @@ model Business {
   deactivationReason  String?                @db.Text
   bundle              Bundle                 @relation(fields: [bundleId], references: [id])
   category            Category               @relation("PrimaryCategory", fields: [categoryId], references: [id])
-  district            District               @relation(fields: [districtId], references: [id])
+  district            District?              @relation(fields: [districtId], references: [id])
   owner               User                   @relation(fields: [ownerId], references: [id])
-  region              Region                 @relation(fields: [regionId], references: [id])
+  region              Region?                @relation(fields: [regionId], references: [id])
   registrar           User?                  @relation("Registrar", fields: [registrarId], references: [id])
-  ward                Ward                   @relation(fields: [wardId], references: [id])
+  ward                Ward?                  @relation(fields: [wardId], references: [id])
   categories          CategoryOnBusiness[]
   payments            Payment[]
   reviews             Review[]
   searchResults       SearchResultBusiness[]
 
-  @@index([bundleId], map: "businesses_bundleId_fkey")
-  @@index([categoryId], map: "businesses_categoryId_fkey")
-  @@index([districtId], map: "businesses_districtId_fkey")
-  @@index([ownerId], map: "businesses_ownerId_fkey")
-  @@index([regionId], map: "businesses_regionId_fkey")
-  @@index([registrarId], map: "businesses_registrarId_fkey")
-  @@index([wardId], map: "businesses_wardId_fkey")
+  @@index([bundleId], map: "businesses_bundleId_idx")
+  @@index([categoryId], map: "businesses_categoryId_idx")
+  @@index([districtId], map: "businesses_districtId_idx")
+  @@index([ownerId], map: "businesses_ownerId_idx")
+  @@index([regionId], map: "businesses_regionId_idx")
+  @@index([registrarId], map: "businesses_registrarId_idx")
+  @@index([wardId], map: "businesses_wardId_idx")
   @@map("businesses")
 }
 
@@ -102,8 +102,8 @@ model BusinessRegistration {
   bundle           Bundle?        @relation(fields: [bundleId], references: [id])
   user             User           @relation(fields: [userId], references: [id])
 
-  @@index([bundleId], map: "business_registrations_bundleId_fkey")
-  @@index([userId], map: "business_registrations_userId_fkey")
+  @@index([bundleId], map: "business_registrations_bundleId_idx")
+  @@index([userId], map: "business_registrations_userId_idx")
   @@map("business_registrations")
 }
 
@@ -143,8 +143,8 @@ model Payment {
   business         Business      @relation(fields: [businessId], references: [id])
   user             User          @relation(fields: [userId], references: [id])
 
-  @@index([businessId], map: "payments_businessId_fkey")
-  @@index([userId], map: "payments_userId_fkey")
+  @@index([businessId], map: "payments_businessId_idx")
+  @@index([userId], map: "payments_userId_idx")
   @@map("payments")
 }
 
@@ -176,7 +176,7 @@ model CategoryOnBusiness {
   category   Category @relation(fields: [categoryId], references: [id])
 
   @@id([businessId, categoryId])
-  @@index([categoryId], map: "category_business_categoryId_fkey")
+  @@index([categoryId], map: "category_business_categoryId_idx")
   @@map("category_business")
 }
 
@@ -191,16 +191,16 @@ model Review {
   business   Business @relation(fields: [businessId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
 
-  @@index([businessId], map: "reviews_businessId_fkey")
-  @@index([userId], map: "reviews_userId_fkey")
+  @@index([businessId], map: "reviews_businessId_idx")
+  @@index([userId], map: "reviews_userId_idx")
   @@map("reviews")
 }
 
 model Region {
-  id               BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  id               BigInt           @id @default(autoincrement())
   name             String?          @map("RegionName")
   code             String?          @map("RegionCode")
-  tamisemiId       BigInt           @map("tamisemi_id") @db.UnsignedBigInt
+  tamisemiId       BigInt           @map("tamisemi_id")
   createdAt        DateTime?        @map("created_at")
   updatedAt        DateTime?        @map("updated_at")
   businesses       Business[]
@@ -211,48 +211,48 @@ model Region {
 }
 
 model District {
-  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  id         BigInt     @id @default(autoincrement())
   name       String?    @map("LgaName")
   code       String?    @map("LgaCode")
   regionCode String     @map("RegionCode") @db.VarChar(100)
-  regionId   BigInt?    @map("parent_area") @db.UnsignedBigInt
-  tamisemiId BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  regionId   BigInt?    @map("parent_area")
+  tamisemiId BigInt     @map("tamisemi_id")
   createdAt  DateTime?  @map("created_at")
   updatedAt  DateTime?  @map("updated_at")
   businesses Business[]
   region     Region?    @relation(fields: [regionId], references: [id])
   wards      Ward[]
 
-  @@index([regionId], map: "districts_regionId_fkey")
+  @@index([regionId], map: "districts_regionId_idx")
   @@map("districts")
 }
 
 model Ward {
-  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  id         BigInt     @id @default(autoincrement())
   name       String?    @map("WardName")
   code       String?    @map("WardCode")
-  districtId BigInt?    @map("parent_area") @db.UnsignedBigInt
-  tamisemiId BigInt     @map("tamisemi_id") @db.UnsignedBigInt
+  districtId BigInt?    @map("parent_area")
+  tamisemiId BigInt     @map("tamisemi_id")
   createdAt  DateTime?  @map("created_at")
   updatedAt  DateTime?  @map("updated_at")
   businesses Business[]
   district   District?  @relation(fields: [districtId], references: [id])
   streets    Street[]
 
-  @@index([districtId], map: "wards_districtId_fkey")
+  @@index([districtId], map: "wards_districtId_idx")
   @@map("wards")
 }
 
 model Street {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  id        BigInt   @id @default(autoincrement())
   name      String
-  wardId    BigInt   @map("ward_id") @db.UnsignedBigInt
+  wardId    BigInt   @map("ward_id")
   code      String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   ward      Ward     @relation(fields: [wardId], references: [id], onDelete: Cascade)
 
-  @@index([wardId], map: "streets_wardId_fkey")
+  @@index([wardId], map: "streets_wardId_idx")
   @@map("streets")
 }
 
@@ -272,7 +272,7 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@index([userId], map: "accounts_userId_fkey")
+  @@index([userId], map: "accounts_userId_idx")
   @@map("accounts")
 }
 
@@ -283,7 +283,7 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId], map: "sessions_userId_fkey")
+  @@index([userId], map: "sessions_userId_idx")
   @@map("sessions")
 }
 
@@ -307,7 +307,7 @@ model SearchQuery {
   user          User?                  @relation(fields: [userId], references: [id])
   searchResults SearchResultBusiness[]
 
-  @@index([userId], map: "search_queries_userId_fkey")
+  @@index([userId], map: "search_queries_userId_idx")
   @@map("search_queries")
 }
 
@@ -322,7 +322,7 @@ model SearchResultBusiness {
   searchQuery   SearchQuery @relation(fields: [searchQueryId], references: [id], onDelete: Cascade)
 
   @@unique([searchQueryId, businessId])
-  @@index([businessId], map: "search_result_businesses_businessId_fkey")
+  @@index([businessId], map: "search_result_businesses_businessId_idx")
   @@map("search_result_businesses")
 }
 
@@ -333,18 +333,18 @@ model CategorySearch {
   lastSearched DateTime @default(now())
   category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@index([categoryId], map: "category_searches_categoryId_fkey")
+  @@index([categoryId], map: "category_searches_categoryId_idx")
   @@map("category_searches")
 }
 
 model LocationSearch {
   id           String   @id @default(cuid())
-  regionId     BigInt   @db.UnsignedBigInt
+  regionId     BigInt
   searchCount  Int      @default(1)
   lastSearched DateTime @default(now())
   region       Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
 
-  @@index([regionId], map: "location_searches_regionId_fkey")
+  @@index([regionId], map: "location_searches_regionId_idx")
   @@map("location_searches")
 }
 
@@ -352,20 +352,20 @@ model business_events {
   id         String   @id
   businessId String
   eventType  String   @db.VarChar(50)
-  createdAt  DateTime @default(now()) @db.DateTime(0)
+  createdAt  DateTime @default(now())
 
-  @@index([businessId], map: "idx_biz")
+  @@index([businessId], map: "business_events_businessId_idx")
   @@index([eventType], map: "idx_type")
 }
 
 model business_images {
   id         String   @id
   businessId String
-  imageData  String   @db.LongText
+  imageData  String   @db.Text
   sortOrder  Int      @default(0)
-  createdAt  DateTime @default(now()) @db.DateTime(0)
+  createdAt  DateTime @default(now())
 
-  @@index([businessId], map: "idx_biz")
+  @@index([businessId], map: "business_images_businessId_idx")
 }
 
 enum UserRole {

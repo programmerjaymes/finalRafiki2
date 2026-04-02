@@ -1,77 +1,71 @@
 'use client';
 
 import Link from 'next/link';
-
-const items = [
-  {
-    title: 'Verified listings',
-    desc: 'Browse trusted businesses with clear details.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-        <path
-          d="M9 12.75l2 2 4-6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M12 21a9 9 0 100-18 9 9 0 000 18z"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: 'Fast search',
-    desc: 'Find services by category and location.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-        <path
-          d="M21 21l-4.3-4.3"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M11 19a8 8 0 110-16 8 8 0 010 16z"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    ),
-  },
-  {
-    title: 'Grow your business',
-    desc: 'Register and get discovered by customers.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-        <path
-          d="M4 19V5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M4 19h16"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M7 15l4-4 3 3 6-7"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-];
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 
 export default function LandingHighlights() {
+  const locale = useLocale();
+  const messages = t(locale);
+  const items = [
+    {
+      title: messages.home.highlights.verifiedTitle,
+      desc: messages.home.highlights.verifiedDesc,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+          <path
+            d="M9 12.75l2 2 4-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 21a9 9 0 100-18 9 9 0 000 18z"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
+      ),
+    },
+    {
+      title: messages.home.highlights.fastTitle,
+      desc: messages.home.highlights.fastDesc,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+          <path
+            d="M21 21l-4.3-4.3"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path
+            d="M11 19a8 8 0 110-16 8 8 0 010 16z"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
+      ),
+    },
+    {
+      title: messages.home.highlights.growTitle,
+      desc: messages.home.highlights.growDesc,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+          <path d="M4 19V5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 19h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M7 15l4-4 3 3 6-7"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <section className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -99,13 +93,13 @@ export default function LandingHighlights() {
             href="/search"
             className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light text-white dark:text-gray-900 px-6 py-3 font-semibold transition shadow-md hover:shadow-lg w-full sm:w-auto"
           >
-            Start searching
+            {messages.home.highlights.primaryCta}
           </Link>
           <Link
             href="/business-create"
             className="inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-6 py-3 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition w-full sm:w-auto"
           >
-            Register a business
+            {messages.home.highlights.secondaryCta}
           </Link>
         </div>
       </div>

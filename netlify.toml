@@ -1,0 +1,9 @@
+# Netlify Database: add DATABASE_URL in Site settings (use the URL from Netlify DB),
+# or set DATABASE_URL = same value as NETLIFY_DATABASE_URL if Netlify injects only that.
+
+[build]
+  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

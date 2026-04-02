@@ -1,3 +1,8 @@
+/**
+ * Legacy one-off: updates a user password on MySQL using mysql2.
+ * This project targets PostgreSQL (Netlify DB); use Prisma Studio, `npx prisma studio`,
+ * or SQL against Postgres instead.
+ */
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 
