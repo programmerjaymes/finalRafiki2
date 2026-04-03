@@ -1,7 +1,7 @@
-# Netlify Database: Use unpooled URL for migrations, pooled URL for runtime
+# Netlify Database: Skip migrations, only generate Prisma client and build
 
 [build]
-  command = "DATABASE_URL=$NETLIFY_DATABASE_URL_UNPOOLED npx prisma generate && DATABASE_URL=$NETLIFY_DATABASE_URL_UNPOOLED npx prisma migrate deploy && npm run build"
+  command = "npx prisma generate && npm run build"
   publish = ".next"
   environment = { DATABASE_URL = "${NETLIFY_DATABASE_URL}" }
 
