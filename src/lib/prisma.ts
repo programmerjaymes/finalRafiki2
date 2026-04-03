@@ -4,6 +4,11 @@ import { PrismaClient } from '@prisma/client'
 // exhausting your database connection limit.
 // Learn more: https://pris.ly/d/help/next-js-best-practices
 
+// Use NETLIFY_DATABASE_URL if DATABASE_URL is not set (for Netlify deployments)
+if (!process.env.DATABASE_URL && process.env.NETLIFY_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
+}
+
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 export const prisma = globalForPrisma.prisma || new PrismaClient()
