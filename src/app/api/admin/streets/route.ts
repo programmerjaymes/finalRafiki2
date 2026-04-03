@@ -33,19 +33,21 @@ export async function POST(request: Request) {
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
+  
   let wardId: bigint;
   try {
     wardId = BigInt(body.wardId);
   } catch {
     return NextResponse.json({ error: 'Valid ward id is required' }, { status: 400 });
   }
-  const code =
-    typeof body.code === 'string' && body.code.trim() ? body.code.trim() : null;
 
   const w = await prisma.ward.findUnique({ where: { id: wardId } });
   if (!w) {
     return NextResponse.json({ error: 'Ward not found' }, { status: 400 });
   }
+  
+  // Auto-generate unique code (STR- + timestamp)
+  const code = `STR-${Date.now()}`;
 
   const row = await prisma.street.create({
     data: { name, code, wardId },

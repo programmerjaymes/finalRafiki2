@@ -7,13 +7,19 @@ import { Category, Region } from '@prisma/client';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 
+type AreaOption = { id: string; name: string | null };
+
 export default function BusinessSearch() {
   const locale = useLocale();
   const messages = t(locale);
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
+  const [districts, setDistricts] = useState<AreaOption[]>([]);
+  const [wards, setWards] = useState<AreaOption[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedWard, setSelectedWard] = useState('');
   const [priceRange, setPriceRange] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -63,10 +69,68 @@ export default function BusinessSearch() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!selectedRegion) {
+      setDistricts([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/districts?regionId=${encodeURIComponent(selectedRegion)}`);
+        if (!r.ok) throw new Error('districts');
+        const data: unknown = await r.json();
+        if (!cancelled && Array.isArray(data)) {
+          setDistricts(
+            data.map((d: { id?: string; name?: string | null }) => ({
+              id: String(d.id),
+              name: d.name ?? null,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) setDistricts([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegion]);
+
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setWards([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/wards?districtId=${encodeURIComponent(selectedDistrict)}`);
+        if (!r.ok) throw new Error('wards');
+        const data: unknown = await r.json();
+        if (!cancelled && Array.isArray(data)) {
+          setWards(
+            data.map((w: { id?: string; name?: string | null }) => ({
+              id: String(w.id),
+              name: w.name ?? null,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) setWards([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDistrict]);
+
   const handleSearch = () => {
     const searchParams = new URLSearchParams();
     if (selectedCategory) searchParams.append('category', selectedCategory);
     if (selectedRegion) searchParams.append('region', selectedRegion);
+    if (selectedDistrict) searchParams.append('district', selectedDistrict);
+    if (selectedWard) searchParams.append('ward', selectedWard);
     if (priceRange) searchParams.append('priceRange', priceRange);
 
     window.location.href = `/search?${searchParams.toString()}`;
@@ -74,6 +138,14 @@ export default function BusinessSearch() {
 
   const selectClass =
     'w-full py-2 pl-3 pr-9 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:border-primary dark:focus:border-secondary focus:ring-2 focus:ring-primary/15 dark:focus:ring-secondary/15 transition duration-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-white';
+
+  const chevron = (
+    <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-400 dark:text-gray-500">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+      </svg>
+    </div>
+  );
 
   return (
     <motion.div
@@ -83,7 +155,7 @@ export default function BusinessSearch() {
       className="space-y-4"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 lg:gap-3 lg:items-end">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.category}
           </label>
@@ -100,22 +172,22 @@ export default function BusinessSearch() {
                 </option>
               ))}
             </Select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-400 dark:text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-              </svg>
-            </div>
+            {chevron}
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {messages.search.location}
+            {messages.search.mkoa}
           </label>
           <div className="relative">
             <Select
               value={selectedRegion}
-              onChange={(e) => setSelectedRegion(e.target.value)}
+              onChange={(e) => {
+                setSelectedRegion(e.target.value);
+                setSelectedDistrict('');
+                setSelectedWard('');
+              }}
               className={selectClass}
             >
               <option value="">{messages.search.allLocations}</option>
@@ -125,19 +197,62 @@ export default function BusinessSearch() {
                 </option>
               ))}
             </Select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-400 dark:text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
+            {chevron}
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            {messages.search.wilaya}
+          </label>
+          <div className="relative">
+            <Select
+              value={selectedDistrict}
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setSelectedWard('');
+              }}
+              disabled={!selectedRegion}
+              className={selectClass}
+            >
+              <option value="">
+                {!selectedRegion ? messages.search.pickMkoaFirst : messages.search.allWilaya}
+              </option>
+              {districts.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name || d.id}
+                </option>
+              ))}
+            </Select>
+            {chevron}
+          </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            {messages.search.kijiji}
+          </label>
+          <div className="relative">
+            <Select
+              value={selectedWard}
+              onChange={(e) => setSelectedWard(e.target.value)}
+              disabled={!selectedDistrict}
+              className={selectClass}
+            >
+              <option value="">
+                {!selectedDistrict ? messages.search.pickWilayaFirst : messages.search.allKijiji}
+              </option>
+              {wards.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name || w.id}
+                </option>
+              ))}
+            </Select>
+            {chevron}
+          </div>
+        </div>
+
+        <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.priceRange}
           </label>
@@ -165,7 +280,7 @@ export default function BusinessSearch() {
           </div>
         </div>
 
-        <div className="sm:col-span-2 lg:col-span-3 flex items-end">
+        <div className="sm:col-span-2 lg:col-span-2 flex items-end">
           <button
             type="button"
             onClick={handleSearch}

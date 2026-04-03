@@ -31,8 +31,6 @@ export default function RegionList() {
   const [current, setCurrent] = useState<RegionRow | null>(null);
   const [form, setForm] = useState({
     name: '',
-    code: '',
-    tamisemiId: '',
   });
 
   const load = async () => {
@@ -72,7 +70,7 @@ export default function RegionList() {
   }, [filtered.length, currentPage, pageSize]);
 
   const resetForm = () =>
-    setForm({ name: '', code: '', tamisemiId: '' });
+    setForm({ name: '' });
 
   const handleDelete = async (r: RegionRow) => {
     const ok = await Swal.fire({
@@ -97,8 +95,8 @@ export default function RegionList() {
 
   const submitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.tamisemiId.trim()) {
-      toast.error('Name and TAMISEMI id are required');
+    if (!form.name.trim()) {
+      toast.error('Name is required');
       return;
     }
     try {
@@ -107,8 +105,6 @@ export default function RegionList() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name.trim(),
-          code: form.code.trim() || null,
-          tamisemiId: form.tamisemiId.trim(),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -125,8 +121,8 @@ export default function RegionList() {
   const submitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!current) return;
-    if (!form.name.trim() || !form.tamisemiId.trim()) {
-      toast.error('Name and TAMISEMI id are required');
+    if (!form.name.trim()) {
+      toast.error('Name is required');
       return;
     }
     try {
@@ -135,8 +131,6 @@ export default function RegionList() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name.trim(),
-          code: form.code.trim() || null,
-          tamisemiId: form.tamisemiId.trim(),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -149,12 +143,10 @@ export default function RegionList() {
     }
   };
 
-  const openEditRow = (r: RegionRow) => {
+  const handleEdit = (r: RegionRow) => {
     setCurrent(r);
     setForm({
       name: r.name || '',
-      code: r.code || '',
-      tamisemiId: String(r.tamisemiId),
     });
     openEdit();
   };
@@ -177,13 +169,6 @@ export default function RegionList() {
       ),
       sortable: true,
     },
-    { key: 'code', header: 'Code', cell: (r) => r.code || '—', sortable: true },
-    {
-      key: 'tam',
-      header: 'TAMISEMI',
-      cell: (r) => String(r.tamisemiId),
-      sortable: true,
-    },
     {
       key: 'act',
       header: 'Actions',
@@ -194,7 +179,7 @@ export default function RegionList() {
             className="p-2 text-gray-500 hover:text-primary-500"
             onClick={(e) => {
               e.stopPropagation();
-              openEditRow(r);
+              handleEdit(r);
             }}
           >
             <FiEdit className="h-4 w-4" />
@@ -245,7 +230,7 @@ export default function RegionList() {
           pageSize={pageSize}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
-          onRowClick={openEditRow}
+          onRowClick={handleEdit}
         />
       )}
 
@@ -256,14 +241,6 @@ export default function RegionList() {
             <div>
               <Label>Name *</Label>
               <Input name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Code</Label>
-              <Input name="code" value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
-            </div>
-            <div>
-              <Label>TAMISEMI id *</Label>
-              <Input name="tamisemiId" value={form.tamisemiId} onChange={(e) => setForm((f) => ({ ...f, tamisemiId: e.target.value }))} />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-6">
@@ -280,14 +257,6 @@ export default function RegionList() {
             <div>
               <Label>Name *</Label>
               <Input name="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Code</Label>
-              <Input name="code" value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
-            </div>
-            <div>
-              <Label>TAMISEMI id *</Label>
-              <Input name="tamisemiId" value={form.tamisemiId} onChange={(e) => setForm((f) => ({ ...f, tamisemiId: e.target.value }))} />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-6">

@@ -61,6 +61,9 @@ const CategoryList = () => {
     descriptionSw: '',
   });
   
+  // Submitting state
+  const [submitting, setSubmitting] = useState(false);
+  
   // Fetch categories
   const fetchCategories = async () => {
     try {
@@ -180,6 +183,7 @@ const CategoryList = () => {
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch('/api/categories', {
         method: 'POST',
         headers: {
@@ -199,6 +203,8 @@ const CategoryList = () => {
     } catch (err) {
       console.error('Error creating category:', err);
       toast.crud('create', 'category', false);
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -214,6 +220,7 @@ const CategoryList = () => {
     }
 
     try {
+      setSubmitting(true);
       const response = await fetch(`/api/categories/${currentCategory.id}`, {
         method: 'PUT',
         headers: {
@@ -232,6 +239,8 @@ const CategoryList = () => {
     } catch (err) {
       console.error('Error updating category:', err);
       toast.crud('update', 'category', false);
+    } finally {
+      setSubmitting(false);
     }
   };
   
@@ -307,22 +316,6 @@ const CategoryList = () => {
         <span className="font-medium">
           {(currentPage - 1) * pageSize + index + 1}
         </span>
-      ),
-      sortable: false
-    },
-    {
-      key: 'icon',
-      header: 'Icon',
-      cell: (category) => (
-        <div className="flex items-center justify-center h-10 w-10 bg-gray-100 dark:bg-gray-800 rounded-md text-center">
-          {category.icon ? (
-            <span className="text-xl">{category.icon}</span>
-          ) : (
-            <span className="text-gray-400 dark:text-gray-500 text-xl font-bold">
-              {category.nameEn.charAt(0)}
-            </span>
-          )}
-        </div>
       ),
       sortable: false
     },
@@ -482,17 +475,6 @@ const CategoryList = () => {
             </div>
             
             <div>
-              <Label>Icon (Emoji or Icon Code)</Label>
-              <Input 
-                type="text" 
-                name="icon" 
-                placeholder="e.g. 🍔 or fa-utensils" 
-                value={formData.icon}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div>
               <Label>Description (English)</Label>
               <textarea 
                 name="descriptionEn" 
@@ -515,12 +497,23 @@ const CategoryList = () => {
           </div>
           
           <div className="flex items-center justify-end w-full gap-3 mt-8">
-            <Button type="button" size="sm" variant="outline" onClick={closeAddModal}>
+            <Button type="button" size="sm" variant="outline" onClick={closeAddModal} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" size="sm">
-              Add Category
-            </Button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Adding...
+                </>
+              ) : (
+                'Add Category'
+              )}
+            </button>
           </div>
         </form>
       </Modal>
@@ -559,17 +552,6 @@ const CategoryList = () => {
             </div>
             
             <div>
-              <Label>Icon (Emoji or Icon Code)</Label>
-              <Input 
-                type="text" 
-                name="icon" 
-                placeholder="e.g. 🍔 or fa-utensils" 
-                value={formData.icon}
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div>
               <Label>Description (English)</Label>
               <textarea 
                 name="descriptionEn" 
@@ -592,12 +574,23 @@ const CategoryList = () => {
           </div>
           
           <div className="flex items-center justify-end w-full gap-3 mt-8">
-            <Button type="button" size="sm" variant="outline" onClick={closeEditModal}>
+            <Button type="button" size="sm" variant="outline" onClick={closeEditModal} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" size="sm">
-              Update Category
-            </Button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Updating...
+                </>
+              ) : (
+                'Update Category'
+              )}
+            </button>
           </div>
         </form>
       </Modal>

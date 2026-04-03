@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { getLocaleFromRequest, localizedCategoryFields } from '@/lib/categoryLocale'
+import {
+  getLocaleFromRequest,
+  localizedCategoryFields,
+  type AppLocale,
+} from '@/lib/categoryLocale'
+
+const BUSINESS_DETAIL_REVALIDATE = 120
 
 function toBigIntOrNull(value: unknown) {
   if (value === null || value === undefined || value === '') return null;
@@ -16,18 +23,10 @@ function jsonSafe<T>(data: T): T {
   );
 }
 
-// GET a single business by ID
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    
+const getCachedBusinessDetail = unstable_cache(
+  async (businessId: string, locale: AppLocale) => {
     const business = await prisma.business.findUnique({
-      where: {
-        id: id
-      },
+      where: { id: businessId },
       include: {
         category: true,
         owner: {
@@ -35,30 +34,23 @@ export async function GET(
             id: true,
             name: true,
             email: true,
-            image: true
-          }
+            image: true,
+          },
         },
         region: true,
         district: true,
         ward: true,
-        bundle: true
-      }
+        bundle: true,
+      },
     })
 
-    if (!business) {
-      return NextResponse.json(
-        { error: 'Business not found' },
-        { status: 404 }
-      )
-    }
+    if (!business) return null
 
-    // Fetch business images
-    const images = await prisma.$queryRaw`
-      SELECT id, imageData, sortOrder FROM business_images 
-      WHERE businessId = ${id} ORDER BY sortOrder ASC
-    ` as Array<{ id: string; imageData: string; sortOrder: number }>
+    const images = (await prisma.$queryRaw`
+      SELECT id, "imageData", "sortOrder" FROM business_images
+      WHERE "businessId" = ${businessId} ORDER BY "sortOrder" ASC
+    `) as Array<{ id: string; imageData: string; sortOrder: number }>
 
-    const locale = getLocaleFromRequest(request)
     const { category, ...rest } = business
     const categoryOut = category
       ? {
@@ -68,8 +60,34 @@ export async function GET(
         }
       : null
 
-    return NextResponse.json(jsonSafe({ ...rest, category: categoryOut, images }), {
-      headers: { Vary: 'Cookie' },
+    return jsonSafe({ ...rest, category: categoryOut, images })
+  },
+  ['business-detail', 'v1'],
+  { revalidate: BUSINESS_DETAIL_REVALIDATE, tags: ['businesses'] },
+)
+
+// GET a single business by ID
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const locale = getLocaleFromRequest(request)
+    const payload = await getCachedBusinessDetail(id, locale)
+
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Business not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(payload, {
+      headers: {
+        Vary: 'Cookie',
+        'Cache-Control': `public, s-maxage=${BUSINESS_DETAIL_REVALIDATE}, stale-while-revalidate=600`,
+      },
     })
   } catch (error) {
     console.error('Error fetching business:', error)
@@ -139,17 +157,18 @@ export async function PUT(
     // Handle images if provided
     if (body.images && Array.isArray(body.images)) {
       // Delete existing images
-      await prisma.$executeRaw`DELETE FROM business_images WHERE businessId = ${id}`
+      await prisma.$executeRaw`DELETE FROM business_images WHERE "businessId" = ${id}`
       // Insert new ones
       for (let i = 0; i < body.images.length; i++) {
         const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25)
         await prisma.$executeRaw`
-          INSERT INTO business_images (id, businessId, imageData, sortOrder, createdAt)
+          INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
           VALUES (${imgId}, ${id}, ${body.images[i]}, ${i}, NOW())
         `
       }
     }
-    
+
+    revalidateTag('businesses')
     return NextResponse.json(jsonSafe(updatedBusiness))
   } catch (error) {
     console.error('Error updating business:', error)
@@ -188,7 +207,8 @@ export async function DELETE(
         id: id
       }
     })
-    
+
+    revalidateTag('businesses')
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting business:', error)

@@ -20,6 +20,7 @@ const toast = {
       timerProgressBar: true,
       background: '#fff',
       iconColor: '#10b981', // Green
+      backdrop: false,
       customClass: {
         popup: 'swal2-toast-custom dark:bg-boxdark dark:text-white',
       }
@@ -44,8 +45,10 @@ const toast = {
       timerProgressBar: true,
       background: '#fff',
       iconColor: '#ef4444', // Red
+      backdrop: false,
       customClass: {
         popup: 'swal2-toast-custom dark:bg-boxdark dark:text-white',
+        container: 'swal2-toast-container-high-z'
       }
     });
   },
@@ -68,8 +71,10 @@ const toast = {
       timerProgressBar: true,
       background: '#fff',
       iconColor: '#3b82f6', // Blue
+      backdrop: false,
       customClass: {
         popup: 'swal2-toast-custom dark:bg-boxdark dark:text-white',
+        container: 'swal2-toast-container-high-z'
       }
     });
   },
@@ -92,8 +97,10 @@ const toast = {
       timerProgressBar: true,
       background: '#fff',
       iconColor: '#f59e0b', // Amber
+      backdrop: false,
       customClass: {
         popup: 'swal2-toast-custom dark:bg-boxdark dark:text-white',
+        container: 'swal2-toast-container-high-z'
       }
     });
   },

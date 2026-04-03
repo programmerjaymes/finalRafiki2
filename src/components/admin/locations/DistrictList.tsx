@@ -237,13 +237,7 @@ export default function DistrictList() {
     {
       key: 'region',
       header: 'Region',
-      cell: (r) => r.region?.name || r.region?.code || '—',
-    },
-    { key: 'code', header: 'Code', cell: (r) => r.code || '—' },
-    {
-      key: 'tam',
-      header: 'TAMISEMI',
-      cell: (r) => String(r.tamisemiId),
+      cell: (r) => r.region?.name || '—',
     },
     {
       key: 'act',

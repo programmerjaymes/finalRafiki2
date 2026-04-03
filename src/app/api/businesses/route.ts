@@ -1,9 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { getLocaleFromRequest, localizedCategoryFields } from '@/lib/categoryLocale';
+import {
+  getLocaleFromRequest,
+  localizedCategoryFields,
+  type AppLocale,
+} from '@/lib/categoryLocale';
 
 function toBigIntOrUndefined(value: unknown) {
   if (value === null || value === undefined || value === '') return undefined;
@@ -19,6 +24,85 @@ function jsonSafe<T>(data: T): T {
   );
 }
 
+const BUSINESSES_PUBLIC_LIST_REVALIDATE = 120;
+
+const fetchPublicBusinessList = unstable_cache(
+  async (page: number, limit: number, locale: AppLocale) => {
+    const skip = (page - 1) * limit;
+    const where: Prisma.BusinessWhereInput = {};
+    const businessListArgs = {
+      skip,
+      take: limit,
+      where,
+      orderBy: {
+        createdAt: 'desc' as const,
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+            icon: true,
+          },
+        },
+        owner: {
+          select: {
+            name: true,
+            email: true,
+            image: true,
+          },
+        },
+        region: {
+          select: {
+            name: true,
+          },
+        },
+        district: {
+          select: {
+            name: true,
+          },
+        },
+        ward: {
+          select: {
+            name: true,
+          },
+        },
+        bundle: {
+          select: {
+            name: true,
+            price: true,
+            duration: true,
+          },
+        },
+      },
+    };
+
+    const [businesses, total] = await Promise.all([
+      prisma.business.findMany(businessListArgs),
+      prisma.business.count({ where }),
+    ]);
+
+    const businessesOut = businesses.map((b) => ({
+      ...b,
+      category: {
+        icon: b.category.icon,
+        name: localizedCategoryFields(b.category, locale).name,
+      },
+    }));
+
+    return jsonSafe({
+      businesses: businessesOut,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  },
+  ['businesses-public-list', 'v1'],
+  { revalidate: BUSINESSES_PUBLIC_LIST_REVALIDATE, tags: ['businesses'] },
+);
+
 // GET all businesses with pagination and search
 export async function GET(request: Request) {
   try {
@@ -28,17 +112,65 @@ export async function GET(request: Request) {
     const search = url.searchParams.get('search') || '';
     const categoryId = url.searchParams.get('category') || undefined;
     const regionId = url.searchParams.get('region') || undefined;
-    
+    const districtId = url.searchParams.get('district') || undefined;
+    const wardId = url.searchParams.get('ward') || undefined;
+    const isApproved = url.searchParams.get('isApproved');
+    const isVerified = url.searchParams.get('isVerified');
+
     const skip = (page - 1) * limit;
-    
+
+    if (!search && !categoryId && !regionId && !districtId && !wardId && isApproved === null && isVerified === null) {
+      const locale = getLocaleFromRequest(request);
+      const payload = await fetchPublicBusinessList(page, limit, locale);
+      return NextResponse.json(payload, {
+        headers: {
+          Vary: 'Cookie',
+          'Cache-Control': `public, s-maxage=${BUSINESSES_PUBLIC_LIST_REVALIDATE}, stale-while-revalidate=600`,
+        },
+      });
+    }
+
     // Build the where condition
     const where: Prisma.BusinessWhereInput = {};
     
-    if (search) {
+    // Handle isApproved and isVerified filters with OR logic
+    if (isApproved === 'false' && isVerified === 'false') {
       where.OR = [
-        { name: { contains: search } },
-        { description: { contains: search } },
+        { isApproved: false },
+        { isVerified: false },
       ];
+    } else if (isApproved === 'false') {
+      where.isApproved = false;
+    } else if (isVerified === 'false') {
+      where.isVerified = false;
+    }
+    
+    if (search) {
+      const q = search.trim();
+      if (q) {
+        // If we already have OR for approval/verification, combine with AND
+        if (where.OR) {
+          where.AND = [
+            { OR: where.OR },
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+                { phone: { contains: q, mode: 'insensitive' } },
+                { email: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          ];
+          delete where.OR;
+        } else {
+          where.OR = [
+            { name: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q, mode: 'insensitive' } },
+            { email: { contains: q, mode: 'insensitive' } },
+          ];
+        }
+      }
     }
     
     if (categoryId) {
@@ -50,20 +182,25 @@ export async function GET(request: Request) {
     
     if (regionId) {
       where.regionId = toBigIntOrUndefined(regionId);
-      
+
       // Track location search
       await trackLocationSearch(BigInt(regionId));
     }
-    
-    console.log('📋 Fetching businesses with params:', { page, limit, search, categoryId, regionId });
-    
-    // Get businesses with pagination
-    const businesses = await prisma.business.findMany({
+
+    if (districtId) {
+      where.districtId = toBigIntOrUndefined(districtId);
+    }
+
+    if (wardId) {
+      where.wardId = toBigIntOrUndefined(wardId);
+    }
+
+    const businessListArgs = {
       skip,
       take: limit,
       where,
       orderBy: {
-        createdAt: 'desc'
+        createdAt: 'desc' as const,
       },
       include: {
         category: {
@@ -74,106 +211,86 @@ export async function GET(request: Request) {
         },
         owner: {
           select: {
-            name: true, 
+            name: true,
             email: true,
-            image: true
-          }
+            image: true,
+          },
         },
         region: {
           select: {
-            name: true
-          }
+            name: true,
+          },
         },
         district: {
           select: {
-            name: true
-          }
+            name: true,
+          },
         },
         ward: {
           select: {
-            name: true
-          }
+            name: true,
+          },
         },
         bundle: {
           select: {
             name: true,
             price: true,
-            duration: true
-          }
-        }
-      }
-    });
+            duration: true,
+          },
+        },
+      },
+    };
 
-    console.log(`✅ Found ${businesses.length} businesses`);
+    const [businesses, total] = await Promise.all([
+      prisma.business.findMany(businessListArgs),
+      prisma.business.count({ where }),
+    ]);
     
-    // Log first business to check logo field
-    if (businesses.length > 0) {
-      console.log('🔍 First business sample:', {
-        id: businesses[0].id,
-        name: businesses[0].name,
-        hasLogo: !!businesses[0].logo,
-        logoLength: businesses[0].logo?.length || 0,
-        logoPreview: businesses[0].logo ? businesses[0].logo.substring(0, 50) + '...' : null
+    // Defer analytics so list results return immediately (admin search was blocking on N+1 inserts).
+    if (search || categoryId || regionId || districtId || wardId) {
+      const session = await getServerSession(authOptions);
+      const userId = session?.user?.id ?? null;
+      const businessRows = businesses.map((b) => ({ id: b.id }));
+      const queryText = search || '';
+      const catId = categoryId || null;
+      const regId = regionId || null;
+      const resultTotal = total;
+
+      after(async () => {
+        try {
+          const uuid = crypto.randomUUID();
+          await prisma.$executeRaw`
+            INSERT INTO search_queries 
+            ("id", "queryText", "userId", "categoryId", "regionId", "resultCount", "createdAt") 
+            VALUES 
+            (${uuid}, ${queryText}, ${userId}, ${catId}, ${regId}, ${resultTotal}, NOW())
+          `;
+
+          if (businessRows.length > 0) {
+            await Promise.all(
+              businessRows.map((business, i) => {
+                const resultUuid = crypto.randomUUID();
+                return prisma.$executeRaw`
+                  INSERT INTO search_result_businesses 
+                  ("id", "searchQueryId", "businessId", "position", "wasClicked", "createdAt") 
+                  VALUES 
+                  (${resultUuid}, ${uuid}, ${business.id}, ${i + 1}, FALSE, NOW())
+                `;
+              }),
+            );
+            await Promise.all(
+              businessRows.map((b) =>
+                prisma.business.update({
+                  where: { id: b.id },
+                  data: { viewCount: { increment: 1 } },
+                }),
+              ),
+            );
+          }
+        } catch (error) {
+          console.error('Error tracking search query:', error);
+        }
       });
-    }
-
-    // Get total count for pagination
-    const total = await prisma.business.count({ where });
-    
-    console.log(`📊 Total businesses: ${total}, Pages: ${Math.ceil(total / limit)}`);
-
-    // Track this search query
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    
-    // Create search query record using raw SQL
-    let searchQueryId: string | null = null;
-    
-    if (search || categoryId || regionId) {
-      try {
-        // Create a UUID for the search query
-        const uuid = crypto.randomUUID();
-        
-        // Insert the search query
-        await prisma.$executeRaw`
-          INSERT INTO search_queries 
-          (id, queryText, userId, categoryId, regionId, resultCount, createdAt) 
-          VALUES 
-          (${uuid}, ${search || ''}, ${userId || null}, ${categoryId || null}, ${regionId || null}, ${total}, NOW())
-        `;
-        
-        searchQueryId = uuid;
-        
-        // Track search results if we have a valid search query ID
-        if (searchQueryId && businesses.length > 0) {
-          // For each business, create a search result record
-          for (let i = 0; i < businesses.length; i++) {
-            const business = businesses[i];
-            const position = i + 1;
-            const resultUuid = crypto.randomUUID();
-            
-            await prisma.$executeRaw`
-              INSERT INTO search_result_businesses 
-              (id, searchQueryId, businessId, position, wasClicked, createdAt) 
-              VALUES 
-              (${resultUuid}, ${searchQueryId}, ${business.id}, ${position}, FALSE, NOW())
-            `;
-          }
-          
-          // Update business view counts
-          await Promise.all(
-            businesses.map(business => 
-              prisma.business.update({
-                where: { id: business.id },
-                data: { viewCount: { increment: 1 } }
-              })
-            )
-          );
-        }
-      } catch (error) {
-        console.error("Error tracking search query:", error);
-        // Continue without tracking if there's an error
-      }
     }
 
     const locale = getLocaleFromRequest(request);
@@ -212,21 +329,21 @@ async function trackCategorySearch(categoryId: string) {
   try {
     // Check if record exists using raw SQL
     const existingRecords = await prisma.$queryRaw`
-      SELECT id FROM category_searches WHERE categoryId = ${categoryId} LIMIT 1
+      SELECT id FROM category_searches WHERE "categoryId" = ${categoryId} LIMIT 1
     ` as Array<{ id: string }>;
     
     if (existingRecords.length > 0) {
       // Update existing record
       await prisma.$executeRaw`
         UPDATE category_searches 
-        SET searchCount = searchCount + 1, lastSearched = NOW() 
+        SET "searchCount" = "searchCount" + 1, "lastSearched" = NOW() 
         WHERE id = ${existingRecords[0].id}
       `;
     } else {
       // Create new record
       const uuid = crypto.randomUUID();
       await prisma.$executeRaw`
-        INSERT INTO category_searches (id, categoryId, searchCount, lastSearched) 
+        INSERT INTO category_searches (id, "categoryId", "searchCount", "lastSearched") 
         VALUES (${uuid}, ${categoryId}, 1, NOW())
       `;
     }
@@ -241,21 +358,21 @@ async function trackLocationSearch(regionId: bigint) {
   try {
     // Check if record exists using raw SQL
     const existingRecords = await prisma.$queryRaw`
-      SELECT id FROM location_searches WHERE regionId = ${regionId} LIMIT 1
+      SELECT id FROM location_searches WHERE "regionId" = ${regionId} LIMIT 1
     ` as Array<{ id: string }>;
     
     if (existingRecords.length > 0) {
       // Update existing record
       await prisma.$executeRaw`
         UPDATE location_searches 
-        SET searchCount = searchCount + 1, lastSearched = NOW() 
+        SET "searchCount" = "searchCount" + 1, "lastSearched" = NOW() 
         WHERE id = ${existingRecords[0].id}
       `;
     } else {
       // Create new record
       const uuid = crypto.randomUUID();
       await prisma.$executeRaw`
-        INSERT INTO location_searches (id, regionId, searchCount, lastSearched) 
+        INSERT INTO location_searches (id, "regionId", "searchCount", "lastSearched") 
         VALUES (${uuid}, ${regionId}, 1, NOW())
       `;
     }
@@ -391,7 +508,7 @@ export async function POST(request: Request) {
         for (let i = 0; i < images.length; i++) {
           const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
           await prisma.$executeRaw`
-            INSERT INTO business_images (id, businessId, imageData, sortOrder, createdAt)
+            INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
             VALUES (${imgId}, ${id}, ${images[i]}, ${i}, NOW())
           `;
         }
@@ -420,6 +537,7 @@ export async function POST(request: Request) {
             }
           : createdBiz;
 
+      revalidateTag('businesses');
       return NextResponse.json(jsonSafe(bizOut), {
         status: 201,
         headers: { Vary: 'Cookie' },
@@ -445,7 +563,7 @@ export async function POST(request: Request) {
       for (let i = 0; i < images.length; i++) {
         const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
         await prisma.$executeRaw`
-          INSERT INTO business_images (id, businessId, imageData, sortOrder, createdAt)
+          INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
           VALUES (${imgId}, ${business.id}, ${images[i]}, ${i}, NOW())
         `;
       }
@@ -466,6 +584,7 @@ export async function POST(request: Request) {
       });
     }
 
+    revalidateTag('businesses');
     return NextResponse.json(jsonSafe(business), { status: 201 });
   } catch (err) {
     console.error('Error creating business:', err);

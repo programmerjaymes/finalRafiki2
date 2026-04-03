@@ -16,6 +16,10 @@ import {
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
   FaMapMarkedAlt as LocationIcon,
+  FaGlobeAfrica as RegionIcon,
+  FaCity as DistrictIcon,
+  FaMapPin as WardIcon,
+  FaRoad as StreetIcon,
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
 import { t } from "@/lib/i18n";
@@ -25,7 +29,7 @@ type NavItem = {
   icon: React.ReactNode;
   name: string;
   path?: string;
-  subItems?: { name: string; path: string; pro: boolean }[];
+  subItems?: { name: string; path: string; pro: boolean; icon?: React.ReactNode }[];
 };
 
 const AppSidebar: React.FC = () => {
@@ -59,10 +63,10 @@ const AppSidebar: React.FC = () => {
       icon: <LocationIcon />,
       name: messages.admin.locations,
       subItems: [
-        { name: messages.admin.regions, path: "/regions", pro: false },
-        { name: messages.admin.districts, path: "/districts", pro: false },
-        { name: messages.admin.wards, path: "/wards", pro: false },
-        { name: messages.admin.streets, path: "/streets", pro: false },
+        { name: messages.admin.regions, path: "/regions", pro: false, icon: <RegionIcon /> },
+        { name: messages.admin.districts, path: "/districts", pro: false, icon: <DistrictIcon /> },
+        { name: messages.admin.wards, path: "/wards", pro: false, icon: <WardIcon /> },
+        { name: messages.admin.streets, path: "/streets", pro: false, icon: <StreetIcon /> },
       ],
     },
     {
@@ -163,6 +167,11 @@ const AppSidebar: React.FC = () => {
                           : "menu-dropdown-item-inactive"
                       }`}
                     >
+                      {subItem.icon && (
+                        <span className="mr-2 text-sm">
+                          {subItem.icon}
+                        </span>
+                      )}
                       {subItem.name}
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.pro && (

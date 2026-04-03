@@ -10,6 +10,8 @@ import Input from '@/components/form/input/InputField';
 import Button from '@/components/ui/button/Button';
 import Checkbox from '@/components/form/input/Checkbox';
 import toast from '@/utils/toast';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 
 interface BusinessImage {
   id: string;
@@ -111,7 +113,8 @@ interface Bundle {
 interface User {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone?: string | null;
   role?: string;
 }
 
@@ -133,6 +136,9 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 const BusinessList = () => {
+  const locale = useLocale();
+  const messages = t(locale);
+
   // Data states
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -148,6 +154,9 @@ const BusinessList = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [filterRegionId, setFilterRegionId] = useState('');
+  const [filterDistrictId, setFilterDistrictId] = useState('');
+  const [filterWardId, setFilterWardId] = useState('');
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: 1,
     limit: 9,
@@ -205,10 +214,12 @@ const BusinessList = () => {
 
   // User search state for owner assignment
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [assignUserFocused, setAssignUserFocused] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Category multi-select (up to 2)
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
   
   // Fetch businesses with pagination and search
   const fetchBusinesses = async () => {
@@ -227,7 +238,17 @@ const BusinessList = () => {
       if (selectedCategory) {
         queryParams.append('category', selectedCategory);
       }
-      
+
+      if (filterRegionId) {
+        queryParams.append('region', filterRegionId);
+      }
+      if (filterDistrictId) {
+        queryParams.append('district', filterDistrictId);
+      }
+      if (filterWardId) {
+        queryParams.append('ward', filterWardId);
+      }
+
       const response = await fetch(`/api/businesses?${queryParams.toString()}`);
       
       if (!response.ok) {
@@ -253,11 +274,12 @@ const BusinessList = () => {
       }
       
       setBusinesses(data.businesses || []);
-      setPaginationMeta(data.meta || data.pagination || {
-        page: 1,
-        limit: 9,
-        total: 0,
-        totalPages: data.pagination?.pages || 0
+      const raw = data.meta || data.pagination;
+      setPaginationMeta({
+        page: raw?.page ?? 1,
+        limit: raw?.limit ?? 9,
+        total: raw?.total ?? 0,
+        totalPages: raw?.totalPages ?? raw?.pages ?? 0,
       });
       setError(null);
     } catch (err) {
@@ -289,7 +311,7 @@ const BusinessList = () => {
         fetch('/api/districts'),
         fetch('/api/wards'),
         fetch('/api/bundles'),
-        fetch('/api/users'),
+        fetch('/api/users?limit=500&page=1'),
       ]);
 
       if (categoryRes.ok) setCategories(await categoryRes.json());
@@ -300,13 +322,15 @@ const BusinessList = () => {
       
       if (userRes.ok) {
         const userData = await userRes.json();
+        let list: User[] = [];
         if (Array.isArray(userData)) {
-          setUsers(userData);
-        } else if (userData && Array.isArray(userData.data)) {
-          setUsers(userData.data);
-        } else {
-          setUsers([]);
+          list = userData;
+        } else if (userData?.users && Array.isArray(userData.users)) {
+          list = userData.users;
+        } else if (userData?.data && Array.isArray(userData.data)) {
+          list = userData.data;
         }
+        setUsers(list);
       }
     } catch (err) {
       console.error('Error fetching reference data:', err);
@@ -315,18 +339,25 @@ const BusinessList = () => {
     }
   };
   
-  // Initial data fetch
+  // Initial reference data (business list loads via effect below)
   useEffect(() => {
-    fetchBusinesses();
     fetchReferenceData();
   }, []);
-  
+
   // Refetch businesses when search, pagination or category filter changes
   useEffect(() => {
     if (paginationMeta) {
       fetchBusinesses();
     }
-  }, [search, paginationMeta?.page, paginationMeta?.limit, selectedCategory]);
+  }, [
+    search,
+    paginationMeta?.page,
+    paginationMeta?.limit,
+    selectedCategory,
+    filterRegionId,
+    filterDistrictId,
+    filterWardId,
+  ]);
   
   // Update filtered districts when region changes
   useEffect(() => {
@@ -371,6 +402,7 @@ const BusinessList = () => {
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
+    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
   };
   
   // Handle search submit
@@ -383,8 +415,36 @@ const BusinessList = () => {
   // Handle category filter change
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedCategory(e.target.value);
-    setPaginationMeta(prev => ({ ...prev, page: 1 }));
+    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
   };
+
+  const handleFilterRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setFilterRegionId(v);
+    setFilterDistrictId('');
+    setFilterWardId('');
+    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilterDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setFilterDistrictId(v);
+    setFilterWardId('');
+    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handleFilterWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFilterWardId(e.target.value);
+    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const listFilterDistricts = filterRegionId
+    ? districts.filter((d) => String(d.regionId) === filterRegionId)
+    : [];
+
+  const listFilterWards = filterDistrictId
+    ? wards.filter((w) => String(w.districtId) === filterDistrictId)
+    : [];
   
   // Handle pagination
   const handlePageChange = (newPage: number) => {
@@ -507,12 +567,22 @@ const BusinessList = () => {
     openAddModal();
   };
   
-  // Open edit modal — fetch full details first
+  // Open edit modal — open immediately with loader, then fetch full details
   const handleEdit = async (business: Business) => {
+    // Open modal immediately with loading state
+    setCurrentBusiness(null);
+    openEditModal();
     setViewLoading(true);
+    
+    // Fetch full details in background
     const full = await fetchBusinessDetails(business.id);
     setViewLoading(false);
-    if (!full) { toast.error('Failed to load business details'); return; }
+    
+    if (!full) { 
+      toast.error('Failed to load business details'); 
+      closeEditModal();
+      return; 
+    }
     
     setCurrentBusiness(full);
     setFormData({
@@ -550,8 +620,6 @@ const BusinessList = () => {
     if (full.owner) {
       setSelectedUser({ id: full.ownerId, name: full.owner.name, email: full.owner.email || '' });
     }
-    
-    openEditModal();
   };
   
   // Open view modal — fetch full details first
@@ -676,13 +744,34 @@ const BusinessList = () => {
     }
   };
 
-  // Filtered users for owner search
-  const filteredUsers = userSearchQuery.length > 0 && Array.isArray(users)
-    ? users.filter(u => {
-        const q = userSearchQuery.toLowerCase();
-        return u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
-      }).slice(0, 6)
+  // Filter categories based on search query
+  const filteredCategories = categories.filter((cat) => {
+    const query = categorySearchQuery.trim().toLowerCase();
+    if (!query) return true;
+    const name = cat.name?.toLowerCase() ?? '';
+    return name.includes(query);
+  });
+
+  // Users for owner picker: filter when typing, else show all users
+  const filteredUsers = Array.isArray(users)
+    ? (() => {
+        const q = userSearchQuery.trim().toLowerCase();
+        let list = users;
+        if (q) {
+          list = users.filter((u) => {
+            const name = u.name?.toLowerCase() ?? '';
+            const email = u.email?.toLowerCase() ?? '';
+            const phone = u.phone?.toLowerCase() ?? '';
+            return name.includes(q) || email.includes(q) || phone.includes(q);
+          });
+        }
+        return list.slice(0, 20);
+      })()
     : [];
+
+  // Show dropdown when focused, even without search query
+  const showUserPicker =
+    !selectedUser && assignUserFocused && filteredUsers.length > 0;
 
   return (
     <div className="w-full">
@@ -697,8 +786,8 @@ const BusinessList = () => {
       
       {/* Search and Filter Section */}
       <div className="bg-white dark:bg-boxdark p-4 rounded-lg border border-stroke dark:border-strokedark mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <form onSubmit={handleSearch} className="flex-grow">
+        <div className="flex flex-col gap-4">
+          <form onSubmit={handleSearch} className="w-full">
             <div className="relative">
               <input
                 type="text"
@@ -715,20 +804,85 @@ const BusinessList = () => {
               </button>
             </div>
           </form>
-          
-          <div className="w-full md:w-48">
-            <select
-              className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-              value={selectedCategory}
-              onChange={handleCategoryChange}
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {messages.admin.categories}
+              </label>
+              <select
+                className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                value={selectedCategory}
+                onChange={handleCategoryChange}
+              >
+                <option value="">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {messages.search.mkoa}
+              </label>
+              <select
+                className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                value={filterRegionId}
+                onChange={handleFilterRegionChange}
+              >
+                <option value="">{messages.search.allLocations}</option>
+                {regions.map((region) => (
+                  <option key={String(region.id)} value={String(region.id)}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {messages.search.wilaya}
+              </label>
+              <select
+                className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-55 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                value={filterDistrictId}
+                onChange={handleFilterDistrictChange}
+                disabled={!filterRegionId}
+              >
+                <option value="">
+                  {!filterRegionId ? messages.search.pickMkoaFirst : messages.search.allWilaya}
                 </option>
-              ))}
-            </select>
+                {listFilterDistricts.map((d) => (
+                  <option key={d.id} value={String(d.id)}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {messages.search.kijiji}
+              </label>
+              <select
+                className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 disabled:opacity-55 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                value={filterWardId}
+                onChange={handleFilterWardChange}
+                disabled={!filterDistrictId}
+              >
+                <option value="">
+                  {!filterDistrictId ? messages.search.pickWilayaFirst : messages.search.allKijiji}
+                </option>
+                {listFilterWards.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -862,49 +1016,60 @@ const BusinessList = () => {
           
           {/* Pagination */}
           {paginationMeta && paginationMeta.totalPages > 1 && (
-            <div className="flex justify-center mt-8">
-              <nav className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
+              <nav className="flex items-center gap-2 flex-wrap justify-center" aria-label="Pagination">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handlePageChange(paginationMeta.page - 1)}
+                  disabled={paginationMeta.page === 1}
                   className={paginationMeta.page === 1 ? 'opacity-50 cursor-not-allowed' : ''}
                 >
-                  <FiChevronLeft className="h-4 w-4" />
+                  <FiChevronLeft className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Previous</span>
                 </Button>
-                
+
                 {Array.from({ length: paginationMeta.totalPages }, (_, i) => i + 1)
-                  .filter(page => 
-                    // Show first page, last page, current page, and pages around current
-                    page === 1 || 
-                    page === paginationMeta.totalPages || 
-                    (page >= paginationMeta.page - 1 && page <= paginationMeta.page + 1)
+                  .filter(
+                    (page) =>
+                      page === 1 ||
+                      page === paginationMeta.totalPages ||
+                      (page >= paginationMeta.page - 1 && page <= paginationMeta.page + 1)
                   )
                   .map((page, index, array) => (
                     <React.Fragment key={page}>
                       {index > 0 && array[index - 1] !== page - 1 && (
                         <span className="text-gray-500 dark:text-gray-400">...</span>
                       )}
-                      <Button 
-                        variant={page === paginationMeta.page ? 'primary' : 'outline'} 
+                      <Button
+                        variant={page === paginationMeta.page ? 'primary' : 'outline'}
                         size="sm"
                         onClick={() => handlePageChange(page)}
                       >
                         {page}
                       </Button>
                     </React.Fragment>
-                  ))
-                }
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                  ))}
+
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handlePageChange(paginationMeta.page + 1)}
-                  className={paginationMeta.page === paginationMeta.totalPages ? 'opacity-50 cursor-not-allowed' : ''}
+                  disabled={paginationMeta.page === paginationMeta.totalPages}
+                  className={
+                    paginationMeta.page === paginationMeta.totalPages
+                      ? 'opacity-50 cursor-not-allowed'
+                      : ''
+                  }
                 >
-                  <FiChevronRight className="h-4 w-4" />
+                  <span className="hidden sm:inline">Next</span>
+                  <FiChevronRight className="h-4 w-4 sm:ml-1" />
                 </Button>
               </nav>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Page {paginationMeta.page} of {paginationMeta.totalPages}
+                {paginationMeta.total ? ` · ${paginationMeta.total} total` : ''}
+              </p>
             </div>
           )}
         </>
@@ -917,6 +1082,12 @@ const BusinessList = () => {
           onClose={isAddModalOpen ? closeAddModal : closeEditModal}
           className="max-w-[900px] p-6 max-h-[90vh] overflow-y-auto"
         >
+          {isEditModalOpen && !currentBusiness ? (
+            <div className="flex flex-col items-center justify-center p-12">
+              <div className="h-12 w-12 border-4 border-gray-300 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Loading business details...</p>
+            </div>
+          ) : (
           <form onSubmit={isAddModalOpen ? handleAdd : handleUpdate}>
             <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-6">
               {isAddModalOpen ? 'Add Business' : 'Edit Business'}
@@ -937,7 +1108,15 @@ const BusinessList = () => {
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{selectedUser.name}</p>
                     <p className="text-xs text-gray-500 truncate">{selectedUser.email}</p>
                   </div>
-                  <button type="button" onClick={() => { setSelectedUser(null); setUserSearchQuery(''); }} className="text-gray-400 hover:text-red-500">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setUserSearchQuery('');
+                      setAssignUserFocused(false);
+                    }}
+                    className="text-gray-400 hover:text-red-500"
+                  >
                     <FiX className="h-4 w-4" />
                   </button>
                 </div>
@@ -945,27 +1124,38 @@ const BusinessList = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search by name or email..."
+                    placeholder="Search by name, email, or phone…"
                     className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
                     value={userSearchQuery}
                     onChange={(e) => setUserSearchQuery(e.target.value)}
+                    onFocus={() => setAssignUserFocused(true)}
+                    onBlur={() => {
+                      window.setTimeout(() => setAssignUserFocused(false), 180);
+                    }}
                   />
                   <FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  {filteredUsers.length > 0 && (
+                  {showUserPicker && (
                     <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredUsers.map(u => (
+                      {filteredUsers.map((u) => (
                         <button
                           key={u.id}
                           type="button"
                           className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 last:border-0"
-                          onClick={() => { setSelectedUser(u); setUserSearchQuery(''); }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setUserSearchQuery('');
+                            setAssignUserFocused(false);
+                          }}
                         >
                           <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-semibold text-primary-600">
                             {u.name?.charAt(0)?.toUpperCase() || 'U'}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {[u.email, u.phone].filter(Boolean).join(' · ') || '—'}
+                            </p>
                           </div>
                           {u.role && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">{u.role}</span>
@@ -1047,33 +1237,53 @@ const BusinessList = () => {
               {/* ── Categories (multi-select up to 2) ── */}
               <div className="col-span-1">
                 <Label>Categories (up to 2) *</Label>
-                <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-3 max-h-40 overflow-y-auto bg-gray-50 dark:bg-gray-800">
-                  {selectedCategoryIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {selectedCategoryIds.map(id => {
-                        const cat = categories.find(c => c.id === id);
-                        return cat ? (
-                          <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-md text-xs font-medium">
-                            {cat.icon} {cat.name}
-                            <button type="button" onClick={() => toggleCategory(id)} className="hover:text-red-500"><FiX className="h-3 w-3" /></button>
-                          </span>
-                        ) : null;
-                      })}
+                <div className="border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  {/* Search input */}
+                  <div className="p-2 border-b border-gray-300 dark:border-gray-700">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search categories..."
+                        value={categorySearchQuery}
+                        onChange={(e) => setCategorySearchQuery(e.target.value)}
+                        className="w-full h-9 pl-9 pr-3 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                      />
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     </div>
-                  )}
-                  <div className="space-y-1">
-                    {categories.map(cat => (
-                      <label key={cat.id} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${selectedCategoryIds.includes(cat.id) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={selectedCategoryIds.includes(cat.id)}
-                          onChange={() => toggleCategory(cat.id)}
-                          disabled={!selectedCategoryIds.includes(cat.id) && selectedCategoryIds.length >= 2}
-                          className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                        />
-                        <span>{cat.icon} {cat.name}</span>
-                      </label>
-                    ))}
+                  </div>
+                  
+                  <div className="p-3 max-h-40 overflow-y-auto">
+                    {selectedCategoryIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {selectedCategoryIds.map(id => {
+                          const cat = categories.find(c => c.id === id);
+                          return cat ? (
+                            <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-md text-xs font-medium">
+                              {cat.icon} {cat.name}
+                              <button type="button" onClick={() => toggleCategory(id)} className="hover:text-red-500"><FiX className="h-3 w-3" /></button>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      {filteredCategories.length > 0 ? (
+                        filteredCategories.map(cat => (
+                          <label key={cat.id} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${selectedCategoryIds.includes(cat.id) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={selectedCategoryIds.includes(cat.id)}
+                              onChange={() => toggleCategory(cat.id)}
+                              disabled={!selectedCategoryIds.includes(cat.id) && selectedCategoryIds.length >= 2}
+                              className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                            />
+                            <span>{cat.icon} {cat.name}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No categories found</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1192,7 +1402,7 @@ const BusinessList = () => {
                 Cancel
               </Button>
               <button type="submit" disabled={submitting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 disabled:opacity-50 transition-colors">
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
                 {submitting ? (
                   <><div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> {isAddModalOpen ? 'Creating...' : 'Updating...'}</>
                 ) : (
@@ -1201,6 +1411,7 @@ const BusinessList = () => {
               </button>
             </div>
           </form>
+          )}
         </Modal>
       )}
       

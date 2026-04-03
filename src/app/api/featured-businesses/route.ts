@@ -45,7 +45,7 @@ const getFeaturedBusinesses = unstable_cache(
     }));
   },
   ['featured-businesses:v3'],
-  { revalidate }
+  { revalidate, tags: ['businesses', 'featured-businesses'] },
 );
 
 export async function GET(request: Request) {

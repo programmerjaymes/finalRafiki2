@@ -18,17 +18,12 @@ export async function POST(request: Request) {
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
-  let tamisemiId: bigint;
-  try {
-    tamisemiId = BigInt(body.tamisemiId ?? body.tamisemi_id);
-  } catch {
-    return NextResponse.json(
-      { error: 'Valid TAMISEMI / numeric id is required' },
-      { status: 400 }
-    );
-  }
-  const code =
-    typeof body.code === 'string' && body.code.trim() ? body.code.trim() : null;
+  
+  // Auto-generate unique tamisemiId (timestamp + random)
+  const tamisemiId = BigInt(Date.now() * 1000 + Math.floor(Math.random() * 1000));
+  
+  // Auto-generate unique code (REG- + timestamp)
+  const code = `REG-${Date.now()}`;
 
   const row = await prisma.region.create({
     data: { name, code, tamisemiId },

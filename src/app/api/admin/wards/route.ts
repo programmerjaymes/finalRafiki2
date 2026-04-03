@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, jsonSafe } from '@/lib/adminApi';
 
@@ -30,27 +31,31 @@ export async function POST(request: Request) {
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
+  
   let districtId: bigint;
-  let tamisemiId: bigint;
   try {
     districtId = BigInt(body.districtId);
-    tamisemiId = BigInt(body.tamisemiId ?? body.tamisemi_id);
   } catch {
     return NextResponse.json(
-      { error: 'Valid district and TAMISEMI ids are required' },
+      { error: 'Valid district id is required' },
       { status: 400 }
     );
   }
-  const code =
-    typeof body.code === 'string' && body.code.trim() ? body.code.trim() : null;
 
   const d = await prisma.district.findUnique({ where: { id: districtId } });
   if (!d) {
     return NextResponse.json({ error: 'District not found' }, { status: 400 });
   }
+  
+  // Auto-generate unique tamisemiId (timestamp + random)
+  const tamisemiId = BigInt(Date.now() * 1000 + Math.floor(Math.random() * 1000));
+  
+  // Auto-generate unique code (WARD- + timestamp)
+  const code = `WARD-${Date.now()}`;
 
   const row = await prisma.ward.create({
     data: { name, code, districtId, tamisemiId },
   });
+  revalidateTag('wards');
   return NextResponse.json(jsonSafe(row), { status: 201 });
 }

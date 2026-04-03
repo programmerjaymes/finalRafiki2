@@ -31,6 +31,8 @@ interface BusinessResponse {
   };
 }
 
+type AreaOption = { id: string; name: string | null };
+
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -39,6 +41,8 @@ function SearchResults() {
   const [businesses, setBusinesses] = useState<BusinessWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
+  const [districts, setDistricts] = useState<AreaOption[]>([]);
+  const [wards, setWards] = useState<AreaOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -48,18 +52,24 @@ function SearchResults() {
   // Get values from URL search params
   const categoryFromUrl = searchParams.get('category') || '';
   const regionFromUrl = searchParams.get('region') || '';
+  const districtFromUrl = searchParams.get('district') || '';
+  const wardFromUrl = searchParams.get('ward') || '';
   const priceRangeFromUrl = searchParams.get('priceRange') || '';
 
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
   const [selectedRegion, setSelectedRegion] = useState(regionFromUrl);
+  const [selectedDistrict, setSelectedDistrict] = useState(districtFromUrl);
+  const [selectedWard, setSelectedWard] = useState(wardFromUrl);
   const [priceRange, setPriceRange] = useState(priceRangeFromUrl);
 
   // Update selected values when URL params change
   useEffect(() => {
     setSelectedCategory(categoryFromUrl);
     setSelectedRegion(regionFromUrl);
+    setSelectedDistrict(districtFromUrl);
+    setSelectedWard(wardFromUrl);
     setPriceRange(priceRangeFromUrl);
-  }, [categoryFromUrl, regionFromUrl, priceRangeFromUrl]);
+  }, [categoryFromUrl, regionFromUrl, districtFromUrl, wardFromUrl, priceRangeFromUrl]);
 
   // Fetch businesses with current filters
   const fetchBusinesses = useCallback(async () => {
@@ -70,6 +80,8 @@ function SearchResults() {
       params.append('page', currentPage.toString());
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedRegion) params.append('region', selectedRegion);
+      if (selectedDistrict) params.append('district', selectedDistrict);
+      if (selectedWard) params.append('ward', selectedWard);
       if (priceRange) params.append('priceRange', priceRange);
 
       const response = await fetch(`/api/businesses?${params.toString()}`);
@@ -90,7 +102,67 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, selectedRegion, priceRange, currentPage]);
+  }, [selectedCategory, selectedRegion, selectedDistrict, selectedWard, priceRange, currentPage]);
+
+  // Load districts when mkoa (region) changes
+  useEffect(() => {
+    if (!selectedRegion) {
+      setDistricts([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/districts?regionId=${encodeURIComponent(selectedRegion)}`);
+        if (!r.ok) throw new Error('districts');
+        const data: unknown = await r.json();
+        if (!cancelled && Array.isArray(data)) {
+          setDistricts(
+            data.map((d: { id?: string; name?: string | null }) => ({
+              id: String(d.id),
+              name: d.name ?? null,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) setDistricts([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRegion]);
+
+  // Load wards when wilaya (district) changes
+  useEffect(() => {
+    if (!selectedDistrict) {
+      setWards([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(
+          `/api/wards?districtId=${encodeURIComponent(selectedDistrict)}`,
+        );
+        if (!r.ok) throw new Error('wards');
+        const data: unknown = await r.json();
+        if (!cancelled && Array.isArray(data)) {
+          setWards(
+            data.map((w: { id?: string; name?: string | null }) => ({
+              id: String(w.id),
+              name: w.name ?? null,
+            })),
+          );
+        }
+      } catch {
+        if (!cancelled) setWards([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDistrict]);
 
   // Fetch reference data (categories and regions)
   const fetchReferenceData = useCallback(async () => {
@@ -131,8 +203,10 @@ function SearchResults() {
     const params = new URLSearchParams();
     if (selectedCategory) params.append('category', selectedCategory);
     if (selectedRegion) params.append('region', selectedRegion);
+    if (selectedDistrict) params.append('district', selectedDistrict);
+    if (selectedWard) params.append('ward', selectedWard);
     if (priceRange) params.append('priceRange', priceRange);
-    
+
     // Navigate to new URL with updated filters
     router.push(`/search?${params.toString()}`);
   };
@@ -140,22 +214,19 @@ function SearchResults() {
   const clearFilters = () => {
     setSelectedCategory('');
     setSelectedRegion('');
+    setSelectedDistrict('');
+    setSelectedWard('');
     setPriceRange('');
     setCurrentPage(1);
     router.push('/search');
   };
 
-  const activeFiltersCount = (selectedCategory ? 1 : 0) + (selectedRegion ? 1 : 0) + (priceRange ? 1 : 0);
-
-  // Debug active selections
-  console.log('Current selections:', { 
-    categoryParam: searchParams.get('category'),
-    selectedCategory,
-    regionParam: searchParams.get('region'),
-    selectedRegion,
-    priceRangeParam: searchParams.get('priceRange'),
-    priceRange
-  });
+  const activeFiltersCount =
+    (selectedCategory ? 1 : 0) +
+    (selectedRegion ? 1 : 0) +
+    (selectedDistrict ? 1 : 0) +
+    (selectedWard ? 1 : 0) +
+    (priceRange ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -224,17 +295,70 @@ function SearchResults() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {messages.search.location}
+                      {messages.search.mkoa}
                     </label>
                     <Select
                       value={selectedRegion}
-                      onChange={(e) => setSelectedRegion(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedRegion(e.target.value);
+                        setSelectedDistrict('');
+                        setSelectedWard('');
+                      }}
                       className="w-full"
                     >
                       <option value="">{messages.search.allLocations}</option>
                       {regions.map((region) => (
                         <option key={String(region.id)} value={String(region.id)}>
                           {region.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {messages.search.wilaya}
+                    </label>
+                    <Select
+                      value={selectedDistrict}
+                      onChange={(e) => {
+                        setSelectedDistrict(e.target.value);
+                        setSelectedWard('');
+                      }}
+                      disabled={!selectedRegion}
+                      className="w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {!selectedRegion
+                          ? messages.search.pickMkoaFirst
+                          : messages.search.allWilaya}
+                      </option>
+                      {districts.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name || d.id}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {messages.search.kijiji}
+                    </label>
+                    <Select
+                      value={selectedWard}
+                      onChange={(e) => setSelectedWard(e.target.value)}
+                      disabled={!selectedDistrict}
+                      className="w-full disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        {!selectedDistrict
+                          ? messages.search.pickWilayaFirst
+                          : messages.search.allKijiji}
+                      </option>
+                      {wards.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name || w.id}
                         </option>
                       ))}
                     </Select>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, jsonSafe } from '@/lib/adminApi';
 
@@ -71,6 +72,7 @@ export async function PUT(
       where: { id },
       data: { name, code, districtId, tamisemiId },
     });
+    revalidateTag('wards');
     return NextResponse.json(jsonSafe(row));
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -101,6 +103,7 @@ export async function DELETE(
   }
   try {
     await prisma.ward.delete({ where: { id } });
+    revalidateTag('wards');
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

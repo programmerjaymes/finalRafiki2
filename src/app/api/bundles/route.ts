@@ -1,15 +1,30 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
-// GET all bundles
-export async function GET(request: Request) {
-  try {
-    const bundles = await prisma.bundle.findMany({
+export const revalidate = 3600
+
+const getBundles = unstable_cache(
+  async () => {
+    return prisma.bundle.findMany({
       orderBy: {
         price: 'asc'
       }
     })
-    return NextResponse.json(bundles)
+  },
+  ['bundles', 'v1'],
+  { revalidate, tags: ['bundles'] },
+)
+
+// GET all bundles
+export async function GET(_request: Request) {
+  try {
+    const bundles = await getBundles()
+    return NextResponse.json(bundles, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    })
   } catch (error) {
     console.error('Error fetching bundles:', error)
     return NextResponse.json(
@@ -47,7 +62,8 @@ export async function POST(request: Request) {
         featured: Boolean(featured)
       }
     })
-    
+
+    revalidateTag('bundles')
     return NextResponse.json(bundle, { status: 201 })
   } catch (error) {
     console.error('Error creating bundle:', error)

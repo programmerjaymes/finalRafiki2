@@ -33,8 +33,7 @@ export async function GET(request: NextRequest) {
       ]
     }
     
-    // Fetch users with filters and pagination
-    const users = await prisma.user.findMany({
+    const userQuery = {
       where,
       select: {
         id: true,
@@ -46,7 +45,6 @@ export async function GET(request: NextRequest) {
         image: true,
         createdAt: true,
         updatedAt: true,
-        // You can add related data if needed
         businesses: {
           select: {
             id: true,
@@ -65,21 +63,23 @@ export async function GET(request: NextRequest) {
             amount: true,
             paymentStatus: true,
           },
-          take: 5, // Limit to recent payments
+          take: 5,
           orderBy: {
-            createdAt: 'desc',
+            createdAt: 'desc' as const,
           },
         },
       },
       skip,
       take: limit,
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'desc' as const,
       },
-    })
-    
-    // Count total users for pagination metadata
-    const total = await prisma.user.count({ where })
+    };
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany(userQuery),
+      prisma.user.count({ where }),
+    ])
     const totalPages = Math.ceil(total / limit)
     
     return NextResponse.json({

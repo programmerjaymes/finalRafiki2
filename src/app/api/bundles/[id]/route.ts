@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server'
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+
+export const revalidate = 3600
+
+const getBundleById = unstable_cache(
+  async (id: string) =>
+    prisma.bundle.findUnique({
+      where: { id },
+    }),
+  ['bundle-by-id', 'v1'],
+  { revalidate, tags: ['bundles'] },
+)
 
 // GET a single bundle by ID
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    
-    const bundle = await prisma.bundle.findUnique({
-      where: {
-        id: id
-      }
-    })
+    const { id } = await params
+
+    const bundle = await getBundleById(id)
 
     if (!bundle) {
       return NextResponse.json(
@@ -22,7 +30,11 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(bundle)
+    return NextResponse.json(bundle, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    })
   } catch (error) {
     console.error('Error fetching bundle:', error)
     return NextResponse.json(
@@ -75,7 +87,8 @@ export async function PUT(
         featured: featured !== undefined ? Boolean(featured) : undefined
       }
     })
-    
+
+    revalidateTag('bundles')
     return NextResponse.json(updatedBundle)
   } catch (error) {
     console.error('Error updating bundle:', error)
@@ -114,7 +127,8 @@ export async function DELETE(
         id: id
       }
     })
-    
+
+    revalidateTag('bundles')
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting bundle:', error)

@@ -225,9 +225,8 @@ export default function StreetList() {
     {
       key: 'ward',
       header: 'Ward',
-      cell: (r) => r.ward?.name || r.ward?.code || '—',
+      cell: (r) => r.ward?.name || '—',
     },
-    { key: 'code', header: 'Code', cell: (r) => r.code || '—' },
     {
       key: 'act',
       header: 'Actions',

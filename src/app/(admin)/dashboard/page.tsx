@@ -179,10 +179,10 @@ async function getDashboardData() {
   try {
     // Get most searched categories
     const categoryResults = await prisma.$queryRaw`
-      SELECT cs.id, cs.categoryId, cs.searchCount, cs.lastSearched, c.name as categoryName
+      SELECT cs.id, cs."categoryId", cs."searchCount", cs."lastSearched", c.name as categoryName
       FROM category_searches cs
-      JOIN categories c ON cs.categoryId = c.id
-      ORDER BY cs.searchCount DESC
+      JOIN categories c ON cs."categoryId" = c.id
+      ORDER BY cs."searchCount" DESC
       LIMIT 5
     ` as Array<{
       id: string;
@@ -225,10 +225,10 @@ async function getDashboardData() {
   try {
     // Get popular locations
     const locationResults = await prisma.$queryRaw`
-      SELECT ls.id, ls.regionId, ls.searchCount, ls.lastSearched, r."RegionName" as regionName
+      SELECT ls.id, ls."regionId", ls."searchCount", ls."lastSearched", r."RegionName" as regionName
       FROM location_searches ls
-      JOIN regions r ON ls.regionId = r.id
-      ORDER BY ls.searchCount DESC
+      JOIN regions r ON ls."regionId" = r.id
+      ORDER BY ls."searchCount" DESC
       LIMIT 5
     ` as Array<{
       id: string;
@@ -254,10 +254,10 @@ async function getDashboardData() {
 
   // Get most selected bundles
   const bundleStats = await prisma.$queryRaw`
-    SELECT b.bundleId, COUNT(*) as count, bd.name as bundleName
+    SELECT b."bundleId", COUNT(*) as count, bd.name as bundleName
     FROM businesses b
-    JOIN bundles bd ON b.bundleId = bd.id
-    GROUP BY b.bundleId, bd.name
+    JOIN bundles bd ON b."bundleId" = bd.id
+    GROUP BY b."bundleId", bd.name
     ORDER BY count DESC
     LIMIT 5
   ` as Array<{

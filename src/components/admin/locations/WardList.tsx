@@ -228,13 +228,7 @@ export default function WardList() {
     {
       key: 'dist',
       header: 'District',
-      cell: (r) => r.district?.name || r.district?.code || '—',
-    },
-    { key: 'code', header: 'Code', cell: (r) => r.code || '—' },
-    {
-      key: 'tam',
-      header: 'TAMISEMI',
-      cell: (r) => String(r.tamisemiId),
+      cell: (r) => r.district?.name || '—',
     },
     {
       key: 'act',

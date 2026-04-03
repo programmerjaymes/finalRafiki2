@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, jsonSafe } from '@/lib/adminApi';
 
@@ -26,31 +27,30 @@ export async function POST(request: Request) {
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   }
-  const regionCode =
-    typeof body.regionCode === 'string' && body.regionCode.trim()
-      ? body.regionCode.trim()
-      : '';
-  if (!regionCode) {
-    return NextResponse.json({ error: 'Region code is required' }, { status: 400 });
-  }
+  
   let regionId: bigint;
-  let tamisemiId: bigint;
   try {
     regionId = BigInt(body.regionId);
-    tamisemiId = BigInt(body.tamisemiId ?? body.tamisemi_id);
   } catch {
     return NextResponse.json(
-      { error: 'Valid region and TAMISEMI ids are required' },
+      { error: 'Valid region id is required' },
       { status: 400 }
     );
   }
-  const code =
-    typeof body.code === 'string' && body.code.trim() ? body.code.trim() : null;
 
   const parent = await prisma.region.findUnique({ where: { id: regionId } });
   if (!parent) {
     return NextResponse.json({ error: 'Region not found' }, { status: 400 });
   }
+  
+  // Auto-generate unique tamisemiId (timestamp + random)
+  const tamisemiId = BigInt(Date.now() * 1000 + Math.floor(Math.random() * 1000));
+  
+  // Auto-generate unique code (DIST- + timestamp)
+  const code = `DIST-${Date.now()}`;
+  
+  // Use parent region code
+  const regionCode = parent.code || '';
 
   const row = await prisma.district.create({
     data: {
@@ -61,5 +61,6 @@ export async function POST(request: Request) {
       tamisemiId,
     },
   });
+  revalidateTag('districts');
   return NextResponse.json(jsonSafe(row), { status: 201 });
 }
