@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+
+export const dynamic = 'force-dynamic';
+
 export const revalidate = 3600
 
 const getBundleById = unstable_cache(

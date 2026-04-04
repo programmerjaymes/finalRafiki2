@@ -10,6 +10,8 @@ import {
   type AppLocale,
 } from '@/lib/categoryLocale';
 
+export const dynamic = 'force-dynamic';
+
 function toBigIntOrUndefined(value: unknown) {
   if (value === null || value === undefined || value === '') return undefined;
   if (typeof value === 'bigint') return value;

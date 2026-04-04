@@ -7,6 +7,8 @@ import {
   type AppLocale,
 } from '@/lib/categoryLocale'
 
+export const dynamic = 'force-dynamic';
+
 const BUSINESS_DETAIL_REVALIDATE = 120
 
 function toBigIntOrNull(value: unknown) {

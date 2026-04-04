@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { getLocaleFromRequest, localizedCategoryFields } from '@/lib/categoryLocale'
 
 // GET a single category by ID
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

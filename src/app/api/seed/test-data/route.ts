@@ -4,6 +4,9 @@ import { hash } from 'bcrypt';
 import { UserRole, PaymentStatus, PaymentMethod } from '@prisma/client';
 
 // Helper to generate random dates within a range
+
+export const dynamic = 'force-dynamic';
+
 function randomDate(start: Date, end: Date): Date {
   return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 }

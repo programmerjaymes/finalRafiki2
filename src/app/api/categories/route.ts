@@ -3,6 +3,9 @@ import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { getLocaleFromRequest, localizedCategoryFields, type AppLocale } from '@/lib/categoryLocale'
 
+
+export const dynamic = 'force-dynamic';
+
 export const revalidate = 3600; // 1 hour
 
 function toPublicCategoryRow(

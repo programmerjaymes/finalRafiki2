@@ -7,6 +7,8 @@ import {
   type AppLocale,
 } from '@/lib/categoryLocale';
 
+export const dynamic = 'force-dynamic';
+
 export const revalidate = 60; // seconds
 
 function jsonSafe<T>(data: T): T {

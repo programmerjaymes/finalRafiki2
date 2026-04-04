@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, jsonSafe } from '@/lib/adminApi';
 
+
+export const dynamic = 'force-dynamic';
+
 function parseId(id: string) {
   try {
     return BigInt(id);

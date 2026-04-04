@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { unstable_cache } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
+
+export const dynamic = 'force-dynamic';
+
 export const revalidate = 3600
 
 function toJsonDistrict(d: { id: bigint; name: string | null; code: string | null; regionId: bigint | null }) {

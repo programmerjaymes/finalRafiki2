@@ -3,6 +3,9 @@ import { revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin, jsonSafe } from '@/lib/adminApi';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
