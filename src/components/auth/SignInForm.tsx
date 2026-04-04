@@ -60,30 +60,41 @@ export default function SignInForm() {
       });
       
       if (!result?.ok) {
-        // Handle error
-        throw new Error(result?.error || "Login failed");
+        throw new Error(result?.error || 'Login failed');
       }
-      
-      // Show success message
+
       toast.success(messages.auth.loginSuccess);
-      
-      // Get the user session to determine role
-      const response = await fetch('/api/auth/session');
-      const session = await response.json();
-      
-      // Wait for session to be fully established
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Redirect based on user role
-      if (session?.user?.role === "ADMIN") {
-        router.push("/dashboard");
-      } else if (session?.user?.role === "BUSINESS_OWNER") {
-        console.log("Redirecting business owner to dashboard");
-        // Force a hard navigation to ensure the middleware picks up the session
-        window.location.href = "/business-dashboard";
+
+      const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+      const session = await sessionRes.json();
+
+      const safeCallbackPath = (): string | null => {
+        const raw = new URLSearchParams(window.location.search).get('callbackUrl');
+        if (!raw) return null;
+        try {
+          const target = raw.startsWith('/')
+            ? new URL(raw, window.location.origin)
+            : new URL(raw);
+          if (target.origin !== window.location.origin) return null;
+          return `${target.pathname}${target.search}${target.hash}`;
+        } catch {
+          return null;
+        }
+      };
+
+      const fromCallback = safeCallbackPath();
+      if (fromCallback) {
+        window.location.assign(fromCallback);
+        return;
+      }
+
+      // Full page navigation so the session cookie is always visible to middleware (fixes Vercel / production).
+      if (session?.user?.role === 'ADMIN') {
+        window.location.assign('/dashboard');
+      } else if (session?.user?.role === 'BUSINESS_OWNER') {
+        window.location.assign('/business-dashboard');
       } else {
-        // Default redirect for other roles
-        router.push("/");
+        window.location.assign('/');
       }
     } catch (error) {
       console.error("Login error:", error);

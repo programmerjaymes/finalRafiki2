@@ -20,6 +20,8 @@ declare module 'next-auth' {
 }
 
 export const authOptions: NextAuthOptions = {
+  // Required for JWT sessions in production (Vercel, etc.); without it cookies/session break.
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -75,8 +77,27 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/signin',
+    error: '/signin',
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith(baseUrl) && url.includes('/api/auth/callback')) {
+        const callbackUrl = new URL(url).searchParams.get('callbackUrl');
+        if (callbackUrl) {
+          try {
+            const target = new URL(callbackUrl, baseUrl);
+            if (target.origin === new URL(baseUrl).origin) {
+              return `${target.pathname}${target.search}${target.hash}`;
+            }
+          } catch {
+            /* ignore invalid callback */
+          }
+        }
+        return baseUrl;
+      }
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
