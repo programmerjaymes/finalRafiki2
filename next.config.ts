@@ -9,12 +9,7 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
-  
-  // Expose environment variables to the runtime
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || '',
-  },
-  
+
   // Add redirects for business-owner routes
   async redirects() {
     return [
