@@ -4,26 +4,54 @@ import { PrismaClient } from '@prisma/client'
 // exhausting your database connection limit.
 // Learn more: https://pris.ly/d/help/next-js-best-practices
 
-// Get the database URL from environment variables
-// Fallback to NETLIFY_DATABASE_URL if DATABASE_URL is not set
+/** Prefer pooled / serverless-friendly URLs (e.g. Neon “pooler” / -pooler in host). */
 const getDatabaseUrl = () => {
-  const url = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+  const url =
+    process.env.DATABASE_URL?.trim() ||
+    process.env.NETLIFY_DATABASE_URL?.trim();
   if (!url) {
     throw new Error('DATABASE_URL or NETLIFY_DATABASE_URL must be set');
   }
-  return url;
+  return normalizePostgresUrl(url);
 };
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
+/**
+ * Neon / Supabase / many cloud Postgres hosts require SSL. Missing sslmode often
+ * works locally (no TLS) but fails in production with connection errors → API 500.
+ */
+function normalizePostgresUrl(url: string): string {
+  if (!url) return url;
+  const lower = url.toLowerCase();
+  if (lower.includes('sslmode=')) return url;
+  const hostMatch = url.match(/@([^/:?]+)/);
+  const host = hostMatch?.[1]?.toLowerCase() ?? '';
+  const likelyNeedsSsl =
+    host.includes('neon.tech') ||
+    host.includes('supabase.co') ||
+    host.includes('amazonaws.com') ||
+    host.includes('azure.com');
+  if (!likelyNeedsSsl) return url;
+  return url.includes('?') ? `${url}&sslmode=require` : `${url}?sslmode=require`;
+}
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({
-  datasources: {
-    db: {
-      url: getDatabaseUrl(),
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    datasources: {
+      db: {
+        url: getDatabaseUrl(),
+      },
     },
-  },
-})
+    log:
+      process.env.NODE_ENV === 'development'
+        ? ['error', 'warn']
+        : ['error'],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
-export default prisma 
+export default prisma;

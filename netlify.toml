@@ -1,7 +1,9 @@
-# Netlify Database: Skip migrations, only generate Prisma client and build
+# Prisma: migrate deploy needs DATABASE_URL during build (set below or in Netlify UI).
+# Runtime: Next.js serverless also needs DATABASE_URL (or NETLIFY_DATABASE_URL) in
+# Site settings → Environment variables for Production/Deploy previews — not only at build time.
 
 [build]
-  command = "npx prisma generate && npm run build"
+  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
   publish = ".next"
   environment = { DATABASE_URL = "${NETLIFY_DATABASE_URL}" }
 
