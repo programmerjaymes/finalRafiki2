@@ -12,13 +12,33 @@ import { useLocale } from '@/lib/useLocale';
 export default function Home() {
   const locale = useLocale();
   const messages = t(locale);
+  const downloadLabel =
+    locale === 'sw' ? 'Pakua Programu Ya simu' : 'Download Our Application';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <Navbar />
       <main className="flex-grow">
-        <Hero />
-        <section id="search" className="-mt-10 sm:-mt-11 relative z-20">
+        <section className="pt-24 sm:pt-28 pb-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary dark:text-secondary">
+                {locale === 'sw' ? 'Biashara Zilizopendekezwa' : 'Featured Businesses'}
+              </h1>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {locale === 'sw'
+                  ? 'Machaguo maarufu kwa sasa - orodha zilizothibitishwa zenye ufuatiliaji mkubwa.'
+                  : 'Popular picks right now — verified listings with the most interest.'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div className="pb-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+          <FeaturedBusinesses showHeader={false} />
+        </div>
+
+        <section id="search" className="pt-6 sm:pt-8 relative z-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900/90 backdrop-blur-xl shadow-lg p-4 sm:p-5">
               <div>
@@ -35,12 +55,9 @@ export default function Home() {
             </div>
           </div>
         </section>
+        <Hero />
 
         <LandingHighlights />
-
-        <div className="py-12 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
-          <FeaturedBusinesses />
-        </div>
 
         {/* CTA Section */}
         <section className="py-12">
@@ -87,7 +104,20 @@ export default function Home() {
             </div>
           </div>
         </section>
+
       </main>
+      <a
+        href="/downloads/rafiki-app-release.apk"
+        download
+        className="fixed bottom-6 right-4 sm:right-6 z-[70] inline-flex items-center gap-2 rounded-full bg-primary text-white px-5 py-3 font-semibold shadow-xl hover:bg-primary-dark transition-all duration-300 animate-pulse hover:animate-none"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+          <path d="M12 4v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M8 11l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 20h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        {downloadLabel}
+      </a>
       <Footer />
     </div>
   );

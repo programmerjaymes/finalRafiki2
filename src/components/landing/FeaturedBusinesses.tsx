@@ -16,7 +16,11 @@ type FeaturedBusiness = {
   region: { name: string | null } | null;
 };
 
-export default function FeaturedBusinesses() {
+type FeaturedBusinessesProps = {
+  showHeader?: boolean;
+};
+
+export default function FeaturedBusinesses({ showHeader = true }: FeaturedBusinessesProps) {
   const locale = useLocale();
   const messages = t(locale);
   const [businesses, setBusinesses] = useState<FeaturedBusiness[]>([]);
@@ -107,17 +111,19 @@ export default function FeaturedBusinesses() {
   return (
     <section className="py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {messages.home.featuredTitleBefore}{' '}
-            <span className="text-primary dark:text-secondary">{messages.home.featuredTitleHighlight}</span>
-          </h2>
-          <p className="mt-3 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            {messages.home.featuredSubtitle}
-          </p>
-        </div>
+        {showHeader && (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {messages.home.featuredTitleBefore}{' '}
+              <span className="text-primary dark:text-secondary">{messages.home.featuredTitleHighlight}</span>
+            </h2>
+            <p className="mt-3 text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              {messages.home.featuredSubtitle}
+            </p>
+          </div>
+        )}
 
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className={`${showHeader ? 'mt-10' : 'mt-0'} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`}>
           {businesses.map((business) => {
             const logoSrc =
               business.logo && business.logo.startsWith('data:')
