@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 import {
   getLocaleFromRequest,
   localizedCategoryFields,
@@ -118,10 +119,11 @@ export async function GET(request: Request) {
     const wardId = url.searchParams.get('ward') || undefined;
     const isApproved = url.searchParams.get('isApproved');
     const isVerified = url.searchParams.get('isVerified');
+    const ownerId = url.searchParams.get('ownerId') || undefined;
 
     const skip = (page - 1) * limit;
 
-    if (!search && !categoryId && !regionId && !districtId && !wardId && isApproved === null && isVerified === null) {
+    if (!search && !categoryId && !regionId && !districtId && !wardId && isApproved === null && isVerified === null && !url.searchParams.get('ownerId')) {
       const locale = getLocaleFromRequest(request);
       const payload = await fetchPublicBusinessList(page, limit, locale);
       return NextResponse.json(payload, {
@@ -195,6 +197,10 @@ export async function GET(request: Request) {
 
     if (wardId) {
       where.wardId = toBigIntOrUndefined(wardId);
+    }
+
+    if (ownerId) {
+      where.ownerId = ownerId;
     }
 
     const businessListArgs = {
@@ -387,34 +393,58 @@ async function trackLocationSearch(regionId: bigint) {
 // POST - Create a new business
 export async function POST(request: Request) {
   try {
-    // Get the current user from the session
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const body = (await request.json()) as Record<string, unknown>;
+
+    const ownerAuthEmail = body.ownerAuthEmail as string | undefined;
+    const ownerAuthPassword = body.ownerAuthPassword as string | undefined;
+    const ownerAuthPhone = body.ownerAuthPhone as string | undefined;
+    delete body.ownerAuthEmail;
+    delete body.ownerAuthPassword;
+    delete body.ownerAuthPhone;
+
+    let currentUser: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
+
+    if (session?.user?.email) {
+      currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
     }
 
-    // Get the current user to check role
-    const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
+    if (!currentUser && ownerAuthEmail && ownerAuthPassword) {
+      const u = await prisma.user.findUnique({
+        where: { email: ownerAuthEmail },
+        select: { id: true, name: true, email: true, phone: true, role: true, image: true, createdAt: true, hashedPassword: true },
+      });
+      if (u?.hashedPassword && (await bcrypt.compare(ownerAuthPassword, u.hashedPassword))) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { hashedPassword: _hp, ...safe } = u;
+        currentUser = safe as Awaited<ReturnType<typeof prisma.user.findUnique>>;
+      }
+    }
+
+    if (!currentUser && ownerAuthPhone && ownerAuthPassword) {
+      const u = await prisma.user.findUnique({
+        where: { phone: ownerAuthPhone },
+        select: { id: true, name: true, email: true, phone: true, role: true, image: true, createdAt: true, hashedPassword: true },
+      });
+      if (u?.hashedPassword && (await bcrypt.compare(ownerAuthPassword, u.hashedPassword))) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { hashedPassword: _hp, ...safe } = u;
+        currentUser = safe as Awaited<ReturnType<typeof prisma.user.findUnique>>;
+      }
+    }
 
     if (!currentUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const isAdmin = currentUser.role === 'ADMIN';
-    const body = await request.json();
 
-    const { 
-      name, 
-      description, 
-      email, 
+    const {
+      name,
+      description,
+      email,
       phone,
       street,
       regionId,
@@ -429,35 +459,53 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       images,
-    } = body;
+    } = body as {
+      name?: string;
+      description?: string;
+      email?: string;
+      phone?: string;
+      street?: string;
+      regionId?: string;
+      districtId?: string;
+      wardId?: string;
+      bundleId?: string;
+      categoryId?: string;
+      categoryId2?: string;
+      transactionId?: string;
+      ownerId?: string;
+      logo?: string;
+      latitude?: string;
+      longitude?: string;
+      images?: string[];
+    };
 
     // Admin creation: ownerId required, transactionId optional
-    // Normal creation: transactionId required
     if (isAdmin) {
       if (!name || !bundleId || !categoryId || !ownerId) {
         return NextResponse.json(
           { error: 'Missing required fields (name, bundleId, categoryId, ownerId)' },
-          { status: 400 }
+          { status: 400 },
         );
       }
     } else {
-      if (!name || !description || !email || !phone || !street || !regionId || !districtId || !wardId || !bundleId || !categoryId || !transactionId) {
-        return NextResponse.json(
-          { error: 'Missing required fields' },
-          { status: 400 }
-        );
+      if (!name || !description || !email || !phone || !street || !regionId || !districtId || !wardId || !bundleId || !categoryId) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
       }
     }
 
     // Get the bundle to verify it exists and get its duration
     const bundle = await prisma.bundle.findUnique({
-      where: { id: bundleId }
+      where: { id: bundleId! },
     });
 
     if (!bundle) {
+      return NextResponse.json({ error: 'Invalid bundle selected' }, { status: 400 });
+    }
+
+    if (!isAdmin && bundle.price > 0 && !transactionId) {
       return NextResponse.json(
-        { error: 'Invalid bundle selected' },
-        { status: 400 }
+        { error: 'Payment transaction reference is required for this bundle' },
+        { status: 400 },
       );
     }
 
@@ -571,8 +619,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create payment record only for non-admin (user-initiated) creation
-    if (!isAdmin && transactionId) {
+    // Create payment record only for non-admin paid bundles
+    if (!isAdmin && transactionId && bundle.price > 0) {
       await prisma.payment.create({
         data: {
           amount: bundle.price,

@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
     const role = searchParams.get('role') || ''
+    const emailExact = searchParams.get('email')
+    const phoneExact = searchParams.get('phone')
     
     console.log('API request parameters:', { page, limit, search, role })
     
@@ -27,9 +29,17 @@ export async function GET(request: NextRequest) {
     if (role) {
       where.role = role
     }
-    
+
+    if (emailExact) {
+      where.email = emailExact
+    }
+
+    if (phoneExact) {
+      where.phone = phoneExact
+    }
+
     // Add search filter if provided
-    if (search) {
+    if (search && !emailExact && !phoneExact) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },

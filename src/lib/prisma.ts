@@ -21,17 +21,33 @@ const getDatabaseUrl = () => {
  */
 function normalizePostgresUrl(url: string): string {
   if (!url) return url;
-  const lower = url.toLowerCase();
-  if (lower.includes('sslmode=')) return url;
-  const hostMatch = url.match(/@([^/:?]+)/);
+  let out = url;
+  const lower = out.toLowerCase();
+  const hostMatch = out.match(/@([^/:?]+)/);
   const host = hostMatch?.[1]?.toLowerCase() ?? '';
+
   const likelyNeedsSsl =
     host.includes('neon.tech') ||
     host.includes('supabase.co') ||
     host.includes('amazonaws.com') ||
     host.includes('azure.com');
-  if (!likelyNeedsSsl) return url;
-  return url.includes('?') ? `${url}&sslmode=require` : `${url}?sslmode=require`;
+  if (likelyNeedsSsl && !lower.includes('sslmode=')) {
+    out = out.includes('?') ? `${out}&sslmode=require` : `${out}?sslmode=require`;
+  }
+
+  // Neon "pooler" endpoints use PgBouncer in transaction mode. Without this, Prisma
+  // can see sporadic `Error { kind: Closed }` when the pooler reclaims connections.
+  const lowerOut = out.toLowerCase();
+  if (
+    host.includes('neon.tech') &&
+    (host.includes('pooler') || lowerOut.includes('pooler')) &&
+    !lowerOut.includes('pgbouncer=true') &&
+    !lowerOut.includes('pgbouncer=1')
+  ) {
+    out = out.includes('?') ? `${out}&pgbouncer=true` : `${out}?pgbouncer=true`;
+  }
+
+  return out;
 }
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };

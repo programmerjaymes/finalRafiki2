@@ -11,34 +11,56 @@ type UserRole = 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, role = 'BUSINESS_OWNER' } = body;
+    const { name, email, phone, password, role = 'BUSINESS_OWNER' } = body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      password?: string;
+      role?: string;
+    };
     
     // Validate required fields
-    if (!name || !email || !password) {
+    if (!name || !password || (!email && !phone)) {
       return NextResponse.json(
         { 
           status: 'error',
-          error: 'Name, email and password are required',
-          field: !name ? 'name' : !email ? 'email' : 'password'
+          error: 'Name, password, and email or phone are required',
+          field: !name ? 'name' : !password ? 'password' : 'email'
         },
         { status: 400 }
       );
     }
     
-    // Check if email is already registered
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-    
-    if (existingUser) {
-      return NextResponse.json(
-        { 
-          status: 'error',
-          error: 'This email is already registered. Please use a different email or try logging in.',
-          field: 'email'
-        },
-        { status: 409 }
-      );
+    if (email) {
+      const existingByEmail = await prisma.user.findUnique({
+        where: { email },
+      });
+      if (existingByEmail) {
+        return NextResponse.json(
+          { 
+            status: 'error',
+            error: 'This email is already registered. Please use a different email or try logging in.',
+            field: 'email'
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    if (phone) {
+      const existingByPhone = await prisma.user.findUnique({
+        where: { phone },
+      });
+      if (existingByPhone) {
+        return NextResponse.json(
+          { 
+            status: 'error',
+            error: 'This phone number is already registered.',
+            field: 'phone'
+          },
+          { status: 409 }
+        );
+      }
     }
     
     // Hash the password with bcrypt
@@ -48,7 +70,8 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: email ?? null,
+        phone: phone ?? null,
         hashedPassword,
         role: role as UserRole,
       },
