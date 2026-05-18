@@ -32,7 +32,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/signin') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/reset-password') ||
-    pathname.startsWith('/error-404');
+    pathname.startsWith('/error-404') ||
+    pathname.startsWith('/account/privacy');
 
   // Deny by default: if route is not explicitly public, login is required.
   if (!isPublicRoute && !token) {
@@ -47,7 +48,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/business-instructions') ||
       pathname.startsWith('/business-create') ||
       pathname.startsWith('/business-my-businesses') ||
-      pathname.startsWith('/businessowner-dashboard');
+      pathname.startsWith('/businessowner-dashboard') ||
+      pathname.startsWith('/account');
 
     if (
       pathname === '/' ||

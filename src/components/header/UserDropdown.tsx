@@ -146,8 +146,32 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
               Support
             </DropdownItem>
           </li>
+          <li>
+            <DropdownItem
+              onItemClick={closeDropdown}
+              tag="a"
+              href="/account/privacy"
+              className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+            >
+              <svg
+                className="fill-gray-500 group-hover:fill-gray-700 dark:fill-gray-400 dark:group-hover:fill-gray-300"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 2.25c-2.625 0-4.875 1.61-5.813 3.89-.41.99-.562 2.08-.437 3.16.124 1.07.499 2.09 1.094 2.98l-1.97 5.78c-.18.53.02 1.11.49 1.42.47.31 1.09.26 1.5-.12l2.06-1.93c.72.19 1.47.29 2.24.29.77 0 1.52-.1 2.24-.29l2.06 1.93c.41.38 1.03.43 1.5.12.47-.31.67-.89.49-1.42l-1.97-5.78c.595-.89.97-1.91 1.094-2.98.125-1.08-.027-2.17-.437-3.16-.938-2.28-3.188-3.89-5.813-3.89Zm0 1.5c2.08 0 3.906 1.28 4.625 3.03.29.69.397 1.45.312 2.18-.084.74-.34 1.44-.75 2.05a.75.75 0 0 0-.08.68l1.78 5.21-1.78-1.67a.75.75 0 0 0-.72-.19 7.15 7.15 0 0 1-3.405.84 7.15 7.15 0 0 1-3.405-.84.75.75 0 0 0-.72.19l-1.78 1.67 1.78-5.21a.75.75 0 0 0-.08-.68c-.41-.61-.666-1.31-.75-2.05-.085-.73.022-1.49.312-2.18.719-1.75 2.545-3.03 4.625-3.03Z"
+                  fill=""
+                />
+              </svg>
+              Privacy &amp; data
+            </DropdownItem>
+          </li>
         </ul>
-        <button
           type="button"
           onClick={() => {
             closeDropdown();

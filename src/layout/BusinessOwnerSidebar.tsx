@@ -1,17 +1,17 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
   GridIcon,
   ChevronDownIcon,
 } from "../icons/index";
-import { 
+import {
   FaInfoCircle as InstructionsIcon,
   FaBuilding as BusinessIcon,
   FaPlus as CreateIcon,
+  FaShieldAlt as PrivacyIcon,
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
 
@@ -43,6 +43,11 @@ const navItems: NavItem[] = [
     icon: <BusinessIcon />,
     name: "My Businesses",
     path: "/business-my-businesses",
+  },
+  {
+    icon: <PrivacyIcon />,
+    name: "Privacy & data",
+    path: "/account/privacy",
   },
 ];
 

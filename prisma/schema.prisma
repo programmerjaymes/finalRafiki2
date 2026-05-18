@@ -27,8 +27,38 @@ model User {
   reviews               Review[]
   searchQueries         SearchQuery[]
   sessions              Session[]
+  privacyRequests       PrivacyRequest[]
 
   @@map("users")
+}
+
+enum PrivacyRequestType {
+  ACCOUNT_DELETION
+  DATA_DELETION
+}
+
+enum PrivacyRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model PrivacyRequest {
+  id        String               @id @default(cuid())
+  userId    String?
+  email     String
+  name      String?
+  type      PrivacyRequestType
+  details   String               @db.Text
+  status    PrivacyRequestStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId], map: "privacy_requests_userId_idx")
+  @@index([status], map: "privacy_requests_status_idx")
+  @@map("privacy_requests")
 }
 
 model Business {
