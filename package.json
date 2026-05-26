@@ -15,7 +15,8 @@
     "drizzle:generate": "drizzle-kit generate",
     "drizzle:migrate": "netlify dev:exec drizzle-kit migrate",
     "drizzle:studio": "netlify dev:exec drizzle-kit studio",
-    "db:studio": "netlify dev:exec drizzle-kit studio"
+    "db:studio": "netlify dev:exec drizzle-kit studio",
+    "seed:categories": "npx tsx prisma/seed-categories.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
