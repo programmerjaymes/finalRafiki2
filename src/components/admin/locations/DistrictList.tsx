@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiPlus, FiSearch } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
 import Label from '@/components/form/Label';
@@ -32,6 +33,8 @@ export default function DistrictList() {
   const [rows, setRows] = useState<DistrictRow[]>([]);
   const [regions, setRegions] = useState<RegionOpt[]>([]);
   const [filterRegion, setFilterRegion] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
+  const [filterRegionSearch, setFilterRegionSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -270,18 +273,30 @@ export default function DistrictList() {
   ];
 
   const regionSelect = (
-    <select
+    <SearchableSelect
       value={form.regionId}
-      onChange={(e) => onRegionPick(e.target.value)}
-      className="h-11 w-full rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      onValueChange={onRegionPick}
     >
-      <option value="">Select region</option>
-      {regions.map((r) => (
-        <option key={r.id} value={r.id}>
-          {r.name || r.code || r.id}
-        </option>
-      ))}
-    </select>
+      <SearchableSelectTrigger>
+        <SearchableSelectValue placeholder="Select region" />
+      </SearchableSelectTrigger>
+      <SearchableSelectContent
+        searchPlaceholder="Search regions..."
+        searchValue={regionSearch}
+        onSearchChange={setRegionSearch}
+      >
+        {regions
+          .filter((r) => 
+            r.name?.toLowerCase().includes(regionSearch.toLowerCase()) ||
+            r.code?.toLowerCase().includes(regionSearch.toLowerCase())
+          )
+          .map((r) => (
+            <SearchableSelectItem key={r.id} value={r.id}>
+              {r.name || r.code || r.id}
+            </SearchableSelectItem>
+          ))}
+      </SearchableSelectContent>
+    </SearchableSelect>
   );
 
   return (
@@ -297,18 +312,31 @@ export default function DistrictList() {
             />
             <FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
-          <select
+          <SearchableSelect
             value={filterRegion}
-            onChange={(e) => setFilterRegion(e.target.value)}
-            className="h-11 rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white min-w-[200px]"
+            onValueChange={setFilterRegion}
           >
-            <option value="">All regions</option>
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name || r.code || r.id}
-              </option>
-            ))}
-          </select>
+            <SearchableSelectTrigger>
+              <SearchableSelectValue placeholder="All regions" />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search regions..."
+              searchValue={filterRegionSearch}
+              onSearchChange={setFilterRegionSearch}
+            >
+              <SearchableSelectItem value="">All regions</SearchableSelectItem>
+              {regions
+                .filter((r) => 
+                  r.name?.toLowerCase().includes(filterRegionSearch.toLowerCase()) ||
+                  r.code?.toLowerCase().includes(filterRegionSearch.toLowerCase())
+                )
+                .map((r) => (
+                  <SearchableSelectItem key={r.id} value={r.id}>
+                    {r.name || r.code || r.id}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
         <Button
           variant="primary"

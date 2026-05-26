@@ -5,7 +5,7 @@ import Card from "@/components/ui/card/Card";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import Select from "@/components/form/select/Select";
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from "@/components/ui/searchable-select";
 import BundleSelection from "@/components/business/BundleSelection";
 import PaymentProcessor from "@/components/business/PaymentProcessor";
 import toast from "@/utils/toast";
@@ -75,6 +75,11 @@ export default function CreateBusinessPage() {
   const [wards, setWards] = useState<Ward[]>([]);
   const [selectedBundle, setSelectedBundle] = useState<Bundle | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [regionSearch, setRegionSearch] = useState("");
+  const [districtSearch, setDistrictSearch] = useState("");
+  const [wardSearch, setWardSearch] = useState("");
+
   const [formData, setFormData] = useState<BusinessFormData>({
     name: "",
     description: "",
@@ -321,20 +326,32 @@ export default function CreateBusinessPage() {
             </div>
             <div>
               <Label htmlFor="categoryId">Business Category *</Label>
-              <Select
-                id="categoryId"
-                name="categoryId"
+              <SearchableSelect
                 value={formData.categoryId}
-                onChange={handleInputChange}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
                 required
               >
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
+                <SearchableSelectTrigger>
+                  <SearchableSelectValue placeholder="Select a category" />
+                </SearchableSelectTrigger>
+                <SearchableSelectContent
+                  searchPlaceholder="Search categories..."
+                  searchValue={categorySearch}
+                  onSearchChange={setCategorySearch}
+                >
+                  {categories
+                    .filter(category => 
+                      category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                      category.nameEn?.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                      category.nameSw?.toLowerCase().includes(categorySearch.toLowerCase())
+                    )
+                    .map(category => (
+                      <SearchableSelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SearchableSelectItem>
+                    ))}
+                </SearchableSelectContent>
+              </SearchableSelect>
             </div>
             {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('website') && (
               <div>
@@ -410,56 +427,96 @@ export default function CreateBusinessPage() {
           <div className="space-y-6">
             <div>
               <Label htmlFor="regionId">Region *</Label>
-              <Select
-                id="regionId"
-                name="regionId"
+              <SearchableSelect
                 value={formData.regionId}
-                onChange={handleInputChange}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, regionId: value, districtId: "", wardId: "" }));
+                  setDistrictSearch("");
+                  setWardSearch("");
+                }}
                 required
               >
-                <option value="">Select a region</option>
-                {regions.map(region => (
-                  <option key={String(region.id)} value={String(region.id)}>
-                    {region.name}
-                  </option>
-                ))}
-              </Select>
+                <SearchableSelectTrigger>
+                  <SearchableSelectValue placeholder="Select a region" />
+                </SearchableSelectTrigger>
+                <SearchableSelectContent
+                  searchPlaceholder="Search regions..."
+                  searchValue={regionSearch}
+                  onSearchChange={setRegionSearch}
+                >
+                  {regions
+                    .filter(region => 
+                      region.name?.toLowerCase().includes(regionSearch.toLowerCase()) ||
+                      region.code?.toLowerCase().includes(regionSearch.toLowerCase())
+                    )
+                    .map(region => (
+                      <SearchableSelectItem key={String(region.id)} value={String(region.id)}>
+                        {region.name}
+                      </SearchableSelectItem>
+                    ))}
+                </SearchableSelectContent>
+              </SearchableSelect>
             </div>
             <div>
               <Label htmlFor="districtId">District *</Label>
-              <Select
-                id="districtId"
-                name="districtId"
+              <SearchableSelect
                 value={formData.districtId}
-                onChange={handleInputChange}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, districtId: value, wardId: "" }));
+                  setWardSearch("");
+                }}
                 required
                 disabled={!formData.regionId}
               >
-                <option value="">Select a district</option>
-                {districts.map(district => (
-                  <option key={String(district.id)} value={String(district.id)}>
-                    {district.name}
-                  </option>
-                ))}
-              </Select>
+                <SearchableSelectTrigger>
+                  <SearchableSelectValue placeholder="Select a district" />
+                </SearchableSelectTrigger>
+                <SearchableSelectContent
+                  searchPlaceholder="Search districts..."
+                  searchValue={districtSearch}
+                  onSearchChange={setDistrictSearch}
+                >
+                  {districts
+                    .filter(district => 
+                      district.name?.toLowerCase().includes(districtSearch.toLowerCase()) ||
+                      district.code?.toLowerCase().includes(districtSearch.toLowerCase())
+                    )
+                    .map(district => (
+                      <SearchableSelectItem key={String(district.id)} value={String(district.id)}>
+                        {district.name}
+                      </SearchableSelectItem>
+                    ))}
+                </SearchableSelectContent>
+              </SearchableSelect>
             </div>
             <div>
               <Label htmlFor="wardId">Ward *</Label>
-              <Select
-                id="wardId"
-                name="wardId"
+              <SearchableSelect
                 value={formData.wardId}
-                onChange={handleInputChange}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, wardId: value }))}
                 required
                 disabled={!formData.districtId}
               >
-                <option value="">Select a ward</option>
-                {wards.map(ward => (
-                  <option key={String(ward.id)} value={String(ward.id)}>
-                    {ward.name}
-                  </option>
-                ))}
-              </Select>
+                <SearchableSelectTrigger>
+                  <SearchableSelectValue placeholder="Select a ward" />
+                </SearchableSelectTrigger>
+                <SearchableSelectContent
+                  searchPlaceholder="Search wards..."
+                  searchValue={wardSearch}
+                  onSearchChange={setWardSearch}
+                >
+                  {wards
+                    .filter(ward => 
+                      ward.name?.toLowerCase().includes(wardSearch.toLowerCase()) ||
+                      ward.code?.toLowerCase().includes(wardSearch.toLowerCase())
+                    )
+                    .map(ward => (
+                      <SearchableSelectItem key={String(ward.id)} value={String(ward.id)}>
+                        {ward.name}
+                      </SearchableSelectItem>
+                    ))}
+                </SearchableSelectContent>
+              </SearchableSelect>
             </div>
             <div>
               <Label htmlFor="street">Street Address *</Label>

@@ -172,6 +172,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
             </DropdownItem>
           </li>
         </ul>
+        <button
           type="button"
           onClick={() => {
             closeDropdown();

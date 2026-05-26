@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
 import { motion } from 'framer-motion';
-import Select from '@/components/form/select/Select';
 import { Category, Region } from '@prisma/client';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
@@ -16,6 +16,10 @@ export default function BusinessSearch() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<AreaOption[]>([]);
   const [wards, setWards] = useState<AreaOption[]>([]);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
+  const [districtSearch, setDistrictSearch] = useState('');
+  const [wardSearch, setWardSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
@@ -159,125 +163,157 @@ export default function BusinessSearch() {
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.category}
           </label>
-          <div className="relative">
-            <Select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className={selectClass}
+          <SearchableSelect
+            value={selectedCategory}
+            onValueChange={setSelectedCategory}
+          >
+            <SearchableSelectTrigger className={selectClass}>
+              <SearchableSelectValue placeholder={messages.search.allCategories} />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search categories..."
+              searchValue={categorySearch}
+              onSearchChange={setCategorySearch}
             >
-              <option value="">{messages.search.allCategories}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </Select>
-            {chevron}
-          </div>
+              <SearchableSelectItem value="">{messages.search.allCategories}</SearchableSelectItem>
+              {categories
+                .filter((category) => 
+                  category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                  category.nameEn?.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                  category.nameSw?.toLowerCase().includes(categorySearch.toLowerCase())
+                )
+                .map((category) => (
+                  <SearchableSelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
 
         <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.mkoa}
           </label>
-          <div className="relative">
-            <Select
-              value={selectedRegion}
-              onChange={(e) => {
-                setSelectedRegion(e.target.value);
-                setSelectedDistrict('');
-                setSelectedWard('');
-              }}
-              className={selectClass}
+          <SearchableSelect
+            value={selectedRegion}
+            onValueChange={(value) => {
+              setSelectedRegion(value);
+              setSelectedDistrict('');
+              setSelectedWard('');
+              setDistrictSearch('');
+              setWardSearch('');
+            }}
+          >
+            <SearchableSelectTrigger className={selectClass}>
+              <SearchableSelectValue placeholder={messages.search.allLocations} />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search regions..."
+              searchValue={regionSearch}
+              onSearchChange={setRegionSearch}
             >
-              <option value="">{messages.search.allLocations}</option>
-              {regions.map((region) => (
-                <option key={String(region.id)} value={String(region.id)}>
-                  {region.name}
-                </option>
-              ))}
-            </Select>
-            {chevron}
-          </div>
+              <SearchableSelectItem value="">{messages.search.allLocations}</SearchableSelectItem>
+              {regions
+                .filter((region) => 
+                  region.name?.toLowerCase().includes(regionSearch.toLowerCase()) ||
+                  region.code?.toLowerCase().includes(regionSearch.toLowerCase())
+                )
+                .map((region) => (
+                  <SearchableSelectItem key={String(region.id)} value={String(region.id)}>
+                    {region.name}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
 
         <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.wilaya}
           </label>
-          <div className="relative">
-            <Select
-              value={selectedDistrict}
-              onChange={(e) => {
-                setSelectedDistrict(e.target.value);
-                setSelectedWard('');
-              }}
-              disabled={!selectedRegion}
-              className={selectClass}
+          <SearchableSelect
+            value={selectedDistrict}
+            onValueChange={(value) => {
+              setSelectedDistrict(value);
+              setSelectedWard('');
+              setWardSearch('');
+            }}
+            disabled={!selectedRegion}
+          >
+            <SearchableSelectTrigger className={selectClass}>
+              <SearchableSelectValue placeholder={!selectedRegion ? messages.search.pickMkoaFirst : messages.search.allWilaya} />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search districts..."
+              searchValue={districtSearch}
+              onSearchChange={setDistrictSearch}
             >
-              <option value="">
-                {!selectedRegion ? messages.search.pickMkoaFirst : messages.search.allWilaya}
-              </option>
-              {districts.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name || d.id}
-                </option>
-              ))}
-            </Select>
-            {chevron}
-          </div>
+              <SearchableSelectItem value="">{messages.search.allWilaya}</SearchableSelectItem>
+              {districts
+                .filter((d) => 
+                  d.name?.toLowerCase().includes(districtSearch.toLowerCase()) ||
+                  d.id.toLowerCase().includes(districtSearch.toLowerCase())
+                )
+                .map((d) => (
+                  <SearchableSelectItem key={d.id} value={d.id}>
+                    {d.name || d.id}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
 
         <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.kijiji}
           </label>
-          <div className="relative">
-            <Select
-              value={selectedWard}
-              onChange={(e) => setSelectedWard(e.target.value)}
-              disabled={!selectedDistrict}
-              className={selectClass}
+          <SearchableSelect
+            value={selectedWard}
+            onValueChange={setSelectedWard}
+            disabled={!selectedDistrict}
+          >
+            <SearchableSelectTrigger className={selectClass}>
+              <SearchableSelectValue placeholder={!selectedDistrict ? messages.search.pickWilayaFirst : messages.search.allKijiji} />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search wards..."
+              searchValue={wardSearch}
+              onSearchChange={setWardSearch}
             >
-              <option value="">
-                {!selectedDistrict ? messages.search.pickWilayaFirst : messages.search.allKijiji}
-              </option>
-              {wards.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name || w.id}
-                </option>
-              ))}
-            </Select>
-            {chevron}
-          </div>
+              <SearchableSelectItem value="">{messages.search.allKijiji}</SearchableSelectItem>
+              {wards
+                .filter((w) => 
+                  w.name?.toLowerCase().includes(wardSearch.toLowerCase()) ||
+                  w.id.toLowerCase().includes(wardSearch.toLowerCase())
+                )
+                .map((w) => (
+                  <SearchableSelectItem key={w.id} value={w.id}>
+                    {w.name || w.id}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
 
         <div className="lg:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {messages.search.priceRange}
           </label>
-          <div className="relative">
-            <Select
-              value={priceRange}
-              onChange={(e) => setPriceRange(e.target.value)}
-              className={selectClass}
-            >
-              <option value="">{messages.search.anyPrice}</option>
-              <option value="low">{messages.search.budget}</option>
-              <option value="medium">{messages.search.standard}</option>
-              <option value="high">{messages.search.premium}</option>
-            </Select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-400 dark:text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-          </div>
+          <SearchableSelect
+            value={priceRange}
+            onValueChange={setPriceRange}
+          >
+            <SearchableSelectTrigger className={selectClass}>
+              <SearchableSelectValue placeholder={messages.search.anyPrice} />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent>
+              <SearchableSelectItem value="">{messages.search.anyPrice}</SearchableSelectItem>
+              <SearchableSelectItem value="low">{messages.search.budget}</SearchableSelectItem>
+              <SearchableSelectItem value="medium">{messages.search.standard}</SearchableSelectItem>
+              <SearchableSelectItem value="high">{messages.search.premium}</SearchableSelectItem>
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
 
         <div className="sm:col-span-2 lg:col-span-2 flex items-end">

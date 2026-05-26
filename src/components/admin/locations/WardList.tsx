@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiPlus, FiSearch } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
 import Label from '@/components/form/Label';
@@ -36,6 +37,8 @@ export default function WardList() {
   const [rows, setRows] = useState<WardRow[]>([]);
   const [districts, setDistricts] = useState<DistrictOpt[]>([]);
   const [filterDistrict, setFilterDistrict] = useState('');
+  const [districtSearch, setDistrictSearch] = useState('');
+  const [filterDistrictSearch, setFilterDistrictSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -193,20 +196,32 @@ export default function WardList() {
   };
 
   const districtSelect = (
-    <select
+    <SearchableSelect
       value={form.districtId}
-      onChange={(e) =>
-        setForm((f) => ({ ...f, districtId: e.target.value }))
+      onValueChange={(value) =>
+        setForm((f) => ({ ...f, districtId: value }))
       }
-      className="h-11 w-full rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
     >
-      <option value="">Select district</option>
-      {districts.map((d) => (
-        <option key={d.id} value={d.id}>
-          {d.name || d.code || d.id}
-        </option>
-      ))}
-    </select>
+      <SearchableSelectTrigger>
+        <SearchableSelectValue placeholder="Select district" />
+      </SearchableSelectTrigger>
+      <SearchableSelectContent
+        searchPlaceholder="Search districts..."
+        searchValue={districtSearch}
+        onSearchChange={setDistrictSearch}
+      >
+        {districts
+          .filter((d) => 
+            d.name?.toLowerCase().includes(districtSearch.toLowerCase()) ||
+            d.code?.toLowerCase().includes(districtSearch.toLowerCase())
+          )
+          .map((d) => (
+            <SearchableSelectItem key={d.id} value={d.id}>
+              {d.name || d.code || d.id}
+            </SearchableSelectItem>
+          ))}
+      </SearchableSelectContent>
+    </SearchableSelect>
   );
 
   const columns: Column<WardRow>[] = [
@@ -273,18 +288,31 @@ export default function WardList() {
             />
             <FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
-          <select
+          <SearchableSelect
             value={filterDistrict}
-            onChange={(e) => setFilterDistrict(e.target.value)}
-            className="h-11 rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white min-w-[220px]"
+            onValueChange={setFilterDistrict}
           >
-            <option value="">All districts</option>
-            {districts.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name || d.code || d.id}
-              </option>
-            ))}
-          </select>
+            <SearchableSelectTrigger>
+              <SearchableSelectValue placeholder="All districts" />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search districts..."
+              searchValue={filterDistrictSearch}
+              onSearchChange={setFilterDistrictSearch}
+            >
+              <SearchableSelectItem value="">All districts</SearchableSelectItem>
+              {districts
+                .filter((d) => 
+                  d.name?.toLowerCase().includes(filterDistrictSearch.toLowerCase()) ||
+                  d.code?.toLowerCase().includes(filterDistrictSearch.toLowerCase())
+                )
+                .map((d) => (
+                  <SearchableSelectItem key={d.id} value={d.id}>
+                    {d.name || d.code || d.id}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
         <Button
           variant="primary"

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiPlus, FiSearch } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
 import Label from '@/components/form/Label';
@@ -35,6 +36,8 @@ export default function StreetList() {
   const [rows, setRows] = useState<StreetRow[]>([]);
   const [wards, setWards] = useState<WardOpt[]>([]);
   const [filterWard, setFilterWard] = useState('');
+  const [wardSearch, setWardSearch] = useState('');
+  const [filterWardSearch, setFilterWardSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -192,18 +195,30 @@ export default function StreetList() {
   };
 
   const wardSelect = (
-    <select
+    <SearchableSelect
       value={form.wardId}
-      onChange={(e) => setForm((f) => ({ ...f, wardId: e.target.value }))}
-      className="h-11 w-full rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+      onValueChange={(value) => setForm((f) => ({ ...f, wardId: value }))}
     >
-      <option value="">Select ward</option>
-      {wards.map((w) => (
-        <option key={w.id} value={w.id}>
-          {w.name || w.code || w.id}
-        </option>
-      ))}
-    </select>
+      <SearchableSelectTrigger>
+        <SearchableSelectValue placeholder="Select ward" />
+      </SearchableSelectTrigger>
+      <SearchableSelectContent
+        searchPlaceholder="Search wards..."
+        searchValue={wardSearch}
+        onSearchChange={setWardSearch}
+      >
+        {wards
+          .filter((w) => 
+            w.name?.toLowerCase().includes(wardSearch.toLowerCase()) ||
+            w.code?.toLowerCase().includes(wardSearch.toLowerCase())
+          )
+          .map((w) => (
+            <SearchableSelectItem key={w.id} value={w.id}>
+              {w.name || w.code || w.id}
+            </SearchableSelectItem>
+          ))}
+      </SearchableSelectContent>
+    </SearchableSelect>
   );
 
   const columns: Column<StreetRow>[] = [
@@ -270,18 +285,31 @@ export default function StreetList() {
             />
             <FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
-          <select
+          <SearchableSelect
             value={filterWard}
-            onChange={(e) => setFilterWard(e.target.value)}
-            className="h-11 rounded-lg border border-gray-300 px-3 dark:border-gray-700 dark:bg-gray-900 dark:text-white min-w-[220px]"
+            onValueChange={setFilterWard}
           >
-            <option value="">All wards</option>
-            {wards.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name || w.code || w.id}
-              </option>
-            ))}
-          </select>
+            <SearchableSelectTrigger>
+              <SearchableSelectValue placeholder="All wards" />
+            </SearchableSelectTrigger>
+            <SearchableSelectContent
+              searchPlaceholder="Search wards..."
+              searchValue={filterWardSearch}
+              onSearchChange={setFilterWardSearch}
+            >
+              <SearchableSelectItem value="">All wards</SearchableSelectItem>
+              {wards
+                .filter((w) => 
+                  w.name?.toLowerCase().includes(filterWardSearch.toLowerCase()) ||
+                  w.code?.toLowerCase().includes(filterWardSearch.toLowerCase())
+                )
+                .map((w) => (
+                  <SearchableSelectItem key={w.id} value={w.id}>
+                    {w.name || w.code || w.id}
+                  </SearchableSelectItem>
+                ))}
+            </SearchableSelectContent>
+          </SearchableSelect>
         </div>
         <Button
           variant="primary"
