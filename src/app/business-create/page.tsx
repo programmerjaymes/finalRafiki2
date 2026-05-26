@@ -5,7 +5,7 @@ import Card from "@/components/ui/card/Card";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from "@/components/ui/searchable-select";
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from "@/components/ui/searchable-select-wrapper";
 import BundleSelection from "@/components/business/BundleSelection";
 import PaymentProcessor from "@/components/business/PaymentProcessor";
 import toast from "@/utils/toast";
@@ -328,7 +328,7 @@ export default function CreateBusinessPage() {
               <Label htmlFor="categoryId">Business Category *</Label>
               <SearchableSelect
                 value={formData.categoryId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, categoryId: value }))}
                 required
               >
                 <SearchableSelectTrigger>
@@ -429,7 +429,7 @@ export default function CreateBusinessPage() {
               <Label htmlFor="regionId">Region *</Label>
               <SearchableSelect
                 value={formData.regionId}
-                onValueChange={(value) => {
+                onValueChange={(value: string) => {
                   setFormData(prev => ({ ...prev, regionId: value, districtId: "", wardId: "" }));
                   setDistrictSearch("");
                   setWardSearch("");
@@ -461,7 +461,7 @@ export default function CreateBusinessPage() {
               <Label htmlFor="districtId">District *</Label>
               <SearchableSelect
                 value={formData.districtId}
-                onValueChange={(value) => {
+                onValueChange={(value: string) => {
                   setFormData(prev => ({ ...prev, districtId: value, wardId: "" }));
                   setWardSearch("");
                 }}
@@ -493,7 +493,7 @@ export default function CreateBusinessPage() {
               <Label htmlFor="wardId">Ward *</Label>
               <SearchableSelect
                 value={formData.wardId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, wardId: value }))}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, wardId: value }))}
                 required
                 disabled={!formData.districtId}
               >

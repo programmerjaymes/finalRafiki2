@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiPlus, FiSearch } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
-import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select-wrapper';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
 import Label from '@/components/form/Label';
@@ -198,7 +198,7 @@ export default function WardList() {
   const districtSelect = (
     <SearchableSelect
       value={form.districtId}
-      onValueChange={(value) =>
+      onValueChange={(value: string) =>
         setForm((f) => ({ ...f, districtId: value }))
       }
     >

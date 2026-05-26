@@ -5,7 +5,29 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { ChevronDownIcon, CheckIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import { cn } from "@/lib/utils"
 
-const SearchableSelect = SelectPrimitive.Root
+interface SearchableSelectWrapperProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
+}
+
+const SearchableSelect = React.forwardRef<any, any>(({ onValueChange, value, ...props }, ref) => {
+  const handleValueChange = (value: string) => {
+    // Convert back from __EMPTY__ to empty string
+    const cleanValue = value === "__EMPTY__" ? "" : value;
+    (onValueChange as (value: string) => void)?.(cleanValue);
+  };
+
+  // Convert empty string to __EMPTY__ for Radix UI compatibility
+  const safeValue = value === "" ? "__EMPTY__" : value;
+
+  return (
+    <SelectPrimitive.Root
+      value={safeValue}
+      onValueChange={handleValueChange}
+      {...props}
+    />
+  );
+})
 
 const SearchableSelectGroup = SelectPrimitive.Group
 

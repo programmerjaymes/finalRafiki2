@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select';
+import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from '@/components/ui/searchable-select-wrapper';
 import { motion } from 'framer-motion';
 import { Category, Region } from '@prisma/client';
 import { t } from '@/lib/i18n';
@@ -197,7 +197,7 @@ export default function BusinessSearch() {
           </label>
           <SearchableSelect
             value={selectedRegion}
-            onValueChange={(value) => {
+            onValueChange={(value: string) => {
               setSelectedRegion(value);
               setSelectedDistrict('');
               setSelectedWard('');
@@ -234,7 +234,7 @@ export default function BusinessSearch() {
           </label>
           <SearchableSelect
             value={selectedDistrict}
-            onValueChange={(value) => {
+            onValueChange={(value: string) => {
               setSelectedDistrict(value);
               setSelectedWard('');
               setWardSearch('');
