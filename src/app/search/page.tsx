@@ -6,6 +6,7 @@ import Select from '@/components/form/select/Select';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import BusinessListingCard from '@/components/landing/BusinessListingCard';
+import SearchNearbySearch from '@/components/landing/SearchNearbySearch';
 import type { Business, Category, Region } from '@prisma/client';
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
@@ -45,6 +46,8 @@ function SearchResults() {
   const [districts, setDistricts] = useState<AreaOption[]>([]);
   const [wards, setWards] = useState<AreaOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [searchRefreshKey, setSearchRefreshKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -110,7 +113,7 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, selectedRegion, selectedDistrict, selectedWard, priceRange, searchText, currentPage]);
+  }, [selectedCategory, selectedRegion, selectedDistrict, selectedWard, priceRange, searchText, currentPage, searchRefreshKey]);
 
   // Load districts when mkoa (region) changes
   useEffect(() => {
@@ -194,20 +197,19 @@ function SearchResults() {
     }
   }, []);
 
-  // Initial data load
   useEffect(() => {
-    // Load reference data
     fetchReferenceData();
-    
-    // Load businesses with current filters
-    fetchBusinesses();
-  }, [fetchBusinesses, fetchReferenceData]);
+  }, [fetchReferenceData]);
 
-  const handleSearch = () => {
-    // Reset to page 1 when filters change
-    setCurrentPage(1);
-    
-    // Update URL with current filters
+  useEffect(() => {
+    fetchBusinesses();
+  }, [fetchBusinesses]);
+
+  useEffect(() => {
+    if (!loading) setScanning(false);
+  }, [loading]);
+
+  const pushSearchUrl = (page = 1) => {
     const params = new URLSearchParams();
     if (searchText.trim()) params.append('search', searchText.trim());
     if (selectedCategory) params.append('category', selectedCategory);
@@ -215,9 +217,21 @@ function SearchResults() {
     if (selectedDistrict) params.append('district', selectedDistrict);
     if (selectedWard) params.append('ward', selectedWard);
     if (priceRange) params.append('priceRange', priceRange);
+    if (page > 1) params.append('page', String(page));
+    const qs = params.toString();
+    router.push(qs ? `/search?${qs}` : '/search');
+  };
 
-    // Navigate to new URL with updated filters
-    router.push(`/search?${params.toString()}`);
+  const handleNearbySearch = () => {
+    setScanning(true);
+    setCurrentPage(1);
+    setSearchRefreshKey((k) => k + 1);
+    pushSearchUrl(1);
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1);
+    pushSearchUrl(1);
   };
 
   const clearFilters = () => {
@@ -297,6 +311,13 @@ function SearchResults() {
             </div>
           </div>
 
+          <SearchNearbySearch
+            query={searchText}
+            onQueryChange={setSearchText}
+            onSearch={handleNearbySearch}
+            scanning={scanning}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
             <aside className="lg:col-span-3 xl:col-span-3">
               <div className="lg:sticky lg:top-[5.25rem] rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-5">
@@ -313,18 +334,6 @@ function SearchResults() {
                 </div>
 
                 <div className="mt-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {locale === 'sw' ? 'Neno la kutafuta' : 'Search keywords'}
-                    </label>
-                    <input
-                      type="search"
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                      placeholder={locale === 'sw' ? 'Mgahawa, saluni…' : 'Restaurant, salon…'}
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
-                    />
-                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       {messages.search.category}

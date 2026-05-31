@@ -3,7 +3,6 @@
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import HomeBusinessListings from '@/components/landing/HomeBusinessListings';
-import LandingNearbySearch from '@/components/landing/LandingNearbySearch';
 import { useLocale } from '@/lib/useLocale';
 import { brandColors } from '@/lib/brandColors';
 
@@ -29,7 +28,6 @@ export default function Home() {
 
       <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-8">
         <div className="w-full max-w-[100vw] px-3 sm:px-4 md:px-5 lg:px-6">
-          <LandingNearbySearch />
           <HomeBusinessListings />
         </div>
       </main>

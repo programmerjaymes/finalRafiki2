@@ -1,35 +1,30 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent } from 'react';
 import RadarScanner from '@/components/landing/RadarScanner';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 import { brandColors } from '@/lib/brandColors';
 
-export default function LandingNearbySearch() {
-  const router = useRouter();
+type SearchNearbySearchProps = {
+  query: string;
+  onQueryChange: (value: string) => void;
+  onSearch: () => void;
+  scanning: boolean;
+};
+
+export default function SearchNearbySearch({
+  query,
+  onQueryChange,
+  onSearch,
+  scanning,
+}: SearchNearbySearchProps) {
   const locale = useLocale();
   const messages = t(locale);
-  const [query, setQuery] = useState('');
-  const [scanning, setScanning] = useState(false);
-
-  const goToListings = (searchText?: string) => {
-    setScanning(true);
-    const delay = 1100;
-    window.setTimeout(() => {
-      const params = new URLSearchParams();
-      const q = (searchText ?? query).trim();
-      if (q) params.set('search', q);
-      const path = params.toString() ? `/search?${params.toString()}` : '/search';
-      router.push(path);
-      setScanning(false);
-    }, delay);
-  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    goToListings();
+    onSearch();
   };
 
   return (
@@ -39,7 +34,7 @@ export default function LandingNearbySearch() {
     >
       <div className="grid md:grid-cols-[minmax(7rem,auto)_1fr] gap-4 md:gap-6 p-5 sm:p-6 md:p-7 items-center">
         <div className="flex flex-col items-center gap-2">
-          <RadarScanner active scanning={scanning} size={120} />
+          <RadarScanner scanning={scanning} size={120} />
           <p className="text-[11px] font-semibold uppercase tracking-wider text-center text-gray-500 dark:text-gray-400 max-w-[8rem]">
             {scanning ? messages.home.nearbyScanning : messages.home.nearbyScanIdle}
           </p>
@@ -55,7 +50,7 @@ export default function LandingNearbySearch() {
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{messages.home.nearbySearchSubtitle}</p>
 
           <form onSubmit={onSubmit} className="mt-4 flex flex-col sm:flex-row gap-2">
-            <label className="sr-only" htmlFor="landing-search">
+            <label className="sr-only" htmlFor="search-page-query">
               {messages.home.nearbySearchPlaceholder}
             </label>
             <div className="relative flex-1">
@@ -69,10 +64,10 @@ export default function LandingNearbySearch() {
                 </svg>
               </span>
               <input
-                id="landing-search"
+                id="search-page-query"
                 type="search"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => onQueryChange(e.target.value)}
                 placeholder={messages.home.nearbySearchPlaceholder}
                 disabled={scanning}
                 className="w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 py-3 pl-11 pr-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8f4a54]/40 disabled:opacity-60"
@@ -94,16 +89,6 @@ export default function LandingNearbySearch() {
               )}
             </button>
           </form>
-
-          <button
-            type="button"
-            onClick={() => goToListings('')}
-            disabled={scanning}
-            className="mt-3 text-sm font-semibold hover:underline disabled:opacity-50"
-            style={{ color: brandColors.accent }}
-          >
-            {messages.home.nearbyBrowseAll} →
-          </button>
         </div>
       </div>
     </section>

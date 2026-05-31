@@ -1,14 +1,12 @@
 'use client';
 
 type RadarScannerProps = {
-  active?: boolean;
   scanning?: boolean;
   size?: number;
 };
 
-export default function RadarScanner({ active = true, scanning = false, size = 112 }: RadarScannerProps) {
-  const pulseDuration = scanning ? '1.2s' : '2.4s';
-  const sweepDuration = scanning ? '1.5s' : '3s';
+/** Radar rings and sweep — only animate while `scanning` is true (after user clicks search). */
+export default function RadarScanner({ scanning = false, size = 112 }: RadarScannerProps) {
   return (
     <div
       className="relative shrink-0 mx-auto"
@@ -22,19 +20,24 @@ export default function RadarScanner({ active = true, scanning = false, size = 1
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className={`absolute inset-0 rounded-full border-2 border-[#8f4a54]/40 ${active ? 'animate-radar-pulse' : ''}`}
-          style={{
-            animationDelay: active ? `${i * (scanning ? 0.4 : 0.9)}s` : undefined,
-            animationDuration: active ? pulseDuration : undefined,
-          }}
+          className={`absolute inset-0 rounded-full border-2 border-[#8f4a54]/30 ${
+            scanning ? 'animate-radar-pulse' : ''
+          }`}
+          style={
+            scanning
+              ? {
+                  animationDelay: `${i * 0.4}s`,
+                  animationDuration: '1.2s',
+                }
+              : undefined
+          }
         />
       ))}
-      <div
-        className={`absolute left-1/2 top-1/2 h-full w-full ${active ? 'animate-radar-sweep' : ''}`}
-        style={{ animationDuration: active ? sweepDuration : undefined }}
-      >
-        <span className="absolute left-1/2 top-1/2 h-[46%] w-0.5 -translate-x-1/2 origin-bottom rounded-full bg-gradient-to-t from-[#8f4a54] via-[#8f4a54]/40 to-transparent" />
-      </div>
+      {scanning && (
+        <div className="absolute left-1/2 top-1/2 h-full w-full animate-radar-sweep" style={{ animationDuration: '1.5s' }}>
+          <span className="absolute left-1/2 top-1/2 h-[46%] w-0.5 -translate-x-1/2 origin-bottom rounded-full bg-gradient-to-t from-[#8f4a54] via-[#8f4a54]/40 to-transparent" />
+        </div>
+      )}
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg"
         style={{ backgroundColor: '#8f4a54' }}
