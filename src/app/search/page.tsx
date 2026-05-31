@@ -56,7 +56,9 @@ function SearchResults() {
   const districtFromUrl = searchParams.get('district') || '';
   const wardFromUrl = searchParams.get('ward') || '';
   const priceRangeFromUrl = searchParams.get('priceRange') || '';
+  const searchTextFromUrl = searchParams.get('search') || '';
 
+  const [searchText, setSearchText] = useState(searchTextFromUrl);
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
   const [selectedRegion, setSelectedRegion] = useState(regionFromUrl);
   const [selectedDistrict, setSelectedDistrict] = useState(districtFromUrl);
@@ -70,7 +72,11 @@ function SearchResults() {
     setSelectedDistrict(districtFromUrl);
     setSelectedWard(wardFromUrl);
     setPriceRange(priceRangeFromUrl);
-  }, [categoryFromUrl, regionFromUrl, districtFromUrl, wardFromUrl, priceRangeFromUrl]);
+  }, [categoryFromUrl, regionFromUrl, districtFromUrl, wardFromUrl, priceRangeFromUrl, searchTextFromUrl]);
+
+  useEffect(() => {
+    setSearchText(searchTextFromUrl);
+  }, [searchTextFromUrl]);
 
   // Fetch businesses with current filters
   const fetchBusinesses = useCallback(async () => {
@@ -79,6 +85,7 @@ function SearchResults() {
       const params = new URLSearchParams();
       params.append('limit', limit.toString());
       params.append('page', currentPage.toString());
+      if (searchText.trim()) params.append('search', searchText.trim());
       if (selectedCategory) params.append('category', selectedCategory);
       if (selectedRegion) params.append('region', selectedRegion);
       if (selectedDistrict) params.append('district', selectedDistrict);
@@ -103,7 +110,7 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, selectedRegion, selectedDistrict, selectedWard, priceRange, currentPage]);
+  }, [selectedCategory, selectedRegion, selectedDistrict, selectedWard, priceRange, searchText, currentPage]);
 
   // Load districts when mkoa (region) changes
   useEffect(() => {
@@ -202,6 +209,7 @@ function SearchResults() {
     
     // Update URL with current filters
     const params = new URLSearchParams();
+    if (searchText.trim()) params.append('search', searchText.trim());
     if (selectedCategory) params.append('category', selectedCategory);
     if (selectedRegion) params.append('region', selectedRegion);
     if (selectedDistrict) params.append('district', selectedDistrict);
@@ -213,6 +221,7 @@ function SearchResults() {
   };
 
   const clearFilters = () => {
+    setSearchText('');
     setSelectedCategory('');
     setSelectedRegion('');
     setSelectedDistrict('');
@@ -223,6 +232,7 @@ function SearchResults() {
   };
 
   const activeFiltersCount =
+    (searchText.trim() ? 1 : 0) +
     (selectedCategory ? 1 : 0) +
     (selectedRegion ? 1 : 0) +
     (selectedDistrict ? 1 : 0) +
@@ -303,6 +313,18 @@ function SearchResults() {
                 </div>
 
                 <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {locale === 'sw' ? 'Neno la kutafuta' : 'Search keywords'}
+                    </label>
+                    <input
+                      type="search"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder={locale === 'sw' ? 'Mgahawa, saluni…' : 'Restaurant, salon…'}
+                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       {messages.search.category}
@@ -426,9 +448,17 @@ function SearchResults() {
             <section className="lg:col-span-9 xl:col-span-9 min-w-0">
               {!loading && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {totalResults.toLocaleString()} {totalResults === 1 ? messages.search.result : messages.search.results}
-                  </h2>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {totalResults.toLocaleString()}{' '}
+                      {totalResults === 1 ? messages.search.result : messages.search.results}
+                    </h2>
+                    {searchText.trim() && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {locale === 'sw' ? 'Kwa' : 'For'}: &ldquo;{searchText.trim()}&rdquo;
+                      </p>
+                    )}
+                  </div>
                   {totalPages > 1 && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {messages.search.page} {currentPage} {messages.search.of} {totalPages}
