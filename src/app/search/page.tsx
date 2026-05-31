@@ -2,14 +2,15 @@
 
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import Select from '@/components/form/select/Select';
 import Navbar from '@/components/landing/Navbar';
+import Footer from '@/components/landing/Footer';
+import BusinessListingCard from '@/components/landing/BusinessListingCard';
 import type { Business, Category, Region } from '@prisma/client';
 import Link from 'next/link';
-import { FaPhone } from 'react-icons/fa';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
+import { brandColors } from '@/lib/brandColors';
 
 interface BusinessWithCategory extends Business {
   category: {
@@ -47,7 +48,7 @@ function SearchResults() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const limit = 9;
+  const limit = 12;
 
   // Get values from URL search params
   const categoryFromUrl = searchParams.get('category') || '';
@@ -228,47 +229,74 @@ function SearchResults() {
     (selectedWard ? 1 : 0) +
     (priceRange ? 1 : 0);
 
+  const descriptionFallback =
+    locale === 'sw'
+      ? 'Tazama taarifa na mawasiliano.'
+      : 'View details for contact info and more.';
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen flex flex-col bg-[#f7f5f3] dark:bg-gray-950">
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 opacity-40 dark:opacity-25"
+        aria-hidden
+        style={{
+          backgroundImage: `
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgba(61, 42, 46, 0.06), transparent),
+            radial-gradient(ellipse 40% 30% at 100% 20%, rgba(201, 162, 39, 0.04), transparent)
+          `,
+        }}
+      />
       <Navbar />
-      <main className="pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
+      <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-12">
+        <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: brandColors.accent }}>
+                Rafiki
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                 {messages.search.title}
               </h1>
-              <p className="mt-1 text-gray-600 dark:text-gray-300">
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
                 {messages.search.subtitle}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              >
+                ← {locale === 'sw' ? 'Nyumbani' : 'Home'}
+              </Link>
               {activeFiltersCount > 0 && (
                 <button
+                  type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  className="inline-flex items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                 >
                   {messages.search.clearFilters}
                 </button>
               )}
               <Link
                 href="/business-create"
-                className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-4 py-2.5 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
+                className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:opacity-90"
+                style={{ backgroundColor: brandColors.accent }}
               >
                 {messages.search.registerBusiness}
               </Link>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Filters */}
-            <aside className="lg:col-span-4 xl:col-span-3">
-              <div className="lg:sticky lg:top-24 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">{messages.search.filters}</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+            <aside className="lg:col-span-3 xl:col-span-3">
+              <div className="lg:sticky lg:top-[5.25rem] rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-5">
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">{messages.search.filters}</h2>
                   {activeFiltersCount > 0 && (
-                    <span className="text-xs rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-1 text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-700">
+                    <span
+                      className="text-xs rounded-full px-2.5 py-1 font-semibold text-white"
+                      style={{ backgroundColor: brandColors.accent }}
+                    >
                       {activeFiltersCount} {messages.search.active}
                     </span>
                   )}
@@ -384,8 +412,10 @@ function SearchResults() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleSearch}
-                    className="w-full inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-4 py-3 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
+                    className="w-full inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-bold text-white transition shadow-md hover:opacity-90"
+                    style={{ backgroundColor: brandColors.accent }}
                   >
                     {messages.search.applyFilters}
                   </button>
@@ -393,8 +423,7 @@ function SearchResults() {
               </div>
             </aside>
 
-            {/* Results */}
-            <section className="lg:col-span-8 xl:col-span-9">
+            <section className="lg:col-span-9 xl:col-span-9 min-w-0">
               {!loading && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -409,107 +438,33 @@ function SearchResults() {
               )}
 
               {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {[...Array(9)].map((_, i) => (
+                <div className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+                  {[...Array(12)].map((_, i) => (
                     <div
                       key={i}
-                      className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5 animate-pulse"
+                      className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-xl bg-gray-200 dark:bg-gray-800" />
-                        <div className="flex-1">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-2/3" />
-                          <div className="mt-2 h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
-                        </div>
-                      </div>
-                      <div className="mt-4 h-3 bg-gray-200 dark:bg-gray-800 rounded w-full" />
-                      <div className="mt-2 h-3 bg-gray-200 dark:bg-gray-800 rounded w-5/6" />
-                      <div className="mt-5 flex items-center justify-between">
-                        <div className="h-6 w-24 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                        <div className="h-6 w-20 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                      <div className="h-28 bg-gray-100 dark:bg-gray-800" />
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />
+                        <div className="h-3 w-full rounded bg-gray-100 dark:bg-gray-800" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {Array.isArray(businesses) && businesses.map((business) => {
-                      const logoSrc =
-                        business.logo && business.logo.startsWith('data:')
-                          ? business.logo
-                          : business.logo
-                            ? `data:image/jpeg;base64,${business.logo}`
-                            : null;
-
-                      return (
-                        <Link
+                  <div className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+                    {Array.isArray(businesses) &&
+                      businesses.map((business) => (
+                        <BusinessListingCard
                           key={business.id}
-                          href={`/businesses/${business.id}`}
-                          className="group block rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-xl transition-shadow"
-                        >
-                          <div className="p-5">
-                            <div className="flex items-start gap-4">
-                              <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 flex items-center justify-center overflow-hidden border border-gray-100 dark:border-gray-800">
-                                {logoSrc ? (
-                                  <img
-                                    src={logoSrc}
-                                    alt={business.name}
-                                    className="h-full w-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <span className="text-gray-700 dark:text-gray-200 font-bold">
-                                    {business.name?.charAt(0)?.toUpperCase() || 'B'}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-3">
-                                  <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                                    {business.name}
-                                  </h3>
-                                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-700">
-                                    <span aria-hidden>{business.category?.icon || '•'}</span>
-                                    <span className="truncate max-w-[120px]">{business.category?.name || 'Category'}</span>
-                                  </span>
-                                </div>
-
-                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                                  {business.description || messages.search.viewDetails}
-                                </p>
-
-                                <div className="mt-4 flex items-center justify-between gap-3">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                    {business.region?.name || messages.search.unknownLocation}
-                                  </span>
-
-                                  {business.phone ? (
-                                    <span className="inline-flex items-center text-xs font-medium text-primary dark:text-secondary">
-                                      <FaPhone className="mr-1.5 text-[11px]" />
-                                      <span className="truncate max-w-[140px]">{business.phone}</span>
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs text-gray-400 dark:text-gray-500">{messages.search.noPhone}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="mt-5 h-px bg-gray-100 dark:bg-gray-800" />
-                            <div className="mt-4 flex items-center justify-between">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary dark:group-hover:text-secondary transition-colors">
-                                {messages.search.viewDetails}
-                              </span>
-                              <span className="text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
-                                →
-                              </span>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                          business={business}
+                          viewDetailsLabel={messages.search.viewDetails}
+                          unknownLocationLabel={messages.search.unknownLocation}
+                          descriptionFallback={descriptionFallback}
+                        />
+                      ))}
                   </div>
 
                   {businesses.length === 0 && (
@@ -522,8 +477,10 @@ function SearchResults() {
                       </p>
                       <div className="mt-6 flex justify-center">
                         <button
+                          type="button"
                           onClick={clearFilters}
-                          className="inline-flex items-center justify-center rounded-xl bg-primary hover:bg-primary-dark dark:bg-secondary dark:hover:bg-secondary-light px-6 py-3 text-sm font-semibold text-white dark:text-gray-900 transition shadow-sm"
+                          className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-bold text-white transition shadow-md hover:opacity-90"
+                          style={{ backgroundColor: brandColors.accent }}
                         >
                           {messages.search.clearFilters}
                         </button>
@@ -555,9 +512,14 @@ function SearchResults() {
                               onClick={() => setCurrentPage(page)}
                               className={`h-10 min-w-10 px-3 rounded-xl transition border ${
                                 currentPage === page
-                                  ? 'bg-primary text-white dark:bg-secondary dark:text-gray-900 border-transparent'
+                                  ? 'text-white border-transparent'
                                   : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
                               }`}
+                              style={
+                                currentPage === page
+                                  ? { backgroundColor: brandColors.accent }
+                                  : undefined
+                              }
                             >
                               {page}
                             </button>
@@ -580,6 +542,7 @@ function SearchResults() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }
@@ -587,10 +550,10 @@ function SearchResults() {
 // Loading fallback component
 function SearchLoading() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#f7f5f3] dark:bg-gray-950">
       <Navbar />
-      <main className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="pt-24 pb-12">
+        <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 animate-pulse">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[...Array(3)].map((_, i) => (

@@ -16,6 +16,9 @@ const messages = {
       myBusinesses: 'My Businesses',
       adminDashboard: 'Admin Dashboard',
       language: 'Language',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      refreshHint: 'Clear cached data and reload the latest listings',
     },
     home: {
       heroTitleBefore: 'Discover Great',
@@ -62,6 +65,10 @@ const messages = {
       ctaDesc: 'Search by category and location, then contact directly.',
       ctaPrimary: 'Find a business',
       ctaSecondary: 'Register your business',
+      listingsTitle: 'Businesses',
+      listingsEmptyHint: 'Explore local services across Tanzania',
+      listingsViewMore: 'View all businesses',
+      searchToggle: 'Search & filter',
     },
     search: {
       title: 'Search businesses',
@@ -176,6 +183,9 @@ const messages = {
       myBusinesses: 'Biashara Zangu',
       adminDashboard: 'Dashibodi ya Admin',
       language: 'Lugha',
+      refresh: 'Onyesha upya',
+      refreshing: 'Inasasisha…',
+      refreshHint: 'Futa data iliyohifadhiwa na pakia orodha mpya',
     },
     home: {
       heroTitleBefore: 'Gundua',
@@ -223,6 +233,10 @@ const messages = {
       ctaDesc: 'Tafuta kwa aina na eneo, kisha wasiliana moja kwa moja.',
       ctaPrimary: 'Tafuta biashara',
       ctaSecondary: 'Sajili biashara yako',
+      listingsTitle: 'Biashara',
+      listingsEmptyHint: 'Gundua huduma za eneo lako Tanzania nzima',
+      listingsViewMore: 'Tazama biashara zote',
+      searchToggle: 'Tafuta na chuja',
     },
     search: {
       title: 'Tafuta biashara',

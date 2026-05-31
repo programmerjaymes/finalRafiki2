@@ -3,11 +3,32 @@
 import { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import { t, type Locale } from '@/lib/i18n';
 import { useLocale, useSetLocale } from '@/lib/useLocale';
+import RefreshButton from '@/components/landing/RefreshButton';
+import { brandColors } from '@/lib/brandColors';
+
+function LogoMark() {
+  return (
+    <span
+      className="relative h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl bg-white shadow-md ring-2 ring-[#d4b84a]/60"
+      style={{ color: brandColors.accent }}
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+        <path
+          d="M12 21s7-4.5 7-11a7 7 0 10-14 0c0 6.5 7 11 7 11z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <circle cx="12" cy="10" r="2.5" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,216 +40,184 @@ export default function Navbar() {
   const locale = useLocale();
   const setLocale = useSetLocale();
   const messages = t(locale);
-  const isHome = pathname === '/';
-  const solidNav = scrolled || !isHome;
 
-  const langSelectClass = `rounded-lg text-sm font-medium border py-2 pl-3 pr-9 max-w-[11rem] cursor-pointer transition ${
-    solidNav
-      ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200'
-      : 'border-white/35 bg-white/10 text-white'
-  }`;
-
-  // Handle scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle theme mounting
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   if (!mounted) {
-    return null;
+    return (
+      <header
+        className="fixed top-0 inset-x-0 z-50 h-16 bg-primary"
+        style={{ background: brandColors.navBackground }}
+        aria-hidden
+      />
+    );
   }
 
   return (
-    <motion.nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        solidNav
-          ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-md' 
-          : 'bg-transparent'
+    <motion.header
+      className={`fixed top-0 inset-x-0 z-50 transition-shadow duration-300 ${
+        scrolled ? 'shadow-xl shadow-black/25' : 'shadow-md shadow-black/15'
       }`}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <span className={`text-2xl font-bold transition-colors duration-300
-                ${solidNav
-                  ? 'text-primary dark:text-white' 
-                  : 'text-white dark:text-white'}`}>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+      <div
+        className="relative text-white overflow-hidden bg-gradient-to-r from-primary via-primary to-primary-dark"
+        style={{ background: brandColors.navBackground }}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          aria-hidden
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M0 0h20v20H0V0zm20 20h20v20H20V20z'/%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundSize: '20px 20px',
+          }}
+        />
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full blur-3xl"
+          style={{ backgroundColor: 'rgba(201, 162, 39, 0.12)' }}
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -left-16 bottom-0 h-40 w-40 rounded-full bg-black/15 blur-2xl"
+          aria-hidden
+        />
+
+        <div className="relative w-full px-3 sm:px-4 md:px-5 lg:px-6">
+          <nav
+            className="flex items-center justify-between gap-3 h-16 sm:h-[4.25rem]"
+            aria-label="Main"
+          >
+            <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
+              <LogoMark />
+              <div className="min-w-0 leading-tight">
+                <span className="block text-lg sm:text-xl font-bold tracking-tight text-white group-hover:text-secondary transition-colors">
                   Rafiki
                 </span>
-              </span>
+                <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">
+                  {locale === 'sw' ? 'Orodha ya Biashara' : 'Business Directory'}
+                </span>
+              </div>
             </Link>
-          </div>
 
-          {/* Desktop menu */}
-          <div className="hidden md:flex md:items-center md:space-x-8">
-            <NavLink href="/search" scrolled={solidNav}>
-              {messages.nav.search}
-            </NavLink>
-            <NavLink href="/business-create" scrolled={solidNav}>
-              {messages.nav.registerBusiness}
-            </NavLink>
-            
-            {session ? (
-              <>
-                <NavLink href="/business-my-businesses" scrolled={solidNav}>
-                  {messages.nav.myBusinesses}
+            <div className="hidden lg:flex items-center">
+              <div className="flex items-center rounded-full bg-black/15 ring-1 ring-white/20 p-1 backdrop-blur-sm">
+                <NavLink href="/search" active={pathname === '/search'}>
+                  {messages.nav.search}
                 </NavLink>
-                {session.user.role === 'ADMIN' && (
-                  <NavLink href="/dashboard" scrolled={solidNav}>
+                <NavLink href="/business-create" active={pathname === '/business-create'}>
+                  {messages.nav.registerBusiness}
+                </NavLink>
+                {session && (
+                  <NavLink
+                    href="/business-my-businesses"
+                    active={pathname.startsWith('/business-my-businesses')}
+                  >
+                    {messages.nav.myBusinesses}
+                  </NavLink>
+                )}
+                {session?.user.role === 'ADMIN' && (
+                  <NavLink href="/dashboard" active={pathname.startsWith('/dashboard')}>
                     {messages.nav.adminDashboard}
                   </NavLink>
                 )}
-                <NavLink href="/api/auth/signout" scrolled={solidNav}>
-                  {messages.nav.signOut}
-                </NavLink>
-              </>
-            ) : (
-              <Link 
-                href="/signin"
-                className={`
-                  ${solidNav
-                    ? 'bg-primary text-white hover:bg-primary-dark' 
-                    : 'bg-white/20 backdrop-blur-md text-white hover:bg-white/30 border border-white/30'
-                  } 
-                  px-4 py-2.5 rounded-lg font-medium transition-all duration-300 shadow-sm hover:shadow-md
-                `}
-                style={solidNav ? {} : {}}
-              >
-                {messages.nav.signIn}
-              </Link>
-            )}
+              </div>
+            </div>
 
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`text-xs font-medium whitespace-nowrap ${
-                  solidNav
-                    ? 'text-gray-600 dark:text-gray-400'
-                    : 'text-white/85'
-                }`}
-              >
-                {messages.nav.language}
-              </span>
+            <div className="hidden md:flex items-center gap-2">
+              <RefreshButton variant="nav" />
+
               <select
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as Locale)}
-                className={langSelectClass}
+                className="rounded-full text-xs font-bold border border-white/25 bg-white/10 text-white py-2 pl-3 pr-8 cursor-pointer hover:bg-white/20 transition backdrop-blur-sm"
                 aria-label={messages.nav.language}
               >
-                <option value="en">English</option>
-                <option value="sw">Kiswahili</option>
+                <option value="en" className="text-gray-900">
+                  EN
+                </option>
+                <option value="sw" className="text-gray-900">
+                  SW
+                </option>
               </select>
-            </div>
-            
-            {/* Theme toggle */}
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={`p-2 rounded-full ${
-                solidNav
-                  ? 'bg-gray-100 dark:bg-gray-800' 
-                  : 'bg-white/20 dark:bg-gray-800/40'
-              }`}
-              aria-label="Toggle dark mode"
-            >
-              {theme === 'dark' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
-              )}
-            </button>
-          </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-3">
-            {/* Theme toggle for mobile */}
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={`p-2 rounded-full ${
-                solidNav
-                  ? 'bg-gray-100 dark:bg-gray-800' 
-                  : 'bg-white/20 dark:bg-gray-800/40'
-              }`}
-              aria-label="Toggle dark mode"
-            >
-              {theme === 'dark' ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                </svg>
+              <ThemeToggle theme={theme} setTheme={setTheme} />
+
+              {session ? (
+                <Link
+                  href="/api/auth/signout"
+                  className="rounded-full border border-white/35 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition"
+                >
+                  {messages.nav.signOut}
+                </Link>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
+                <Link
+                  href="/signin"
+                  className="rounded-full bg-secondary text-gray-900 px-5 py-2 text-sm font-bold shadow-lg shadow-black/20 hover:bg-secondary-light transition"
+                  style={{ backgroundColor: '#fdd00d' }}
+                >
+                  {messages.nav.signIn}
+                </Link>
               )}
-            </button>
-            
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`p-2 rounded-md ${solidNav ? 'text-primary dark:text-white' : 'text-white'} hover:bg-primary-light/20`}
-              aria-expanded={isMenuOpen}
-            >
-              <span className="sr-only">Open main menu</span>
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
+            </div>
+
+            <div className="flex md:hidden items-center gap-1">
+              <RefreshButton variant="nav" className="!px-2.5" />
+              <ThemeToggle theme={theme} setTheme={setTheme} />
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen((o) => !o)}
+                className="p-2.5 rounded-xl text-white hover:bg-white/15 ring-1 ring-white/20 transition"
+                aria-expanded={isMenuOpen}
+                aria-label="Open menu"
               >
-                {isMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
-          </div>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
+          </nav>
         </div>
 
-        {/* Mobile menu */}
+        <div className="h-1" style={{ background: brandColors.navGoldStripe }} aria-hidden />
+      </div>
+
+      <AnimatePresence>
         {isMenuOpen && (
-          <motion.div 
-            className="md:hidden py-4 bg-white dark:bg-gray-800 shadow-lg rounded-b-xl border-t border-gray-100 dark:border-gray-700"
+          <motion.div
+            className="md:hidden border-t border-white/10 shadow-2xl"
+            style={{ backgroundColor: brandColors.navMobileMenu }}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
           >
-            <div className="flex flex-col space-y-1 px-2">
+            <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 space-y-0.5">
               <MobileNavLink href="/search" onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.search}
               </MobileNavLink>
               <MobileNavLink href="/business-create" onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.registerBusiness}
               </MobileNavLink>
-              
-              {session ? (
+              {session && (
                 <>
                   <MobileNavLink href="/business-my-businesses" onClick={() => setIsMenuOpen(false)}>
                     {messages.nav.myBusinesses}
@@ -242,67 +231,83 @@ export default function Navbar() {
                     {messages.nav.signOut}
                   </MobileNavLink>
                 </>
-              ) : (
+              )}
+              {!session && (
                 <Link
                   href="/signin"
-                  className="w-full text-center bg-primary text-white px-3 py-3 rounded-lg font-medium hover:bg-primary-dark transition-colors duration-200 my-2"
+                  className="block text-center mt-2 rounded-xl bg-secondary text-gray-900 py-3 font-bold shadow-md"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {messages.nav.signIn}
                 </Link>
               )}
-
-              <label className="block px-3 pt-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+              <label className="block px-3 pt-3 text-xs font-semibold uppercase tracking-wider text-white/60">
                 {messages.nav.language}
               </label>
               <select
                 value={locale}
-                onChange={(e) => {
-                  setLocale(e.target.value as Locale);
-                  setIsMenuOpen(false);
-                }}
-                className="w-full mx-2 mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 px-3 py-3 text-base font-medium"
-                aria-label={messages.nav.language}
+                onChange={(e) => setLocale(e.target.value as Locale)}
+                className="w-full rounded-xl border border-white/20 bg-white/10 text-white px-3 py-2.5 text-sm font-semibold mb-2"
               >
-                <option value="en">English</option>
-                <option value="sw">Kiswahili</option>
+                <option value="en" className="text-gray-900">
+                  English
+                </option>
+                <option value="sw" className="text-gray-900">
+                  Kiswahili
+                </option>
               </select>
             </div>
           </motion.div>
         )}
-      </div>
-      
-      {/* Add a colored border at the bottom when scrolled */}
-      {scrolled && (
-        <div className="h-0.5 w-full bg-gradient-to-r from-primary via-primary-light to-secondary"></div>
+      </AnimatePresence>
+    </motion.header>
+  );
+}
+
+function ThemeToggle({ theme, setTheme }: { theme?: string; setTheme: (t: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      className="p-2 rounded-full border border-white/25 bg-white/10 text-white hover:bg-white/20 transition backdrop-blur-sm"
+      aria-label="Toggle dark mode"
+    >
+      {theme === 'dark' ? (
+        <svg className="h-5 w-5 text-secondary" viewBox="0 0 20 20" fill="currentColor">
+          <path
+            fillRule="evenodd"
+            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+            clipRule="evenodd"
+          />
+        </svg>
+      ) : (
+        <svg className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
       )}
-    </motion.nav>
+    </button>
   );
 }
 
 interface NavLinkProps {
   href: string;
   children: ReactNode;
-  scrolled: boolean;
+  active?: boolean;
 }
 
-const NavLink = ({ href, children, scrolled }: NavLinkProps) => {
-  return (
-    <Link 
-      href={href} 
-      className={`
-        text-sm font-medium transition-colors duration-300 relative group
-        ${scrolled 
-          ? 'text-gray-800 dark:text-gray-200 hover:text-primary' 
-          : 'text-gray-100 hover:text-white dark:text-gray-200 dark:hover:text-white'
-        }
-      `}
-    >
-      {children}
-      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
-    </Link>
-  );
-};
+const NavLink = ({ href, children, active }: NavLinkProps) => (
+  <Link
+    href={href}
+    className={`relative px-3.5 py-2 rounded-full text-sm font-semibold transition-all ${
+      active
+        ? 'bg-secondary text-gray-900 shadow-md'
+        : 'text-white/90 hover:text-white hover:bg-white/15'
+    }`}
+    style={active ? { backgroundColor: '#fdd00d' } : undefined}
+  >
+    {children}
+  </Link>
+);
 
 interface MobileNavLinkProps {
   href: string;
@@ -310,14 +315,12 @@ interface MobileNavLinkProps {
   onClick: () => void;
 }
 
-const MobileNavLink = ({ href, children, onClick }: MobileNavLinkProps) => {
-  return (
-    <Link
-      href={href}
-      className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-secondary hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 px-3 py-3 rounded-lg text-base font-medium transition block"
-      onClick={onClick}
-    >
-      {children}
-    </Link>
-  );
-};
+const MobileNavLink = ({ href, children, onClick }: MobileNavLinkProps) => (
+  <Link
+    href={href}
+    className="block px-3 py-3 rounded-xl text-white font-semibold hover:bg-white/10 border-b border-white/5 last:border-0"
+    onClick={onClick}
+  >
+    {children}
+  </Link>
+);

@@ -33,7 +33,9 @@ export default function FeaturedBusinesses({ showHeader = true }: FeaturedBusine
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/featured-businesses');
+        const res = await fetch(`/api/featured-businesses?_=${Date.now()}`, {
+          cache: 'no-store',
+        });
         const json = await res.json().catch(() => null);
         if (!res.ok) throw new Error((json && json.error) || 'Failed to load featured businesses');
         if (!cancelled) setBusinesses(Array.isArray(json?.businesses) ? json.businesses : []);

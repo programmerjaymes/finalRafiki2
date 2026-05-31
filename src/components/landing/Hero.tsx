@@ -2,172 +2,155 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import styles from '@/styles/colors.module.css';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
+import RefreshButton from '@/components/landing/RefreshButton';
+
+const stats = [
+  { value: '1,000+', key: 'businesses' as const },
+  { value: '24/7', key: 'access' as const },
+  { value: 'TZ', key: 'local' as const },
+];
 
 export default function Hero() {
   const locale = useLocale();
   const messages = t(locale);
 
+  const statLabels =
+    locale === 'sw'
+      ? { businesses: 'Biashara', access: 'Upatikanaji', local: 'Kitaifa' }
+      : { businesses: 'Businesses', access: 'Access', local: 'Tanzania' };
+
   return (
-    <div 
-      className="relative overflow-hidden bg-gradient-to-br from-primary dark:from-primary-dark via-primary-dark dark:via-gray-900 to-gray-900 dark:to-black text-white"
-      style={{ 
-        background: `linear-gradient(to bottom right, #b71131, #8f0e27, #101828)`,
-      }}
-    >
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{ 
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'white\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/svg%3E")',
-          backgroundSize: '60px 60px'
-        }}></div>
-      </div>
-      
-      {/* Animated gradient orbs */}
-      <motion.div 
-        className="absolute -bottom-24 -left-24 w-72 h-72 md:w-80 md:h-80 rounded-full bg-gradient-to-r from-primary-light/30 to-secondary/20 blur-3xl"
+    <section className="relative overflow-hidden text-white pt-[7.5rem] sm:pt-32 pb-28 sm:pb-36">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#8f0e27] via-primary-dark to-[#0c111d]" />
+      <div
+        className="absolute inset-0 opacity-[0.35]"
         style={{
-          background: 'radial-gradient(circle, rgba(183,17,49,0.3) 0%, rgba(253,208,13,0.2) 100%)',
-        }}
-        animate={{
-          y: [0, -20, 0],
-          x: [0, 15, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          repeatType: "reverse"
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundSize: '48px 48px',
         }}
       />
-      
-      <motion.div 
-        className="absolute -top-24 -right-24 w-72 h-72 md:w-80 md:h-80 rounded-full bg-gradient-to-r from-secondary/30 to-secondary-dark/30 blur-3xl"
-        style={{
-          background: 'radial-gradient(circle, rgba(253,208,13,0.3) 0%, rgba(209,172,11,0.3) 100%)',
-        }}
-        animate={{
-          y: [0, 20, 0],
-          x: [0, -15, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          repeatType: "reverse",
-          delay: 1
-        }}
+
+      <motion.div
+        className="absolute -left-20 top-1/4 h-72 w-72 rounded-full bg-secondary/25 blur-3xl"
+        animate={{ scale: [1, 1.08, 1], opacity: [0.4, 0.55, 0.4] }}
+        transition={{ duration: 7, repeat: Infinity }}
       />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 sm:pt-16 sm:pb-20 md:pt-20 md:pb-24 relative z-10">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8">
+      <motion.div
+        className="absolute -right-16 top-10 h-64 w-64 rounded-full bg-primary-light/30 blur-3xl"
+        animate={{ scale: [1.05, 1, 1.05], opacity: [0.35, 0.5, 0.35] }}
+        transition={{ duration: 8, repeat: Infinity, delay: 0.5 }}
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center md:text-left md:w-1/2 mb-6 md:mb-0"
+            transition={{ duration: 0.7 }}
           >
-            <motion.h1 
-              className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 leading-tight"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              <span className="inline-flex items-center rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-semibold tracking-wide">
+                {locale === 'sw' ? 'Jukwaa la Biashara za Tanzania' : 'Tanzania Business Platform'}
+              </span>
+              <RefreshButton variant="hero" />
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.25rem] font-bold leading-[1.1] tracking-tight">
               {messages.home.heroTitleBefore}{' '}
-              <span className={`${styles.gradientText}`}>{messages.home.heroTitleHighlight}</span>{' '}
+              <span className="text-secondary">{messages.home.heroTitleHighlight}</span>{' '}
               {messages.home.heroTitleAfter}
-            </motion.h1>
-            <motion.p 
-              className="text-base sm:text-lg md:text-xl mb-5 text-gray-200 dark:text-gray-300 max-w-lg mx-auto md:mx-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
+            </h1>
+
+            <p className="mt-5 text-base sm:text-lg text-white/80 max-w-lg leading-relaxed">
               {messages.home.heroSubtitle}
-            </motion.p>
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
+            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 href="#search"
-                className={`bg-secondary text-gray-900 dark:text-gray-900 px-6 py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-secondary-light transition duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl ${styles.secondaryBg}`}
+                className="inline-flex justify-center items-center rounded-2xl bg-secondary text-gray-900 px-7 py-3.5 font-bold hover:bg-secondary-light transition shadow-lg shadow-black/20"
               >
                 {messages.home.heroPrimary}
               </Link>
               <Link
                 href="/business-create"
-                className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-white hover:text-primary transition duration-200 transform hover:scale-[1.02]"
-                style={{ borderColor: 'white' }}
+                className="inline-flex justify-center items-center rounded-2xl border-2 border-white/50 px-7 py-3.5 font-bold hover:bg-white/10 transition"
               >
                 {messages.home.heroSecondary}
               </Link>
-            </motion.div>
-            
-            <motion.div 
-              className="mt-5 sm:mt-6 flex items-center gap-3 justify-center md:justify-start"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden" style={{ backgroundColor: '#d1ac0b', borderColor: 'white' }}>
-                    <div className={`w-full h-full ${styles.gradientBg}`}></div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs sm:text-sm text-gray-200 dark:text-gray-300">
-                {messages.home.heroSocialProof}
-              </p>
-            </motion.div>
+            </div>
+
+            <p className="mt-6 text-sm text-white/70">{messages.home.heroSocialProof}</p>
+
+            <dl className="mt-8 grid grid-cols-3 gap-3 max-w-md">
+              {stats.map((s) => (
+                <div
+                  key={s.key}
+                  className="rounded-2xl bg-white/10 border border-white/15 px-3 py-3 text-center backdrop-blur-sm"
+                >
+                  <dt className="text-lg sm:text-xl font-bold text-secondary">{s.value}</dt>
+                  <dd className="text-[10px] sm:text-xs font-medium text-white/70 uppercase tracking-wide mt-0.5">
+                    {statLabels[s.key]}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </motion.div>
-          
-          {/* Hero image/illustration */}
-          <motion.div 
-            className="md:w-1/2 flex justify-center"
-            initial={{ opacity: 0, x: 20 }}
+
+          <motion.div
+            className="relative hidden sm:block"
+            initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
           >
-            <div className="w-full max-w-sm md:max-w-md h-52 sm:h-56 md:h-64 relative bg-white/10 dark:bg-white/5 backdrop-blur-lg rounded-xl p-1 shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 dark:from-white/10 dark:to-white/5 rounded-xl overflow-hidden border border-white/30">
-                <div className="p-4 h-full flex flex-col">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex space-x-1">
-                      <div className={`w-3 h-3 rounded-full ${styles.primaryBg}`}></div>
-                      <div className={`w-3 h-3 rounded-full ${styles.secondaryBg}`}></div>
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    </div>
-                    <div className="h-2 w-24 bg-white/30 rounded-full"></div>
-                  </div>
-                  
-                  <div className="flex-1 grid grid-cols-2 gap-4">
-                    {[1, 2, 3, 4].map((item) => (
-                      <div key={item} className="bg-white/10 rounded-lg overflow-hidden shadow-sm">
-                        <div className={`h-16 sm:h-20 ${styles.gradientBg} opacity-20`}></div>
-                        <div className="p-2">
-                          <div className="h-2 bg-white/40 rounded w-3/4 mb-2"></div>
-                          <div className="h-2 bg-white/30 rounded w-1/2"></div>
-                        </div>
+            <div className="relative mx-auto max-w-md lg:max-w-none">
+              <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-secondary/40 to-primary/30 blur-2xl opacity-60" />
+              <div className="relative rounded-[1.75rem] border border-white/20 bg-white/10 backdrop-blur-xl p-5 shadow-2xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400/90" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-secondary/90" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
+                  <span className="ml-auto h-2 flex-1 max-w-[40%] rounded-full bg-white/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl overflow-hidden border border-white/10 bg-white/5"
+                    >
+                      <div
+                        className="h-20 bg-gradient-to-br from-primary/50 to-secondary/30"
+                        style={{ opacity: 0.5 + i * 0.1 }}
+                      />
+                      <div className="p-3 space-y-2">
+                        <div className="h-2 rounded bg-white/30 w-4/5" />
+                        <div className="h-2 rounded bg-white/20 w-3/5" />
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-black/20 px-4 py-3 border border-white/10">
+                  <span className="text-xs font-medium text-white/80">
+                    {locale === 'sw' ? 'Tafuta karibu nawe' : 'Search near you'}
+                  </span>
+                  <span className="text-xs font-bold text-secondary">→</span>
                 </div>
               </div>
             </div>
           </motion.div>
         </div>
       </div>
-      
-      {/* Wave divider */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 sm:h-12 text-gray-50 dark:text-gray-900">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none" className="h-full w-full">
-          <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.11,140.83,94.17,208.18,82.7Z" fill="currentColor"></path>
+
+      <div className="absolute bottom-0 left-0 right-0 text-[#faf8f6] dark:text-gray-950 leading-none">
+        <svg viewBox="0 0 1200 80" preserveAspectRatio="none" className="w-full h-12 sm:h-16">
+          <path
+            d="M0,40 C300,90 600,0 900,50 C1050,75 1150,60 1200,45 L1200,80 L0,80 Z"
+            fill="currentColor"
+          />
         </svg>
       </div>
-    </div>
+    </section>
   );
 }

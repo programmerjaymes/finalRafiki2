@@ -50,6 +50,14 @@
   --color-brand-800: #5f091a;
   --color-brand-900: #4c0714;
 
+  /* Rafiki system colors (used across landing + app as primary/secondary) */
+  --color-primary: #b71131;
+  --color-primary-light: #c73351;
+  --color-primary-dark: #8f0e27;
+  --color-secondary: #fdd00d;
+  --color-secondary-light: #fed63d;
+  --color-secondary-dark: #d1ac0b;
+
   --color-secondary-25: #fffbeb;
   --color-secondary-50: #fef3c7;
   --color-secondary-100: #fde68a;

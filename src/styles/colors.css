@@ -65,7 +65,54 @@
   border-color: #fdd00d !important;
 }
 
-/* Gradient overrides */
+/* Gradient overrides (Tailwind v4 may not resolve from-primary without @theme) */
 .bg-gradient-primary-secondary {
   background: linear-gradient(90deg, #b71131 0%, #fdd00d 100%) !important;
+}
+
+.from-primary {
+  --tw-gradient-from: #b71131 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(183 17 49 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.via-primary {
+  --tw-gradient-via: #b71131 var(--tw-gradient-via-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to);
+}
+
+.to-primary-dark {
+  --tw-gradient-to: #8f0e27 var(--tw-gradient-to-position);
+}
+
+.hover\:bg-primary-dark:hover {
+  background-color: #8f0e27 !important;
+}
+
+.hover\:bg-secondary-light:hover {
+  background-color: #fed63d !important;
+}
+
+.shadow-primary\/25 {
+  --tw-shadow-color: rgb(183 17 49 / 0.25);
+}
+
+.shadow-primary\/30 {
+  --tw-shadow-color: rgb(183 17 49 / 0.3);
+}
+
+.ring-secondary\/80 {
+  --tw-ring-color: rgb(253 208 13 / 0.8);
+}
+
+.hover\:border-primary\/40:hover {
+  border-color: rgb(183 17 49 / 0.4) !important;
+}
+
+.group-hover\:bg-primary:is(:where(.group):hover *) {
+  background-color: #b71131 !important;
+}
+
+.group-hover\:text-primary:is(:where(.group):hover *) {
+  color: #b71131 !important;
 } 
