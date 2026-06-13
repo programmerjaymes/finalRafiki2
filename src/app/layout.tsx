@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${outfit.className} dark:bg-gray-900`}>
+    <html lang="en" suppressHydrationWarning className="light">
+      <body className={`${outfit.className} bg-white text-gray-900 dark:bg-gray-900`}>
         <Providers>
           <SidebarProvider>{children}</SidebarProvider>
         </Providers>

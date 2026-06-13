@@ -487,6 +487,32 @@ const BusinessList = () => {
     setUserSearchQuery('');
     setSelectedCategoryIds([]);
   };
+
+  const selectOwnerUser = (user: User) => {
+    setSelectedUser(user);
+    setFormData((prev) => ({ ...prev, ownerId: user.id }));
+    setUserSearchQuery('');
+    setAssignUserFocused(false);
+  };
+
+  const clearOwnerUser = () => {
+    setSelectedUser(null);
+    setFormData((prev) => ({ ...prev, ownerId: '' }));
+    setUserSearchQuery('');
+    setAssignUserFocused(false);
+  };
+
+  const resolveOwnerFromBusiness = (full: Business): User | null => {
+    if (full.owner) {
+      return { id: full.ownerId, name: full.owner.name, email: full.owner.email || '' };
+    }
+    if (full.ownerId) {
+      const fromList = (users ?? []).find((u) => u.id === full.ownerId);
+      if (fromList) return fromList;
+      return { id: full.ownerId, name: 'Unknown user', email: '' };
+    }
+    return null;
+  };
   
   // Handle input change for form fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -616,10 +642,7 @@ const BusinessList = () => {
     setExistingImages(full.images || []);
     setProductImages([]);
     
-    // Set selected user
-    if (full.owner) {
-      setSelectedUser({ id: full.ownerId, name: full.owner.name, email: full.owner.email || '' });
-    }
+    setSelectedUser(resolveOwnerFromBusiness(full));
   };
   
   // Open view modal — fetch full details first
@@ -704,6 +727,7 @@ const BusinessList = () => {
     if (!currentBusiness) return;
     
     if (!formData.name) { toast.error('Business name is required'); return; }
+    if (!selectedUser) { toast.error('Please select an owner'); return; }
     if (!formData.bundleId) { toast.error('Please select a bundle'); return; }
     if (selectedCategoryIds.length === 0) { toast.error('Please select at least one category'); return; }
 
@@ -711,6 +735,7 @@ const BusinessList = () => {
     try {
       const payload: any = {
         ...formData,
+        ownerId: selectedUser.id,
         categoryId: selectedCategoryIds[0],
         categoryId2: selectedCategoryIds[1] || null,
       };
@@ -1092,7 +1117,7 @@ const BusinessList = () => {
             <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-6">
               {isAddModalOpen ? 'Add Business' : 'Edit Business'}
               <span className="block text-xs font-normal text-gray-500 mt-1">
-                {isAddModalOpen ? 'Create and assign to a user (auto-approved)' : 'Update business details'}
+                {isAddModalOpen ? 'Create and assign to a user (auto-approved)' : 'Update business details or reassign to a different user'}
               </span>
             </h4>
 
@@ -1110,11 +1135,8 @@ const BusinessList = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedUser(null);
-                      setUserSearchQuery('');
-                      setAssignUserFocused(false);
-                    }}
+                    onClick={clearOwnerUser}
+                    title="Change assigned user"
                     className="text-gray-400 hover:text-red-500"
                   >
                     <FiX className="h-4 w-4" />
@@ -1142,11 +1164,7 @@ const BusinessList = () => {
                           type="button"
                           className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 last:border-0"
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setUserSearchQuery('');
-                            setAssignUserFocused(false);
-                          }}
+                          onClick={() => selectOwnerUser(u)}
                         >
                           <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-semibold text-primary-600">
                             {u.name?.charAt(0)?.toUpperCase() || 'U'}

@@ -14,13 +14,13 @@ export default function RadarScanner({ scanning = false, size = 112 }: RadarScan
       aria-hidden
     >
       <div
-        className="absolute inset-0 rounded-full border border-[#8f4a54]/25"
+        className="absolute inset-0 rounded-full border border-[#8f0e27]/25"
         style={{ background: 'radial-gradient(circle, rgba(143,74,84,0.12) 0%, transparent 70%)' }}
       />
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className={`absolute inset-0 rounded-full border-2 border-[#8f4a54]/30 ${
+          className={`absolute inset-0 rounded-full border-2 border-[#8f0e27]/30 ${
             scanning ? 'animate-radar-pulse' : ''
           }`}
           style={
@@ -35,12 +35,12 @@ export default function RadarScanner({ scanning = false, size = 112 }: RadarScan
       ))}
       {scanning && (
         <div className="absolute left-1/2 top-1/2 h-full w-full animate-radar-sweep" style={{ animationDuration: '1.5s' }}>
-          <span className="absolute left-1/2 top-1/2 h-[46%] w-0.5 -translate-x-1/2 origin-bottom rounded-full bg-gradient-to-t from-[#8f4a54] via-[#8f4a54]/40 to-transparent" />
+          <span className="absolute left-1/2 top-1/2 h-[46%] w-0.5 -translate-x-1/2 origin-bottom rounded-full bg-gradient-to-t from-[#8f0e27] via-[#8f0e27]/40 to-transparent" />
         </div>
       )}
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg"
-        style={{ backgroundColor: '#8f4a54' }}
+        style={{ backgroundColor: '#8f0e27' }}
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
           <path

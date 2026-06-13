@@ -57,9 +57,9 @@ export default function HomeBusinessListings() {
 
   return (
     <section className="pb-10 w-full" aria-label={messages.home.listingsTitle}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 md:mb-5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
             {messages.home.listingsTitle}
           </h1>
           {!loading && (
@@ -80,14 +80,14 @@ export default function HomeBusinessListings() {
       </div>
 
       {loading ? (
-        <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
           {shimmerCards.map((i) => (
             <div
               key={i}
-              className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse"
+              className="rounded-xl md:rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse"
             >
-              <div className="h-28 bg-gray-100 dark:bg-gray-800" />
-              <div className="p-4 space-y-3">
+              <div className="h-11 md:h-28 bg-gray-100 dark:bg-gray-800" />
+              <div className="hidden md:block p-4 space-y-3">
                 <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />
                 <div className="h-3 w-full rounded bg-gray-100 dark:bg-gray-800" />
               </div>
@@ -107,7 +107,7 @@ export default function HomeBusinessListings() {
         </div>
       ) : (
         <>
-          <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+          <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
             {businesses.map((business) => (
               <BusinessListingCard
                 key={business.id}

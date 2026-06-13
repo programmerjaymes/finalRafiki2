@@ -48,6 +48,7 @@ function SearchResults() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [searchRefreshKey, setSearchRefreshKey] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -273,7 +274,7 @@ function SearchResults() {
       <Navbar />
       <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-12">
         <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-6">
+          <div className="hidden md:flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: brandColors.accent }}>
                 Rafiki
@@ -318,9 +319,31 @@ function SearchResults() {
             scanning={scanning}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-5">
             <aside className="lg:col-span-3 xl:col-span-3">
-              <div className="lg:sticky lg:top-[5.25rem] rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-5">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((o) => !o)}
+                className="lg:hidden w-full mb-2 flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-white"
+              >
+                <span>{messages.search.filters}</span>
+                <span className="flex items-center gap-2">
+                  {activeFiltersCount > 0 && (
+                    <span
+                      className="text-xs rounded-full px-2 py-0.5 font-semibold text-white"
+                      style={{ backgroundColor: brandColors.accent }}
+                    >
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                  <span className="text-gray-400">{filtersOpen ? '−' : '+'}</span>
+                </span>
+              </button>
+              <div
+                className={`lg:sticky lg:top-[5.25rem] rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-lg p-4 md:p-5 ${
+                  filtersOpen ? 'block' : 'hidden lg:block'
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">{messages.search.filters}</h2>
                   {activeFiltersCount > 0 && (
@@ -456,14 +479,14 @@ function SearchResults() {
 
             <section className="lg:col-span-9 xl:col-span-9 min-w-0">
               {!loading && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2 md:mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h2 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white">
                       {totalResults.toLocaleString()}{' '}
                       {totalResults === 1 ? messages.search.result : messages.search.results}
                     </h2>
                     {searchText.trim() && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                         {locale === 'sw' ? 'Kwa' : 'For'}: &ldquo;{searchText.trim()}&rdquo;
                       </p>
                     )}
@@ -477,7 +500,7 @@ function SearchResults() {
               )}
 
               {loading ? (
-                <div className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
                   {[...Array(12)].map((_, i) => (
                     <div
                       key={i}
@@ -493,7 +516,7 @@ function SearchResults() {
                 </div>
               ) : (
                 <>
-                  <div className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
                     {Array.isArray(businesses) &&
                       businesses.map((business) => (
                         <BusinessListingCard

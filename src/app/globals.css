@@ -743,6 +743,60 @@ span.flatpickr-weekday,
   @apply w-6.5 rounded-xl;
 }
 
+.landing-hero-carousel .swiper-pagination {
+  @apply bottom-3! sm:bottom-4!;
+}
+
+.landing-hero-carousel .swiper-pagination-bullet {
+  @apply bg-white/70 opacity-100;
+}
+
+.landing-hero-carousel .swiper-pagination-bullet-active {
+  @apply bg-white w-5;
+}
+
+.landing-promo-banner .swiper-pagination {
+  @apply bottom-1.5! sm:bottom-2!;
+}
+
+.landing-promo-banner .swiper-pagination-bullet {
+  @apply bg-gray-400/80 opacity-100;
+}
+
+.landing-promo-banner .swiper-pagination-bullet-active {
+  @apply w-5 rounded-xl;
+  background-color: #8f0e27;
+}
+
+.landing-product-carousel .swiper-pagination {
+  @apply bottom-0!;
+}
+
+.landing-product-carousel .swiper-pagination-bullet {
+  @apply bg-gray-300 dark:bg-gray-600;
+}
+
+.landing-product-carousel .swiper-pagination-bullet-active {
+  @apply w-5 rounded-xl;
+  background-color: #8f0e27;
+}
+
+.landing-featured-carousel .swiper-pagination,
+.landing-highlights-carousel .swiper-pagination {
+  @apply bottom-0!;
+}
+
+.landing-featured-carousel .swiper-pagination-bullet,
+.landing-highlights-carousel .swiper-pagination-bullet {
+  @apply bg-gray-300 dark:bg-gray-600;
+}
+
+.landing-featured-carousel .swiper-pagination-bullet-active,
+.landing-highlights-carousel .swiper-pagination-bullet-active {
+  @apply w-5 rounded-xl;
+  background-color: #8f0e27;
+}
+
 .jvectormap-container {
   @apply bg-gray-50! dark:bg-gray-900!;
 }

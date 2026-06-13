@@ -3,6 +3,9 @@
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
 import HomeBusinessListings from '@/components/landing/HomeBusinessListings';
+import LandingPromoImages from '@/components/landing/LandingPromoImages';
+import LandingCategoriesCarousel from '@/components/landing/LandingCategoriesCarousel';
+import LandingFeaturedCarousel from '@/components/landing/LandingFeaturedCarousel';
 import { useLocale } from '@/lib/useLocale';
 import { brandColors } from '@/lib/brandColors';
 
@@ -18,7 +21,7 @@ export default function Home() {
         aria-hidden
         style={{
           backgroundImage: `
-            radial-gradient(ellipse 70% 40% at 50% 0%, rgba(61, 42, 46, 0.06), transparent),
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgba(143, 14, 39, 0.07), transparent),
             radial-gradient(ellipse 40% 30% at 100% 20%, rgba(201, 162, 39, 0.04), transparent)
           `,
         }}
@@ -28,6 +31,9 @@ export default function Home() {
 
       <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-8">
         <div className="w-full max-w-[100vw] px-3 sm:px-4 md:px-5 lg:px-6">
+          <LandingPromoImages />
+          <LandingCategoriesCarousel />
+          <LandingFeaturedCarousel />
           <HomeBusinessListings />
         </div>
       </main>
