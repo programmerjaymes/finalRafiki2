@@ -50,24 +50,35 @@ function normalizePostgresUrl(url: string): string {
   return out;
 }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+  /** Bumped when schema changes — prevents HMR from keeping a stale PrismaClient in dev. */
+  prismaSchemaGeneration?: string;
+};
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: {
-        url: getDatabaseUrl(),
+const PRISMA_SCHEMA_GENERATION = '20260531-whatsapp';
+
+const needsNewClient =
+  !globalForPrisma.prisma ||
+  globalForPrisma.prismaSchemaGeneration !== PRISMA_SCHEMA_GENERATION;
+
+export const prisma = needsNewClient
+  ? new PrismaClient({
+      datasources: {
+        db: {
+          url: getDatabaseUrl(),
+        },
       },
-    },
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['error', 'warn']
-        : ['error'],
-  });
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['error', 'warn']
+          : ['error'],
+    })
+  : globalForPrisma.prisma!;
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
+  globalForPrisma.prismaSchemaGeneration = PRISMA_SCHEMA_GENERATION;
 }
 
 export default prisma;

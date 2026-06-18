@@ -48,10 +48,10 @@ const getFeaturedBusinesses = unstable_cache(
     if (businessIds.length > 0) {
       const inClause = businessIds.map(id => `'${id}'`).join(',');
       businessImages = await prisma.$queryRawUnsafe(`
-        SELECT "businessId", id, "imageData", "sortOrder" 
+        SELECT DISTINCT ON ("businessId") "businessId", id, "imageData", "sortOrder" 
         FROM business_images 
         WHERE "businessId" IN (${inClause})
-        ORDER BY "sortOrder" ASC
+        ORDER BY "businessId", "sortOrder" ASC
       `);
     }
 
@@ -70,7 +70,7 @@ const getFeaturedBusinesses = unstable_cache(
       },
     }));
   },
-  ['featured-businesses:v4'],
+  ['featured-businesses:v5'],
   { revalidate, tags: ['businesses', 'featured-businesses'] },
 );
 

@@ -4,6 +4,7 @@ import AppHeader from "@/layout/AppHeader";
 import { SidebarProvider } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { BusinessOwnerAuthWrapper } from '@/components/auth/BusinessOwnerAuthWrapper';
 
 function MainContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered } = useSidebar();
@@ -26,13 +27,15 @@ export default function BusinessOwnerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider>
-      <SidebarProvider>
-        <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-          <BusinessOwnerSidebar />
-          <MainContent>{children}</MainContent>
-        </div>
-      </SidebarProvider>
-    </ThemeProvider>
+    <BusinessOwnerAuthWrapper>
+      <ThemeProvider>
+        <SidebarProvider>
+          <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+            <BusinessOwnerSidebar />
+            <MainContent>{children}</MainContent>
+          </div>
+        </SidebarProvider>
+      </ThemeProvider>
+    </BusinessOwnerAuthWrapper>
   );
 } 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   FaPhone,
+  FaWhatsapp,
   FaEnvelope,
   FaGlobe,
   FaFacebook,
@@ -16,7 +17,10 @@ import {
 } from 'react-icons/fa';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
+import BusinessProductCarousel from '@/components/landing/BusinessProductCarousel';
 import { brandColors } from '@/lib/brandColors';
+import { resolveBusinessImageSrc } from '@/lib/businessImage';
+import { whatsappChatUrl } from '@/lib/phoneNumber';
 import { useLocale } from '@/lib/useLocale';
 
 interface BusinessImage {
@@ -30,6 +34,7 @@ interface Business {
   name: string;
   description: string | null;
   phone: string | null;
+  whatsapp: string | null;
   email: string | null;
   website: string | null;
   logo: string | null;
@@ -56,9 +61,7 @@ interface Business {
 }
 
 function imageSrc(data: string | null) {
-  if (!data) return null;
-  if (data.startsWith('data:')) return data;
-  return `data:image/jpeg;base64,${data}`;
+  return resolveBusinessImageSrc(data);
 }
 
 export default function BusinessDetails({
@@ -78,7 +81,7 @@ export default function BusinessDetails({
       ? {
           back: 'Rudi kwenye utafutaji',
           about: 'Kuhusu',
-          gallery: 'Picha',
+          gallery: 'Picha za bidhaa',
           contact: 'Mawasiliano',
           location: 'Eneo',
           features: 'Huduma',
@@ -87,6 +90,7 @@ export default function BusinessDetails({
           clicks: 'Mibofyo',
           inquiries: 'Maswali',
           phone: 'Simu',
+          whatsapp: 'WhatsApp',
           email: 'Barua pepe',
           website: 'Tovuti',
           social: 'Mitandao',
@@ -100,11 +104,12 @@ export default function BusinessDetails({
           notFoundDesc: 'Biashara unayotafuta haipo au imeondolewa.',
           goBack: 'Rudi nyuma',
           call: 'Piga simu',
+          chatWhatsapp: 'Wasiliana WhatsApp',
         }
       : {
           back: 'Back to search',
           about: 'About',
-          gallery: 'Gallery',
+          gallery: 'Product photos',
           contact: 'Contact',
           location: 'Location',
           features: 'Features',
@@ -113,6 +118,7 @@ export default function BusinessDetails({
           clicks: 'Clicks',
           inquiries: 'Inquiries',
           phone: 'Phone',
+          whatsapp: 'WhatsApp',
           email: 'Email',
           website: 'Website',
           social: 'Social',
@@ -126,6 +132,7 @@ export default function BusinessDetails({
           notFoundDesc: 'The business you are looking for could not be found or is no longer available.',
           goBack: 'Go back',
           call: 'Call now',
+          chatWhatsapp: 'Chat on WhatsApp',
         };
 
   useEffect(() => {
@@ -197,7 +204,10 @@ export default function BusinessDetails({
   }
 
   const logo = imageSrc(business.logo);
-  const cover = imageSrc(business.coverImage);
+  const hasProductPhotos =
+    Boolean(business.coverImage) ||
+    Boolean(business.images && business.images.length > 0) ||
+    Boolean(business.logo);
   const locationParts = [
     business.street,
     business.ward?.name,
@@ -216,11 +226,17 @@ export default function BusinessDetails({
       </Link>
 
       <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl mb-6">
-        <div className="relative h-44 sm:h-56 md:h-64 overflow-hidden" style={{ background: brandColors.cardHeader }}>
-          {cover ? (
-            <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
-          ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="relative h-44 sm:h-56 md:h-72 overflow-hidden" style={{ background: brandColors.cardHeader }}>
+          <BusinessProductCarousel
+            business={business}
+            className="absolute inset-0 h-full w-full"
+            emptyLabel={
+              locale === 'sw'
+                ? 'Hakuna picha za bidhaa bado'
+                : 'No product photos yet'
+            }
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 flex items-end gap-4">
             <div className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 rounded-2xl border-2 border-white bg-white dark:bg-gray-800 shadow-xl overflow-hidden flex items-center justify-center">
               {logo ? (
@@ -259,7 +275,7 @@ export default function BusinessDetails({
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between border-b border-gray-100 dark:border-gray-800">
+        <div className="p-4 sm:p-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center border-b border-gray-100 dark:border-gray-800">
           {business.phone && (
             <a
               href={`tel:${business.phone}`}
@@ -268,6 +284,17 @@ export default function BusinessDetails({
             >
               <FaPhone />
               {labels.call}: {business.phone}
+            </a>
+          )}
+          {whatsappChatUrl(business.whatsapp) && (
+            <a
+              href={whatsappChatUrl(business.whatsapp)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex justify-center items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-md hover:opacity-90 transition bg-[#25D366]"
+            >
+              <FaWhatsapp className="h-5 w-5" />
+              {labels.chatWhatsapp}
             </a>
           )}
           {business.allowsOnlineBooking && (
@@ -289,7 +316,7 @@ export default function BusinessDetails({
           </p>
         </div>
 
-        {business.images && business.images.length > 0 && (
+        {hasProductPhotos && business.images && business.images.length > 0 && (
           <div className="px-4 sm:px-6 pb-6 border-t border-gray-100 dark:border-gray-800 pt-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{labels.gallery}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -326,6 +353,24 @@ export default function BusinessDetails({
                   <p className="text-xs text-gray-500 dark:text-gray-400">{labels.phone}</p>
                   <a href={`tel:${business.phone}`} className="font-semibold text-gray-900 dark:text-white">
                     {business.phone}
+                  </a>
+                </div>
+              </li>
+            )}
+            {whatsappChatUrl(business.whatsapp) && (
+              <li className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/30">
+                  <FaWhatsapp className="text-[#25D366] h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{labels.whatsapp}</p>
+                  <a
+                    href={whatsappChatUrl(business.whatsapp)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    {business.whatsapp}
                   </a>
                 </div>
               </li>

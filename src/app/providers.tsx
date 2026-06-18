@@ -8,7 +8,7 @@ import { LocaleProvider } from '@/lib/LocaleProvider';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false}>
       <LocaleProvider>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <SessionExpiryPrompt />

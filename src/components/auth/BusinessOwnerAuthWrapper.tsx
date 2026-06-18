@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 
 interface BusinessOwnerAuthWrapperProps {
@@ -12,28 +12,33 @@ interface BusinessOwnerAuthWrapperProps {
 export const BusinessOwnerAuthWrapper: React.FC<BusinessOwnerAuthWrapperProps> = ({ children }) => {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const wasAuthorizedRef = useRef(false);
+
+  const isBusinessOwner =
+    status === 'authenticated' && session?.user?.role === 'BUSINESS_OWNER';
+
+  if (isBusinessOwner) {
+    wasAuthorizedRef.current = true;
+  }
 
   useEffect(() => {
     if (status === 'loading') return;
 
-    console.log('Auth status:', status);
-    console.log('Session:', session);
-    
-    // If the user is not authenticated or is not a business owner, redirect to login
+    const callbackUrl = encodeURIComponent(pathname || '/business-dashboard');
+
     if (status === 'unauthenticated') {
-      console.log('User not authenticated, redirecting to login');
-      router.push('/signin?callbackUrl=/business-dashboard');
+      router.push(`/signin?callbackUrl=${callbackUrl}`);
       return;
     }
-    
+
     if (status === 'authenticated' && session?.user?.role !== 'BUSINESS_OWNER') {
-      console.log(`User authenticated but has wrong role: ${session?.user?.role}`);
       router.push('/');
     }
-  }, [session, status, router]);
+  }, [session, status, router, pathname]);
 
-  // Show loading spinner while checking authentication
-  if (status === 'loading') {
+  // Only block the page on the very first auth check — never unmount the form during background session refetches.
+  if (status === 'loading' && !wasAuthorizedRef.current) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spinner size="lg" />
@@ -42,7 +47,10 @@ export const BusinessOwnerAuthWrapper: React.FC<BusinessOwnerAuthWrapperProps> =
     );
   }
 
-  // If the user is not authenticated or is not checking, don't render children
+  if (wasAuthorizedRef.current && status === 'loading') {
+    return <>{children}</>;
+  }
+
   if (status === 'unauthenticated') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -51,7 +59,6 @@ export const BusinessOwnerAuthWrapper: React.FC<BusinessOwnerAuthWrapperProps> =
     );
   }
 
-  // If the user is authenticated but not a business owner
   if (status === 'authenticated' && session?.user?.role !== 'BUSINESS_OWNER') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -60,6 +67,5 @@ export const BusinessOwnerAuthWrapper: React.FC<BusinessOwnerAuthWrapperProps> =
     );
   }
 
-  // If the user is authenticated and is a business owner, render children
   return <>{children}</>;
-}; 
+};

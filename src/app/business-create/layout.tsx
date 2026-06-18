@@ -10,11 +10,11 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered } = useSidebar();
   
   return (
-    <div className={`flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out ${
+    <div className={`flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out ${
       isExpanded ? "lg:ml-[290px]" : isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"
     }`}>
       <AppHeader />
-      <main className="px-4 py-4 sm:px-6 sm:py-6 lg:px-10 lg:py-7">
+      <main className="flex flex-col flex-1 min-h-0 overflow-hidden px-4 pt-4 sm:px-6 sm:pt-6 lg:px-10 lg:pt-7 pb-0">
         {children}
       </main>
     </div>

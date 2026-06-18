@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { BUSINESS_CREATE_PATH } from './lib/registerBusiness';
 
 const LOCALE_COOKIE = 'rafiki_locale';
 
@@ -37,6 +38,12 @@ export async function middleware(request: NextRequest) {
 
   // Deny by default: if route is not explicitly public, login is required.
   if (!isPublicRoute && !token) {
+    if (pathname.startsWith('/business-create')) {
+      const url = new URL('/signup', request.url);
+      url.searchParams.set('callbackUrl', BUSINESS_CREATE_PATH);
+      return NextResponse.redirect(url);
+    }
+
     const url = new URL('/signin', request.url);
     url.searchParams.set('callbackUrl', encodeURI(request.url));
     return NextResponse.redirect(url);
@@ -90,6 +97,11 @@ export async function middleware(request: NextRequest) {
 
   if (isBusinessOwnerRoute) {
     if (!token || token.role !== 'BUSINESS_OWNER') {
+      if (!token && pathname.startsWith('/business-create')) {
+        const url = new URL('/signup', request.url);
+        url.searchParams.set('callbackUrl', BUSINESS_CREATE_PATH);
+        return NextResponse.redirect(url);
+      }
       const url = new URL('/signin', request.url);
       url.searchParams.set('callbackUrl', encodeURI(request.url));
       return NextResponse.redirect(url);

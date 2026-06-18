@@ -1,35 +1,38 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { getSession, signOut, useSession } from 'next-auth/react';
 import { brandColors } from '@/lib/brandColors';
 
 export default function SessionValidator() {
-  const { data: session, update } = useSession();
+  const { data: session } = useSession();
   const [showInvalidatedModal, setShowInvalidatedModal] = useState(false);
 
   useEffect(() => {
-    // Check if session has been invalidated (logged in elsewhere)
-    if ((session as any)?.isInvalidated) {
+    if ((session as { isInvalidated?: boolean })?.isInvalidated) {
       setShowInvalidatedModal(true);
     }
   }, [session]);
 
-  // Poll session every 30 seconds to check validity
+  // Poll in the background without calling update() — that flips useSession to "loading"
+  // and unmounts protected pages (e.g. business-create forms).
   useEffect(() => {
-    const interval = setInterval(() => {
-      update(); // Refresh session
-    }, 30000);
+    const checkSession = async () => {
+      const fresh = await getSession();
+      if ((fresh as { isInvalidated?: boolean })?.isInvalidated) {
+        setShowInvalidatedModal(true);
+      }
+    };
 
+    const interval = setInterval(checkSession, 60_000);
     return () => clearInterval(interval);
-  }, [update]);
+  }, []);
 
   if (!showInvalidatedModal) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl">
-        {/* Icon */}
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
           <svg
             className="h-8 w-8 text-red-600 dark:text-red-400"
@@ -46,17 +49,14 @@ export default function SessionValidator() {
           </svg>
         </div>
 
-        {/* Title */}
         <h3 className="mb-2 text-center text-xl font-bold text-gray-900 dark:text-white">
           Session Ended
         </h3>
 
-        {/* Description */}
         <p className="mb-6 text-center text-sm text-gray-600 dark:text-gray-300">
           Your session was ended because you logged in from another device or tab.
         </p>
 
-        {/* Button */}
         <button
           onClick={() => signOut({ callbackUrl: '/signin' })}
           className="w-full rounded-xl py-3 font-semibold text-white transition-opacity hover:opacity-90"

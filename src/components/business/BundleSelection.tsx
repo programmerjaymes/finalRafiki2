@@ -1,9 +1,9 @@
 "use client";
+
 import React from 'react';
 import { Bundle } from '@prisma/client';
-import Card from '@/components/ui/card/Card';
-import Button from '@/components/ui/button/Button';
 import { FiCheck } from 'react-icons/fi';
+import { brandColors } from '@/lib/brandColors';
 
 interface BundleSelectionProps {
   bundles: Bundle[];
@@ -11,84 +11,160 @@ interface BundleSelectionProps {
   onSelect: (bundle: Bundle) => void;
 }
 
+const FEATURE_LABELS: Record<string, string> = {
+  name: 'Business name',
+  description: 'Description',
+  phone: 'Phone number',
+  whatsapp: 'WhatsApp number',
+  email: 'Email address',
+  website: 'Website',
+  regionId: 'Region',
+  districtId: 'District',
+  wardId: 'Ward',
+  street: 'Street address',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  twitter: 'Twitter',
+  allowsOnlineBooking: 'Online booking',
+  allowsDelivery: 'Delivery option',
+  logo: 'Company logo',
+  coverImage: 'Cover image',
+  latitude: 'GPS latitude',
+  longitude: 'GPS longitude',
+  social_media: 'Social media links',
+  coordinates: 'GPS coordinates',
+};
+
+function formatFeature(feature: string): string {
+  return (
+    FEATURE_LABELS[feature] ??
+    feature
+      .replace(/_/g, ' ')
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, (s) => s.toUpperCase())
+      .trim()
+  );
+}
+
+function bundleFeatures(bundle: Bundle): string[] {
+  let raw: string[] = [];
+  try {
+    raw = JSON.parse(bundle.allowedFields);
+  } catch {
+    raw = [];
+  }
+
+  const display = raw
+    .filter((f) => !['name', 'description', 'phone', 'whatsapp', 'email', 'regionId', 'districtId', 'wardId', 'street'].includes(f))
+    .map(formatFeature);
+
+  if (bundle.allowsVideo) display.push('Video uploads');
+  if (bundle.allowsAnalytics) {
+    display.push(bundle.advancedAnalytics ? 'Advanced analytics' : 'Basic analytics');
+  }
+  display.push(`Up to ${bundle.maxImages} product photo${bundle.maxImages === 1 ? '' : 's'}`);
+
+  return display.length > 0 ? display : ['Core business listing'];
+}
+
 export default function BundleSelection({ bundles, selectedBundle, onSelect }: BundleSelectionProps) {
   if (!bundles || bundles.length === 0) {
     return (
       <div className="text-center p-8">
-        <h3 className="text-xl font-semibold text-gray-700">No subscription bundles available</h3>
-        <p className="text-gray-500 mt-2">Please try again later or contact support for assistance.</p>
+        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
+          No subscription bundles available
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">
+          Please try again later or contact support for assistance.
+        </p>
       </div>
     );
   }
 
+  const columnClass =
+    bundles.length === 1
+      ? 'grid-cols-1 max-w-xl mx-auto'
+      : bundles.length === 2
+        ? 'grid-cols-1 md:grid-cols-2'
+        : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3';
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className={`w-full min-w-0 grid gap-4 sm:gap-5 lg:gap-6 ${columnClass}`}>
       {bundles.map((bundle) => {
         const isSelected = selectedBundle?.id === bundle.id;
-        const features = JSON.parse(bundle.allowedFields);
+        const features = bundleFeatures(bundle);
 
         return (
-          <Card
+          <button
             key={bundle.id}
-            className={`relative p-6 cursor-pointer transition-all ${
-              isSelected
-                ? 'border-2 border-primary-500 shadow-lg'
-                : 'border border-gray-200 hover:border-primary-300'
-            }`}
+            type="button"
             onClick={() => onSelect(bundle)}
+            className={`relative flex w-full min-w-0 flex-col rounded-2xl border-2 p-5 sm:p-6 text-left transition-all ${
+              isSelected
+                ? 'border-primary shadow-lg ring-2 ring-primary/20 bg-primary/[0.03] dark:bg-primary/10'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 hover:border-primary/40 hover:shadow-md'
+            }`}
           >
             {isSelected && (
-              <div className="absolute -top-3 -right-3 bg-primary-500 rounded-full p-1">
-                <FiCheck className="w-5 h-5 text-white" />
+              <div
+                className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-white shadow-md"
+                style={{ backgroundColor: brandColors.accent }}
+              >
+                <FiCheck className="h-5 w-5" aria-hidden />
               </div>
             )}
 
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">{bundle.name}</h3>
-              <div className="mt-2">
-                <span className="text-4xl font-bold">KES {bundle.price}</span>
-                <span className="text-gray-500">/{bundle.duration} days</span>
+            {bundle.featured && (
+              <span
+                className="mb-3 inline-flex w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white"
+                style={{ backgroundColor: brandColors.accent }}
+              >
+                Popular
+              </span>
+            )}
+
+            <div className="pr-10">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">
+                {bundle.name}
+              </h3>
+              {bundle.description && (
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                  {bundle.description}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                  TZS {Number(bundle.price).toLocaleString()}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                  / {bundle.duration} days
+                </span>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="font-semibold mb-2">Features:</h4>
-                <ul className="space-y-2">
-                  {features.map((feature: string, index: number) => (
-                    <li key={index} className="flex items-center text-gray-600">
-                      <FiCheck className="w-4 h-4 text-green-500 mr-2" />
-                      {feature}
-                    </li>
-                  ))}
-                  {bundle.allowsVideo && (
-                    <li className="flex items-center text-gray-600">
-                      <FiCheck className="w-4 h-4 text-green-500 mr-2" />
-                      Video uploads
-                    </li>
-                  )}
-                  {bundle.allowsAnalytics && (
-                    <li className="flex items-center text-gray-600">
-                      <FiCheck className="w-4 h-4 text-green-500 mr-2" />
-                      {bundle.advancedAnalytics ? 'Advanced analytics' : 'Basic analytics'}
-                    </li>
-                  )}
-                  <li className="flex items-center text-gray-600">
-                    <FiCheck className="w-4 h-4 text-green-500 mr-2" />
-                    Up to {bundle.maxImages} images
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <ul className="mt-5 flex-1 space-y-2 border-t border-gray-100 dark:border-gray-700 pt-4">
+              {features.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"
+                >
+                  <FiCheck className="mt-0.5 h-4 w-4 shrink-0 text-green-500" aria-hidden />
+                  <span className="break-words">{feature}</span>
+                </li>
+              ))}
+            </ul>
 
-            <Button
-              variant={isSelected ? "primary" : "outline"}
-              className="w-full mt-6"
-              onClick={() => onSelect(bundle)}
+            <span
+              className={`mt-5 block w-full rounded-xl py-3 text-center text-sm font-bold transition-colors ${
+                isSelected
+                  ? 'text-white'
+                  : 'border-2 border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100'
+              }`}
+              style={isSelected ? { backgroundColor: brandColors.accent } : undefined}
             >
-              {isSelected ? 'Selected' : 'Choose Plan'}
-            </Button>
-          </Card>
+              {isSelected ? 'Selected' : 'Choose plan'}
+            </span>
+          </button>
         );
       })}
     </div>

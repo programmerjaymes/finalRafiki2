@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 import RefreshButton from '@/components/landing/RefreshButton';
+import { REGISTER_BUSINESS_SIGNUP_HREF } from '@/lib/registerBusiness';
 
 const stats = [
   { value: '1,000+', key: 'businesses' as const },
@@ -75,7 +76,7 @@ export default function Hero() {
                 {messages.home.heroPrimary}
               </Link>
               <Link
-                href="/business-create"
+                href={REGISTER_BUSINESS_SIGNUP_HREF}
                 className="inline-flex justify-center items-center rounded-2xl border-2 border-white/50 px-7 py-3.5 font-bold hover:bg-white/10 transition"
               >
                 {messages.home.heroSecondary}

@@ -67,6 +67,7 @@ model Business {
   name                String
   description         String?                @db.Text
   phone               String?
+  whatsapp            String?
   email               String?
   website             String?
   logo                String?                @db.Text

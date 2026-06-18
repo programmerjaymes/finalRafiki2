@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server';
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getUserFromSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -10,7 +10,9 @@ import {
   localizedCategoryFields,
   type AppLocale,
 } from '@/lib/categoryLocale';
-import { saveProductImages, saveLogoImage } from '@/lib/imageStorage';
+import { saveProductImages, saveLogoImage, saveProductImage } from '@/lib/imageStorage';
+import { normalizeWhatsapp } from '@/lib/phoneNumber';
+import { setBusinessWhatsapp } from '@/lib/businessWhatsapp';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +35,9 @@ const BUSINESSES_PUBLIC_LIST_REVALIDATE = 120;
 const fetchPublicBusinessList = unstable_cache(
   async (page: number, limit: number, locale: AppLocale) => {
     const skip = (page - 1) * limit;
-    const where: Prisma.BusinessWhereInput = {};
+    const where: Prisma.BusinessWhereInput = {
+      isApproved: true,
+    };
     const businessListArgs = {
       skip,
       take: limit,
@@ -92,10 +96,10 @@ const fetchPublicBusinessList = unstable_cache(
     if (businessIds.length > 0) {
       const inClause = businessIds.map(id => `'${id}'`).join(',');
       businessImages = await prisma.$queryRawUnsafe(`
-        SELECT "businessId", id, "imageData", "sortOrder" 
+        SELECT DISTINCT ON ("businessId") "businessId", id, "imageData", "sortOrder" 
         FROM business_images 
         WHERE "businessId" IN (${inClause})
-        ORDER BY "sortOrder" ASC
+        ORDER BY "businessId", "sortOrder" ASC
       `);
     }
 
@@ -124,7 +128,7 @@ const fetchPublicBusinessList = unstable_cache(
       },
     });
   },
-  ['businesses-public-list', 'v1'],
+  ['businesses-public-list', 'v2'],
   { revalidate: BUSINESSES_PUBLIC_LIST_REVALIDATE, tags: ['businesses'] },
 );
 
@@ -477,10 +481,8 @@ export async function POST(request: Request) {
 
     let currentUser: Awaited<ReturnType<typeof prisma.user.findUnique>> | null = null;
 
-    if (session?.user?.email) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-      });
+    if (session) {
+      currentUser = await getUserFromSession(session);
     }
 
     if (!currentUser && ownerAuthEmail && ownerAuthPassword) {
@@ -528,6 +530,14 @@ export async function POST(request: Request) {
       transactionId,
       ownerId,
       logo,
+      coverImage,
+      website,
+      facebook,
+      instagram,
+      twitter,
+      whatsapp,
+      allowsOnlineBooking,
+      allowsDelivery,
       latitude,
       longitude,
       images,
@@ -546,6 +556,14 @@ export async function POST(request: Request) {
       transactionId?: string;
       ownerId?: string;
       logo?: string;
+      coverImage?: string;
+      website?: string;
+      facebook?: string;
+      instagram?: string;
+      twitter?: string;
+      whatsapp?: string;
+      allowsOnlineBooking?: boolean;
+      allowsDelivery?: boolean;
       latitude?: string;
       longitude?: string;
       images?: string[];
@@ -589,24 +607,34 @@ export async function POST(request: Request) {
     const finalOwnerId = isAdmin && ownerId ? ownerId : currentUser.id;
 
     // Build business data
-    const businessData: any = {
-      name,
+    const savedLogo = logo ? await saveLogoImage(logo) : null;
+    const savedCover = coverImage ? await saveProductImage(coverImage) : null;
+    const normalizedWhatsapp = normalizeWhatsapp(whatsapp as string | undefined);
+
+    const businessData: Prisma.BusinessUncheckedCreateInput = {
+      name: name!,
       description: description || null,
       email: email || null,
       phone: phone || null,
       street: street || null,
-      regionId: toBigIntOrUndefined(regionId),
-      districtId: toBigIntOrUndefined(districtId),
-      wardId: toBigIntOrUndefined(wardId),
-      bundleId,
-      categoryId,
+      website: website || null,
+      facebook: facebook || null,
+      instagram: instagram || null,
+      twitter: twitter || null,
+      allowsOnlineBooking: Boolean(allowsOnlineBooking),
+      allowsDelivery: Boolean(allowsDelivery),
+      regionId: toBigIntOrUndefined(regionId) ?? null,
+      districtId: toBigIntOrUndefined(districtId) ?? null,
+      wardId: toBigIntOrUndefined(wardId) ?? null,
+      bundleId: bundleId!,
+      categoryId: categoryId!,
       categoryId2: categoryId2 || null,
       bundleExpiresAt,
       ownerId: finalOwnerId,
-      logo: logo ? await saveLogoImage(logo) : null,
+      logo: savedLogo,
+      coverImage: savedCover,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
-      // Admin-created businesses are auto-approved
       isVerified: isAdmin,
       isApproved: isAdmin,
     };
@@ -648,6 +676,10 @@ export async function POST(request: Request) {
         },
       });
 
+      if (normalizedWhatsapp) {
+        await setBusinessWhatsapp(id, normalizedWhatsapp);
+      }
+
       const loc = getLocaleFromRequest(request);
       const bizOut =
         createdBiz && createdBiz.category
@@ -681,6 +713,10 @@ export async function POST(request: Request) {
       }
     });
 
+    if (normalizedWhatsapp) {
+      await setBusinessWhatsapp(business.id, normalizedWhatsapp);
+    }
+
     // Save product images as files and store paths
     if (images && Array.isArray(images) && images.length > 0) {
       const imagePaths = await saveProductImages(images);
@@ -695,12 +731,13 @@ export async function POST(request: Request) {
 
     // Create payment record only for non-admin paid bundles
     if (!isAdmin && transactionId && bundle.price > 0) {
+      const isManualPending = transactionId.startsWith('MANUAL-PENDING');
       await prisma.payment.create({
         data: {
           amount: bundle.price,
           paymentReference: transactionId,
-          paymentStatus: 'COMPLETED',
-          paymentMethod: 'MOBILE_MONEY',
+          paymentStatus: isManualPending ? 'PENDING' : 'COMPLETED',
+          paymentMethod: isManualPending ? 'BANK_TRANSFER' : 'MOBILE_MONEY',
           businessId: business.id,
           userId: currentUser.id,
           bundleId: bundle.id

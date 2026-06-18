@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
+import { REGISTER_BUSINESS_SIGNUP_HREF } from '@/lib/registerBusiness';
 
 export default function LandingHighlights() {
   const locale = useLocale();
@@ -96,7 +97,7 @@ export default function LandingHighlights() {
             {messages.home.highlights.primaryCta}
           </Link>
           <Link
-            href="/business-create"
+            href={REGISTER_BUSINESS_SIGNUP_HREF}
             className="inline-flex w-full sm:w-auto justify-center items-center rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-8 py-3.5 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           >
             {messages.home.highlights.secondaryCta}

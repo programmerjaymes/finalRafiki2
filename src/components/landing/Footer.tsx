@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { REGISTER_BUSINESS_SIGNUP_HREF } from '@/lib/registerBusiness';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,7 +11,7 @@ export default function Footer() {
     {
       title: 'For Businesses',
       links: [
-        { name: 'Register Business', href: '/business-create' },
+        { name: 'Register Business', href: REGISTER_BUSINESS_SIGNUP_HREF },
         { name: 'Business Dashboard', href: '/business-dashboard' },
         { name: 'Pricing', href: '/pricing' },
         { name: 'Success Stories', href: '/success-stories' },

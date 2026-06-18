@@ -28,7 +28,7 @@ async function main() {
       duration: 30, // 30 days
       description: 'Basic listing with limited features',
       allowedFields: JSON.stringify([
-        'name', 'description', 'phone', 'email',
+        'name', 'description', 'phone', 'email', 'whatsapp',
         'regionId', 'districtId', 'wardId', 'street'
       ]),
       maxImages: 1,
@@ -43,7 +43,7 @@ async function main() {
       duration: 90, // 90 days
       description: 'Enhanced listing with more visibility',
       allowedFields: JSON.stringify([
-        'name', 'description', 'phone', 'email', 'website',
+        'name', 'description', 'phone', 'email', 'whatsapp', 'website',
         'regionId', 'districtId', 'wardId', 'street',
         'facebook', 'instagram', 'twitter',
         'allowsOnlineBooking', 'allowsDelivery',
@@ -61,7 +61,7 @@ async function main() {
       duration: 180, // 180 days
       description: 'Premium listing with maximum exposure and all features',
       allowedFields: JSON.stringify([
-        'name', 'description', 'phone', 'email', 'website',
+        'name', 'description', 'phone', 'email', 'whatsapp', 'website',
         'regionId', 'districtId', 'wardId', 'street',
         'facebook', 'instagram', 'twitter',
         'allowsOnlineBooking', 'allowsDelivery',

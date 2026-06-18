@@ -7,6 +7,8 @@ import {
   type AppLocale,
 } from '@/lib/categoryLocale'
 import { saveProductImages, saveLogoImage, isStoredPath, deleteStoredImage } from '@/lib/imageStorage'
+import { normalizeWhatsapp } from '@/lib/phoneNumber'
+import { setBusinessWhatsapp } from '@/lib/businessWhatsapp'
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +67,7 @@ const getCachedBusinessDetail = unstable_cache(
 
     return jsonSafe({ ...rest, category: categoryOut, images })
   },
-  ['business-detail', 'v1'],
+  ['business-detail', 'v2'],
   { revalidate: BUSINESS_DETAIL_REVALIDATE, tags: ['businesses'] },
 )
 
@@ -129,6 +131,8 @@ export async function PUT(
     if (body.name !== undefined) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
     if (body.phone !== undefined) updateData.phone = body.phone
+    const whatsappUpdate =
+      body.whatsapp !== undefined ? normalizeWhatsapp(body.whatsapp as string) : undefined
     if (body.email !== undefined) updateData.email = body.email
     if (body.website !== undefined) updateData.website = body.website
     if (body.logo !== undefined) {
@@ -160,6 +164,10 @@ export async function PUT(
       where: { id },
       data: updateData
     })
+
+    if (whatsappUpdate !== undefined) {
+      await setBusinessWhatsapp(id, whatsappUpdate)
+    }
 
     // Handle images if provided - save to files and store paths
     if (body.images && Array.isArray(body.images) && body.images.length > 0) {

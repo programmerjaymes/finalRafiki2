@@ -1,4 +1,4 @@
-import type { NextAuthOptions } from 'next-auth';
+import type { NextAuthOptions, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
@@ -60,6 +60,22 @@ export async function clearActiveSession(userId: string): Promise<void> {
   });
 }
 
+/** Resolve DB user from a NextAuth session (id first — phone-only users have no email). */
+export async function getUserFromSession(session: Session | null) {
+  if (!session?.user) return null;
+
+  if (session.user.id) {
+    const byId = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (byId) return byId;
+  }
+
+  if (session.user.email) {
+    return prisma.user.findUnique({ where: { email: session.user.email } });
+  }
+
+  return null;
+}
+
 export const authOptions: NextAuthOptions = {
   // Required for JWT sessions in production (Vercel, etc.); without it cookies/session break.
   secret: process.env.NEXTAUTH_SECRET,
@@ -67,7 +83,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or Phone", type: "text" },
         password: { label: "Password", type: "password" },
         switchSession: { label: "Switch Session", type: "hidden" }
       },
@@ -76,17 +92,30 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            hashedPassword: true,
-            activeSessionToken: true,
-          },
+        const identifier = credentials.email.trim();
+
+        const selectFields = {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          hashedPassword: true,
+          activeSessionToken: true,
+        };
+
+        // Try email lookup first, then phone
+        let user = await prisma.user.findUnique({
+          where: { email: identifier },
+          select: selectFields,
         });
+
+        if (!user) {
+          user = await prisma.user.findUnique({
+            where: { phone: identifier },
+            select: selectFields,
+          });
+        }
 
         if (!user || !user.hashedPassword) {
           return null;

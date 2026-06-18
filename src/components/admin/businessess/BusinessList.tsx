@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Link from 'next/link';
 import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser, FiRefreshCw } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
 import Label from '@/components/form/Label';
 import Input from '@/components/form/input/InputField';
+import TanzaniaPhoneInput from '@/components/form/input/TanzaniaPhoneInput';
 import Button from '@/components/ui/button/Button';
 import Checkbox from '@/components/form/input/Checkbox';
 import toast from '@/utils/toast';
@@ -25,6 +27,7 @@ interface Business {
   name: string;
   description: string | null;
   phone: string | null;
+  whatsapp: string | null;
   email: string | null;
   website: string | null;
   logo: string | null;
@@ -126,6 +129,11 @@ interface PaginationMeta {
   totalPages: number;
 }
 
+type BusinessListProps = {
+  /** Owner portal: only the signed-in owner's businesses, no admin assign flow */
+  variant?: 'admin' | 'owner';
+};
+
 // Helper: convert File to base64
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -136,9 +144,10 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const BusinessList = () => {
+const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
   const locale = useLocale();
   const messages = t(locale);
+  const isOwnerPortal = variant === 'owner';
 
   // Data states
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -183,6 +192,7 @@ const BusinessList = () => {
     name: '',
     description: '',
     phone: '',
+    whatsapp: '',
     email: '',
     website: '',
     logo: '',
@@ -254,8 +264,8 @@ const BusinessList = () => {
         queryParams.append('ward', filterWardId);
       }
 
-      // If user is BUSINESS_OWNER, only show their businesses
-      if (userRole === 'BUSINESS_OWNER' && userId) {
+      // Owner portal / business owners: only their businesses
+      if ((userRole === 'BUSINESS_OWNER' || isOwnerPortal) && userId) {
         queryParams.append('ownerId', userId);
       }
 
@@ -348,7 +358,7 @@ const BusinessList = () => {
       if (wardRes.ok) setWards(await wardRes.json());
       if (bundleRes.ok) setBundles(await bundleRes.json());
       
-      if (userRes.ok) {
+      if (userRes.ok && !isOwnerPortal) {
         const userData = await userRes.json();
         let list: User[] = [];
         if (Array.isArray(userData)) {
@@ -374,6 +384,7 @@ const BusinessList = () => {
 
   // Refetch businesses when search, pagination or category filter changes
   useEffect(() => {
+    if (isOwnerPortal && !userId) return;
     if (paginationMeta) {
       fetchBusinesses();
     }
@@ -387,6 +398,7 @@ const BusinessList = () => {
     filterWardId,
     userRole,
     userId,
+    isOwnerPortal,
   ]);
   
   // Update filtered districts when region changes
@@ -488,6 +500,7 @@ const BusinessList = () => {
       name: '',
       description: '',
       phone: '',
+      whatsapp: '',
       email: '',
       website: '',
       logo: '',
@@ -645,6 +658,7 @@ const BusinessList = () => {
       name: full.name,
       description: full.description || '',
       phone: full.phone || '',
+      whatsapp: full.whatsapp || '',
       email: full.email || '',
       website: full.website || '',
       logo: full.logo || '',
@@ -757,7 +771,7 @@ const BusinessList = () => {
     if (!currentBusiness) return;
     
     if (!formData.name) { toast.error('Business name is required'); return; }
-    if (!selectedUser) { toast.error('Please select an owner'); return; }
+    if (!isOwnerPortal && !selectedUser) { toast.error('Please select an owner'); return; }
     if (!formData.bundleId) { toast.error('Please select a bundle'); return; }
     if (selectedCategoryIds.length === 0) { toast.error('Please select at least one category'); return; }
 
@@ -765,7 +779,7 @@ const BusinessList = () => {
     try {
       const payload: any = {
         ...formData,
-        ownerId: selectedUser.id,
+        ownerId: isOwnerPortal ? userId : selectedUser!.id,
         categoryId: selectedCategoryIds[0],
         categoryId2: selectedCategoryIds[1] || null,
       };
@@ -1011,16 +1025,34 @@ const BusinessList = () => {
     <div className="w-full flex flex-col">
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
-        <h4 className="text-xl font-medium">Business Management</h4>
+        <div>
+          <h4 className="text-xl font-medium text-gray-900 dark:text-white">
+            {isOwnerPortal ? 'My Businesses' : 'Business Management'}
+          </h4>
+          {isOwnerPortal && (
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Manage your business listings
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleRefresh}>
             <FiRefreshCw className="h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={handleOpenAddModal}>
-            <FiPlus className="h-4 w-4" />
-            Add Business
-          </Button>
+          {isOwnerPortal ? (
+            <Link href="/business-create">
+              <Button variant="primary" size="sm" className="flex items-center gap-1">
+                <FiPlus className="h-4 w-4" />
+                Add Business
+              </Button>
+            </Link>
+          ) : (
+            <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={handleOpenAddModal}>
+              <FiPlus className="h-4 w-4" />
+              Add Business
+            </Button>
+          )}
         </div>
       </div>
       
@@ -1226,8 +1258,16 @@ const BusinessList = () => {
           {/* Empty State */}
           {businesses.length === 0 && (
             <div className="text-center py-12 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-              <p className="text-gray-500 dark:text-gray-400 mb-4">No businesses found</p>
-              <Button variant="primary" size="sm" onClick={handleOpenAddModal}>Add Your First Business</Button>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                {isOwnerPortal ? "You haven't created any businesses yet." : 'No businesses found'}
+              </p>
+              {isOwnerPortal ? (
+                <Link href="/business-create">
+                  <Button variant="primary" size="sm">Create Your First Business</Button>
+                </Link>
+              ) : (
+                <Button variant="primary" size="sm" onClick={handleOpenAddModal}>Add Your First Business</Button>
+              )}
             </div>
           )}
           
@@ -1293,7 +1333,7 @@ const BusinessList = () => {
       )}
       
       {/* ═══ Shared Form Fields Component ═══ */}
-      {(isAddModalOpen || isEditModalOpen) && (
+      {(isAddModalOpen || isEditModalOpen) && (!isOwnerPortal || isEditModalOpen) && (
         <Modal
           isOpen={isAddModalOpen || isEditModalOpen}
           onClose={isAddModalOpen ? closeAddModal : closeEditModal}
@@ -1307,13 +1347,18 @@ const BusinessList = () => {
           ) : (
           <form onSubmit={isAddModalOpen ? handleAdd : handleUpdate}>
             <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-6">
-              {isAddModalOpen ? 'Add Business' : 'Edit Business'}
+              {isAddModalOpen ? 'Add Business' : isOwnerPortal ? 'Edit My Business' : 'Edit Business'}
               <span className="block text-xs font-normal text-gray-500 mt-1">
-                {isAddModalOpen ? 'Create and assign to a user (auto-approved)' : 'Update business details or reassign to a different user'}
+                {isAddModalOpen
+                  ? 'Create and assign to a user (auto-approved)'
+                  : isOwnerPortal
+                  ? 'Update your business details and photos'
+                  : 'Update business details or reassign to a different user'}
               </span>
             </h4>
 
-            {/* ── Assign to User ── */}
+            {/* ── Assign to User (admin only) ── */}
+            {!isOwnerPortal && (
             <div className="mb-6">
               <Label>Assign to User *</Label>
               {selectedUser ? (
@@ -1377,6 +1422,7 @@ const BusinessList = () => {
                 </div>
               )}
             </div>
+            )}
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {/* ── Company Logo ── */}
@@ -1417,7 +1463,19 @@ const BusinessList = () => {
               </div>
               <div className="col-span-1">
                 <Label>Phone *</Label>
-                <Input type="text" name="phone" placeholder="+255 xxx xxx xxx" defaultValue={formData.phone} onChange={handleChange} />
+                <TanzaniaPhoneInput
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-span-1">
+                <Label>WhatsApp</Label>
+                <TanzaniaPhoneInput
+                  name="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={handleChange}
+                />
               </div>
               <div className="col-span-1">
                 <Label>Email *</Label>
@@ -1540,14 +1598,18 @@ const BusinessList = () => {
               {isEditModalOpen && (
                 <div className="col-span-1 sm:col-span-2">
                   <div className="flex flex-wrap gap-6">
-                    <div className="flex items-center">
-                      <Checkbox id="isApproved-form" checked={formData.isApproved} onChange={(checked) => handleCheckboxChange(checked, 'isApproved')} />
-                      <Label htmlFor="isApproved-form" className="ml-2 cursor-pointer">Approved</Label>
-                    </div>
-                    <div className="flex items-center">
-                      <Checkbox id="isVerified-form" checked={formData.isVerified} onChange={(checked) => handleCheckboxChange(checked, 'isVerified')} />
-                      <Label htmlFor="isVerified-form" className="ml-2 cursor-pointer">Verified</Label>
-                    </div>
+                    {!isOwnerPortal && (
+                      <>
+                        <div className="flex items-center">
+                          <Checkbox id="isApproved-form" checked={formData.isApproved} onChange={(checked) => handleCheckboxChange(checked, 'isApproved')} />
+                          <Label htmlFor="isApproved-form" className="ml-2 cursor-pointer">Approved</Label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox id="isVerified-form" checked={formData.isVerified} onChange={(checked) => handleCheckboxChange(checked, 'isVerified')} />
+                          <Label htmlFor="isVerified-form" className="ml-2 cursor-pointer">Verified</Label>
+                        </div>
+                      </>
+                    )}
                     <div className="flex items-center">
                       <Checkbox id="allowsOnlineBooking-form" checked={formData.allowsOnlineBooking} onChange={(checked) => handleCheckboxChange(checked, 'allowsOnlineBooking')} />
                       <Label htmlFor="allowsOnlineBooking-form" className="ml-2 cursor-pointer">Online Booking</Label>
@@ -1717,6 +1779,18 @@ const BusinessList = () => {
                   {currentBusiness.phone && (
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <FiPhone className="h-3.5 w-3.5 text-gray-400" /> {currentBusiness.phone}
+                    </div>
+                  )}
+                  {currentBusiness.whatsapp && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <a
+                        href={`https://wa.me/${currentBusiness.whatsapp.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-emerald-600 hover:underline dark:text-emerald-400"
+                      >
+                        WhatsApp: {currentBusiness.whatsapp}
+                      </a>
                     </div>
                   )}
                   {currentBusiness.email && (

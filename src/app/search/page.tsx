@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Select from '@/components/form/select/Select';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
@@ -12,6 +13,7 @@ import Link from 'next/link';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 import { brandColors } from '@/lib/brandColors';
+import { registerBusinessHref } from '@/lib/registerBusiness';
 
 interface BusinessWithCategory extends Business {
   category: {
@@ -38,8 +40,10 @@ type AreaOption = { id: string; name: string | null };
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const locale = useLocale();
   const messages = t(locale);
+  const registerBusinessLink = registerBusinessHref(session);
   const [businesses, setBusinesses] = useState<BusinessWithCategory[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -308,7 +312,7 @@ function SearchResults() {
                 </button>
               )}
               <Link
-                href="/business-create"
+                href={registerBusinessLink}
                 className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:opacity-90"
                 style={{ backgroundColor: brandColors.accent }}
               >

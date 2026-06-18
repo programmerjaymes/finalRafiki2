@@ -11,11 +11,17 @@ import toast from "@/utils/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { isValidTzPhone } from "@/lib/phoneNumber";
+import TanzaniaPhoneInput from "@/components/form/input/TanzaniaPhoneInput";
 
 // Define signup schema with validation
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().optional().or(z.literal('')).refine(
+    (val) => !val || isValidTzPhone(val),
+    { message: "Please enter a valid 9-digit phone number" },
+  ),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal('')),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   acceptTerms: z.boolean().refine(val => val === true, {
@@ -24,6 +30,9 @@ const signupSchema = z.object({
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
+}).refine(data => data.email || data.phone, {
+  message: "Please provide either an email address or phone number",
+  path: ["phone"],
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -39,6 +48,7 @@ export default function SignUpForm() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: "",
+      phone: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -47,6 +57,7 @@ export default function SignUpForm() {
   });
 
   const acceptTerms = watch("acceptTerms");
+  const phoneValue = watch("phone");
 
   const handleTermsChange = (checked: boolean) => {
     setValue("acceptTerms", checked);
@@ -64,9 +75,10 @@ export default function SignUpForm() {
         },
         body: JSON.stringify({
           name: values.name,
-          email: values.email,
+          email: values.email || undefined,
+          phone: values.phone || undefined,
           password: values.password,
-          role: "BUSINESS_OWNER", // Default role from schema
+          role: "BUSINESS_OWNER",
         }),
       });
       
@@ -82,7 +94,13 @@ export default function SignUpForm() {
       toast.success(data.message || "Registration successful");
       
       // Redirect to login page or dashboard
-      router.push("/signin");
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get('callbackUrl');
+      if (callbackUrl && callbackUrl.startsWith('/')) {
+        router.push(`/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      } else {
+        router.push('/signin');
+      }
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(error instanceof Error ? error.message : "Registration failed");
@@ -145,7 +163,20 @@ export default function SignUpForm() {
                 
                 <div>
                   <Label>
-                    Email <span className="text-error-500">*</span>
+                    Phone Number <span className="text-error-500">*</span>
+                  </Label>
+                  <TanzaniaPhoneInput
+                    name="phone"
+                    value={phoneValue}
+                    onChange={(e) => setValue("phone", e.target.value, { shouldValidate: true })}
+                    error={!!errors.phone}
+                    hint={errors.phone?.message}
+                  />
+                </div>
+
+                <div>
+                  <Label>
+                    Email <span className="text-gray-400 text-xs font-normal">(optional)</span>
                   </Label>
                   <Input 
                     placeholder="youremail@example.com" 

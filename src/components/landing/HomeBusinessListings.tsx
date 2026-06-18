@@ -24,7 +24,7 @@ export default function HomeBusinessListings() {
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/businesses?page=1&limit=${HOME_LIMIT}&_=${Date.now()}`,
+          `/api/businesses?page=1&limit=${HOME_LIMIT}&lean=true&_=${Date.now()}`,
           { cache: 'no-store' },
         );
         const json = await res.json().catch(() => null);

@@ -10,6 +10,7 @@ import { t, type Locale } from '@/lib/i18n';
 import { useLocale, useSetLocale } from '@/lib/useLocale';
 import RefreshButton from '@/components/landing/RefreshButton';
 import { brandColors } from '@/lib/brandColors';
+import { registerBusinessHref } from '@/lib/registerBusiness';
 
 function LogoMark() {
   return (
@@ -40,6 +41,8 @@ export default function Navbar() {
   const locale = useLocale();
   const setLocale = useSetLocale();
   const messages = t(locale);
+
+  const registerBusinessLink = registerBusinessHref(session);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -119,7 +122,7 @@ export default function Navbar() {
                 <NavLink href="/search" active={pathname === '/search'}>
                   {messages.nav.search}
                 </NavLink>
-                <NavLink href="/business-create" active={pathname === '/business-create'}>
+                <NavLink href={registerBusinessLink} active={pathname === '/business-create'}>
                   {messages.nav.registerBusiness}
                 </NavLink>
                 {session && (
@@ -214,7 +217,7 @@ export default function Navbar() {
               <MobileNavLink href="/search" onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.search}
               </MobileNavLink>
-              <MobileNavLink href="/business-create" onClick={() => setIsMenuOpen(false)}>
+              <MobileNavLink href={registerBusinessLink} onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.registerBusiness}
               </MobileNavLink>
               {session && (

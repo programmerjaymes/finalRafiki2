@@ -7,6 +7,7 @@ import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
+import { REGISTER_BUSINESS_SIGNUP_HREF } from '@/lib/registerBusiness';
 
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -23,7 +24,7 @@ const BANNER_SLIDES = [
     src: '/images/correctDImension2.png',
     altEn: 'Rafiki — Tanzania business directory platform',
     altSw: 'Rafiki — Jukwaa la saraka ya biashara Tanzania',
-    href: '/business-create',
+    href: REGISTER_BUSINESS_SIGNUP_HREF,
   },
   {
     src: '/images/help.png',

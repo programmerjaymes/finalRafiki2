@@ -19,7 +19,7 @@ import SessionConflictModal from "./SessionConflictModal";
 
 // Define login schema with validation
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.string().min(1, "Please enter your email or phone number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   rememberMe: z.boolean().optional(),
 });
@@ -198,11 +198,11 @@ export default function SignInForm() {
               <div className="space-y-6">
                 <div>
                   <Label>
-                    {messages.auth.email} <span className="text-error-500">*</span>{" "}
+                    Email or Phone <span className="text-error-500">*</span>
                   </Label>
                   <Input 
-                    placeholder={messages.auth.emailPlaceholder}
-                    type="email" 
+                    placeholder="your@email.com or +255712345678"
+                    type="text"
                     name="email"
                     onChange={(e) => setValue("email", e.target.value)}
                     error={!!errors.email}

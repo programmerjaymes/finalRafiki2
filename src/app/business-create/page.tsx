@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from "react";
 import PageBreadcrumb from "@/components/PageBreadcrumb";
 import Card from "@/components/ui/card/Card";
-import Input from "@/components/form/input/InputField";
-import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { SearchableSelect, SearchableSelectTrigger, SearchableSelectValue, SearchableSelectContent, SearchableSelectItem } from "@/components/ui/searchable-select-wrapper";
 import BundleSelection from "@/components/business/BundleSelection";
 import PaymentProcessor from "@/components/business/PaymentProcessor";
+import BusinessCreateFormFields, {
+  type BusinessCreateFormData,
+} from "@/components/business/BusinessCreateFormFields";
 import toast from "@/utils/toast";
 import { useRouter } from "next/navigation";
 import type { Bundle, Category, Region, District, Ward } from "@prisma/client";
@@ -29,7 +29,7 @@ const steps: Step[] = [
   {
     id: 2,
     title: "Payment",
-    description: "Complete your payment"
+    description: "Manual payment info"
   },
   {
     id: 3,
@@ -43,27 +43,7 @@ const steps: Step[] = [
   }
 ];
 
-interface BusinessFormData {
-  name: string;
-  description: string;
-  phone: string;
-  email: string;
-  website: string;
-  logo: string;
-  coverImage: string;
-  facebook: string;
-  instagram: string;
-  twitter: string;
-  allowsOnlineBooking: boolean;
-  allowsDelivery: boolean;
-  categoryId: string;
-  latitude: string;
-  longitude: string;
-  regionId: string;
-  districtId: string;
-  wardId: string;
-  street: string;
-}
+interface BusinessFormData extends BusinessCreateFormData {}
 
 export default function CreateBusinessPage() {
   const router = useRouter();
@@ -79,11 +59,18 @@ export default function CreateBusinessPage() {
   const [regionSearch, setRegionSearch] = useState("");
   const [districtSearch, setDistrictSearch] = useState("");
   const [wardSearch, setWardSearch] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<BusinessFormData>({
     name: "",
     description: "",
     phone: "",
+    whatsapp: "",
     email: "",
     website: "",
     logo: "",
@@ -94,6 +81,7 @@ export default function CreateBusinessPage() {
     allowsOnlineBooking: false,
     allowsDelivery: false,
     categoryId: "",
+    categoryId2: "",
     latitude: "",
     longitude: "",
     regionId: "",
@@ -184,19 +172,158 @@ export default function CreateBusinessPage() {
     setSelectedBundle(bundle);
   };
 
+  const toggleCategory = (catId: string) => {
+    setSelectedCategoryIds((prev) => {
+      if (prev.includes(catId)) {
+        const next = prev.filter((id) => id !== catId);
+        setFormData((fd) => ({
+          ...fd,
+          categoryId: next[0] || "",
+          categoryId2: next[1] || "",
+        }));
+        return next;
+      }
+      if (prev.length >= 2) return prev;
+      const next = [...prev, catId];
+      setFormData((fd) => ({
+        ...fd,
+        categoryId: next[0] || "",
+        categoryId2: next[1] || "",
+      }));
+      return next;
+    });
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported on this device");
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        toast.success("Location detected successfully");
+        setDetectingLocation(false);
+      },
+      (err) => {
+        toast.error(err.message || "Could not detect your location");
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  const formFieldsProps = {
+    bundle: selectedBundle,
+    formData,
+    setFormData,
+    categories,
+    regions,
+    districts,
+    wards,
+    selectedCategoryIds,
+    onToggleCategory: toggleCategory,
+    categorySearch,
+    setCategorySearch,
+    regionSearch,
+    setRegionSearch,
+    districtSearch,
+    setDistrictSearch,
+    wardSearch,
+    setWardSearch,
+    logoPreview,
+    setLogoPreview,
+    coverPreview,
+    setCoverPreview,
+    productImages,
+    setProductImages,
+    detectingLocation,
+    onDetectLocation: handleDetectLocation,
+  };
+
   const handlePaymentComplete = (tid: string) => {
     setTransactionId(tid);
     setCurrentStep(3);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const buildSubmitPayload = () => {
+    if (!selectedBundle) return null;
+    const allowed = new Set(JSON.parse(selectedBundle.allowedFields) as string[]);
+    const payload: Record<string, unknown> = {
+      name: formData.name,
+      description: formData.description,
+      phone: formData.phone,
+      email: formData.email,
+      whatsapp: formData.whatsapp || null,
+      categoryId: formData.categoryId,
+      categoryId2: formData.categoryId2 || null,
+      regionId: formData.regionId,
+      districtId: formData.districtId,
+      wardId: formData.wardId,
+      street: formData.street,
+      bundleId: selectedBundle.id,
+      transactionId,
+    };
+
+    const optionalKeys: (keyof BusinessFormData)[] = [
+      "website",
+      "logo",
+      "coverImage",
+      "facebook",
+      "instagram",
+      "twitter",
+      "latitude",
+      "longitude",
+      "allowsOnlineBooking",
+      "allowsDelivery",
+    ];
+
+    for (const key of optionalKeys) {
+      if (allowed.has(key)) {
+        payload[key] = formData[key];
+      }
+    }
+
+    if (productImages.length > 0) {
+      payload.images = productImages;
+    }
+
+    return payload;
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
+  const submitBusiness = async () => {
+    const finalData = buildSubmitPayload();
+    if (!finalData) return;
+
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/businesses', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || error.message || 'Failed to create business');
+      }
+
+      toast.success('Business created successfully!');
+      router.push('/business-my-businesses');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create business';
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -206,57 +333,22 @@ export default function CreateBusinessPage() {
         return;
       }
 
-      // Get allowed fields from the selected bundle
-      const allowedFields = JSON.parse(selectedBundle.allowedFields);
-      
-      // Validate required fields
       const requiredFields = ['name', 'description', 'phone', 'email', 'categoryId', 'regionId', 'districtId', 'wardId', 'street'];
-      const missingFields = requiredFields.filter(field => !formData[field as keyof BusinessFormData]);
-      
+      const missingFields = requiredFields.filter((field) => !formData[field as keyof BusinessFormData]);
       if (missingFields.length > 0) {
-        toast.error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+        toast.error('Please fill in all required fields');
         return;
       }
 
-      // Filter form data to only include allowed fields
-      const filteredData = Object.keys(formData).reduce<Record<string, string | boolean>>((acc, key) => {
-        if (allowedFields.includes(key)) {
-          acc[key] = formData[key as keyof BusinessFormData];
-        }
-        return acc;
-      }, {});
+      const result = await toast.confirm(
+        'Create business?',
+        `You are about to submit "${formData.name}" for registration. Please confirm all details are correct — this cannot be undone from this screen.`,
+        'question',
+      );
 
-      // Add required fields that might not be in allowedFields
-      const finalData = {
-        ...filteredData,
-        name: formData.name,
-        description: formData.description,
-        phone: formData.phone,
-        email: formData.email,
-        categoryId: formData.categoryId,
-        regionId: formData.regionId,
-        districtId: formData.districtId,
-        wardId: formData.wardId,
-        street: formData.street,
-        bundleId: selectedBundle.id,
-        transactionId
-      };
+      if (!result.isConfirmed) return;
 
-      const response = await fetch('/api/businesses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(finalData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create business');
-      }
-
-      toast.success('Business created successfully!');
-      router.push('/dashboard');
+      await submitBusiness();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create business';
       toast.error(errorMessage);
@@ -277,360 +369,110 @@ export default function CreateBusinessPage() {
         return selectedBundle ? (
           <PaymentProcessor
             amount={selectedBundle.price}
+            bundleName={selectedBundle.name}
             onComplete={handlePaymentComplete}
           />
         ) : null;
       case 3:
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="name">Business Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Description *</Label>
-              <Input
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="categoryId">Business Category *</Label>
-              <SearchableSelect
-                value={formData.categoryId}
-                onValueChange={(value: string) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                required
-              >
-                <SearchableSelectTrigger>
-                  <SearchableSelectValue placeholder="Select a category" />
-                </SearchableSelectTrigger>
-                <SearchableSelectContent
-                  searchPlaceholder="Search categories..."
-                  searchValue={categorySearch}
-                  onSearchChange={setCategorySearch}
-                >
-                  {categories
-                    .filter(category => 
-                      category.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
-                      category.nameEn?.toLowerCase().includes(categorySearch.toLowerCase()) ||
-                      category.nameSw?.toLowerCase().includes(categorySearch.toLowerCase())
-                    )
-                    .map(category => (
-                      <SearchableSelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SearchableSelectItem>
-                    ))}
-                </SearchableSelectContent>
-              </SearchableSelect>
-            </div>
-            {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('website') && (
-              <div>
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleInputChange}
-                />
-              </div>
-            )}
-            {/* Add social media fields based on bundle */}
-            {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('social_media') && (
-              <>
-                <div>
-                  <Label htmlFor="facebook">Facebook</Label>
-                  <Input
-                    id="facebook"
-                    name="facebook"
-                    value={formData.facebook}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="instagram">Instagram</Label>
-                  <Input
-                    id="instagram"
-                    name="instagram"
-                    value={formData.instagram}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="twitter">Twitter</Label>
-                  <Input
-                    id="twitter"
-                    name="twitter"
-                    value={formData.twitter}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </>
-            )}
-            {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('allows_online_booking') && (
-              <div>
-                <Label htmlFor="allowsOnlineBooking">Allows Online Booking</Label>
-                <input
-                  id="allowsOnlineBooking"
-                  name="allowsOnlineBooking"
-                  type="checkbox"
-                  checked={formData.allowsOnlineBooking}
-                  onChange={handleCheckboxChange}
-                />
-              </div>
-            )}
-            {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('allows_delivery') && (
-              <div>
-                <Label htmlFor="allowsDelivery">Allows Delivery</Label>
-                <input
-                  id="allowsDelivery"
-                  name="allowsDelivery"
-                  type="checkbox"
-                  checked={formData.allowsDelivery}
-                  onChange={handleCheckboxChange}
-                />
-              </div>
-            )}
-          </div>
-        );
+        return <BusinessCreateFormFields step={3} {...formFieldsProps} />;
       case 4:
-        return (
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="regionId">Region *</Label>
-              <SearchableSelect
-                value={formData.regionId}
-                onValueChange={(value: string) => {
-                  setFormData(prev => ({ ...prev, regionId: value, districtId: "", wardId: "" }));
-                  setDistrictSearch("");
-                  setWardSearch("");
-                }}
-                required
-              >
-                <SearchableSelectTrigger>
-                  <SearchableSelectValue placeholder="Select a region" />
-                </SearchableSelectTrigger>
-                <SearchableSelectContent
-                  searchPlaceholder="Search regions..."
-                  searchValue={regionSearch}
-                  onSearchChange={setRegionSearch}
-                >
-                  {regions
-                    .filter(region => 
-                      region.name?.toLowerCase().includes(regionSearch.toLowerCase()) ||
-                      region.code?.toLowerCase().includes(regionSearch.toLowerCase())
-                    )
-                    .map(region => (
-                      <SearchableSelectItem key={String(region.id)} value={String(region.id)}>
-                        {region.name}
-                      </SearchableSelectItem>
-                    ))}
-                </SearchableSelectContent>
-              </SearchableSelect>
-            </div>
-            <div>
-              <Label htmlFor="districtId">District *</Label>
-              <SearchableSelect
-                value={formData.districtId}
-                onValueChange={(value: string) => {
-                  setFormData(prev => ({ ...prev, districtId: value, wardId: "" }));
-                  setWardSearch("");
-                }}
-                required
-                disabled={!formData.regionId}
-              >
-                <SearchableSelectTrigger>
-                  <SearchableSelectValue placeholder="Select a district" />
-                </SearchableSelectTrigger>
-                <SearchableSelectContent
-                  searchPlaceholder="Search districts..."
-                  searchValue={districtSearch}
-                  onSearchChange={setDistrictSearch}
-                >
-                  {districts
-                    .filter(district => 
-                      district.name?.toLowerCase().includes(districtSearch.toLowerCase()) ||
-                      district.code?.toLowerCase().includes(districtSearch.toLowerCase())
-                    )
-                    .map(district => (
-                      <SearchableSelectItem key={String(district.id)} value={String(district.id)}>
-                        {district.name}
-                      </SearchableSelectItem>
-                    ))}
-                </SearchableSelectContent>
-              </SearchableSelect>
-            </div>
-            <div>
-              <Label htmlFor="wardId">Ward *</Label>
-              <SearchableSelect
-                value={formData.wardId}
-                onValueChange={(value: string) => setFormData(prev => ({ ...prev, wardId: value }))}
-                required
-                disabled={!formData.districtId}
-              >
-                <SearchableSelectTrigger>
-                  <SearchableSelectValue placeholder="Select a ward" />
-                </SearchableSelectTrigger>
-                <SearchableSelectContent
-                  searchPlaceholder="Search wards..."
-                  searchValue={wardSearch}
-                  onSearchChange={setWardSearch}
-                >
-                  {wards
-                    .filter(ward => 
-                      ward.name?.toLowerCase().includes(wardSearch.toLowerCase()) ||
-                      ward.code?.toLowerCase().includes(wardSearch.toLowerCase())
-                    )
-                    .map(ward => (
-                      <SearchableSelectItem key={String(ward.id)} value={String(ward.id)}>
-                        {ward.name}
-                      </SearchableSelectItem>
-                    ))}
-                </SearchableSelectContent>
-              </SearchableSelect>
-            </div>
-            <div>
-              <Label htmlFor="street">Street Address *</Label>
-              <Input
-                id="street"
-                name="street"
-                value={formData.street}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {selectedBundle && JSON.parse(selectedBundle.allowedFields).includes('coordinates') && (
-              <>
-                <div>
-                  <Label htmlFor="latitude">Latitude</Label>
-                  <Input
-                    id="latitude"
-                    name="latitude"
-                    value={formData.latitude}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="longitude">Longitude</Label>
-                  <Input
-                    id="longitude"
-                    name="longitude"
-                    value={formData.longitude}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        );
+        return <BusinessCreateFormFields step={4} {...formFieldsProps} />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="p-6">
-      <PageBreadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Create Business' }]} />
-      
-      <div className="max-w-4xl mx-auto mt-8">
-        <Card>
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-2">Create New Business</h2>
-            <p className="text-gray-600">Complete all steps to register your business</p>
-          </div>
+    <div className="flex flex-col flex-1 min-h-0 h-full">
+      <PageBreadcrumb
+        items={[
+          { label: 'Dashboard', path: '/business-dashboard' },
+          { label: 'Create Business' },
+        ]}
+        className="mb-3 shrink-0 px-4 sm:px-6 lg:px-10"
+      />
 
-          <div className="mb-8">
-            <div className="flex justify-between items-center">
-              {steps.map((step) => (
-                <div
-                  key={step.id}
-                  className={`flex-1 text-center ${
-                    currentStep === step.id
-                      ? 'text-primary-600'
-                      : currentStep > step.id
-                      ? 'text-green-600'
-                      : 'text-gray-400'
-                  }`}
-                >
-                  <div className="mb-2">{step.title}</div>
-                  <div className="text-sm">{step.description}</div>
+      <Card className="flex flex-col flex-1 min-h-0 !p-0 rounded-none border-0 shadow-none bg-white dark:bg-gray-900 overflow-hidden">
+        <div className="shrink-0 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
+            Create New Business
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Complete all steps to register your business
+          </p>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            {steps.map((step) => (
+              <div
+                key={step.id}
+                className={`rounded-xl border px-3 py-3 text-center transition-colors ${
+                  currentStep === step.id
+                    ? 'border-primary bg-primary/5 text-primary-600 dark:border-primary dark:bg-primary/10'
+                    : currentStep > step.id
+                    ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400'
+                    : 'border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-800/50'
+                }`}
+              >
+                <div className="text-xs sm:text-sm font-semibold">{step.title}</div>
+                <div className="mt-1 text-[10px] sm:text-xs opacity-80 hidden sm:block">
+                  {step.description}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className="mb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-10 py-6">
+          <div className="w-full min-w-0">
             {renderStepContent(currentStep)}
           </div>
+        </div>
 
-          <div className="flex justify-between">
-            {currentStep > 1 && (
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep((prev) => prev - 1)}
-              >
-                Previous
-              </Button>
-            )}
-            {currentStep < steps.length ? (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (currentStep === 1 && !selectedBundle) {
-                    toast.error('Please select a bundle to continue');
-                    return;
-                  }
-                  if (currentStep === 2 && !transactionId) {
-                    toast.error('Please complete the payment to continue');
-                    return;
+        <div className="shrink-0 border-t border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8 py-4 flex justify-between gap-3 bg-gray-50/80 dark:bg-gray-900/80">
+          {currentStep > 1 ? (
+            <Button
+              variant="outline"
+              onClick={() => setCurrentStep((prev) => prev - 1)}
+            >
+              Previous
+            </Button>
+          ) : (
+            <span />
+          )}
+          {currentStep < steps.length ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (currentStep === 1 && !selectedBundle) {
+                  toast.error('Please select a bundle to continue');
+                  return;
+                }
+                if (currentStep === 2) {
+                  if (!transactionId) {
+                    setTransactionId(`MANUAL-PENDING-${Date.now()}`);
                   }
                   setCurrentStep((prev) => prev + 1);
-                }}
-                className="ml-auto"
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={handleSubmit}
-                className="ml-auto"
-              >
-                Create Business
-              </Button>
-            )}
-          </div>
-        </Card>
-      </div>
+                  return;
+                }
+                setCurrentStep((prev) => prev + 1);
+              }}
+              className="ml-auto"
+            >
+              {currentStep === 2 ? 'Continue' : 'Next'}
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              loading={submitting}
+              disabled={submitting}
+              className="ml-auto"
+            >
+              Create Business
+            </Button>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
