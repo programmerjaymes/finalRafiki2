@@ -844,3 +844,24 @@ span.flatpickr-weekday,
 .swal2-toast-container-high-z {
   z-index: 999999 !important;
 }
+
+/* Public nav height — taller on mobile when guest CTA strip is shown */
+:root {
+  --rafiki-nav-offset: 4.25rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --rafiki-nav-offset: 4.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  html[data-rafiki-guest-mobile='true'] {
+    --rafiki-nav-offset: 7.75rem;
+  }
+}
+
+.rafiki-nav-offset {
+  padding-top: var(--rafiki-nav-offset);
+}

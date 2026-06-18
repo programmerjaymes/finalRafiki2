@@ -164,7 +164,7 @@ export default function BusinessDetails({
   const shell = (content: ReactNode) => (
     <div className="min-h-screen flex flex-col bg-[#f7f5f3] dark:bg-gray-950">
       <Navbar />
-      <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-10">{content}</main>
+      <main className="flex-grow w-full rafiki-nav-offset pb-10">{content}</main>
       <Footer />
     </div>
   );

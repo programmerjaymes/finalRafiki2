@@ -57,7 +57,8 @@ export default function SearchNearbySearch({
     <>
       {/* Phone: minimal sticky search bar */}
       <section
-        className="md:hidden sticky top-[4.25rem] z-30 -mx-3 px-3 py-2 mb-3 bg-[#f7f5f3]/95 dark:bg-gray-950/95 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800"
+        className="md:hidden sticky z-30 -mx-3 px-3 py-2 mb-3 bg-[#f7f5f3]/95 dark:bg-gray-950/95 backdrop-blur-md border-b border-gray-200/80 dark:border-gray-800"
+        style={{ top: 'var(--rafiki-nav-offset, 4.25rem)' }}
         aria-label={messages.home.nearbySearchTitle}
       >
         <form onSubmit={onSubmit} className="flex gap-2 items-center">

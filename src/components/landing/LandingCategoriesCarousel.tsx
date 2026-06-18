@@ -65,7 +65,7 @@ export default function LandingCategoriesCarousel() {
   if (categories.length === 0) return null;
 
   return (
-    <section className="mb-5 md:mb-7" aria-label={messages.home.carouselCategoriesTitle}>
+    <section className="mb-5 md:mb-7 overflow-hidden" aria-label={messages.home.carouselCategoriesTitle}>
       <div className="flex items-end justify-between gap-3 mb-3">
         <div>
           <p
@@ -87,15 +87,16 @@ export default function LandingCategoriesCarousel() {
         </Link>
       </div>
 
-      <Swiper
-        modules={[Autoplay, FreeMode]}
-        slidesPerView="auto"
-        spaceBetween={10}
-        freeMode
-        loop={categories.length > 4}
-        autoplay={{ delay: 3500, disableOnInteraction: false, pauseOnMouseEnter: true }}
-        className="landing-categories-carousel !overflow-visible"
-      >
+      <div className="overflow-hidden -mx-0.5 px-0.5">
+        <Swiper
+          modules={[Autoplay, FreeMode]}
+          slidesPerView="auto"
+          spaceBetween={10}
+          freeMode
+          loop={categories.length > 4}
+          autoplay={{ delay: 3500, disableOnInteraction: false, pauseOnMouseEnter: true }}
+          className="landing-categories-carousel w-full overflow-hidden"
+        >
         {categories.map((cat) => (
           <SwiperSlide key={cat.id} className="!w-[6.5rem] sm:!w-[7.5rem]">
             <Link
@@ -116,7 +117,8 @@ export default function LandingCategoriesCarousel() {
             </Link>
           </SwiperSlide>
         ))}
-      </Swiper>
+        </Swiper>
+      </div>
     </section>
   );
 }

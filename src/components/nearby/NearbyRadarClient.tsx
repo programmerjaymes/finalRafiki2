@@ -363,7 +363,9 @@ export default function NearbyRadarClient() {
 
         {/* Mobile + tablet */}
         <div className="lg:hidden space-y-3">
-          <div className="sticky top-[4.25rem] z-20 -mx-3 px-3 sm:-mx-4 sm:px-4 py-2 bg-[#f4f7ff]/95 dark:bg-[#080c18]/95 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800/60">
+          <div className="sticky z-20 -mx-3 px-3 sm:-mx-4 sm:px-4 py-2 bg-[#f4f7ff]/95 dark:bg-[#080c18]/95 backdrop-blur-md border-b border-gray-200/60 dark:border-gray-800/60"
+            style={{ top: 'var(--rafiki-nav-offset, 4.25rem)' }}
+          >
             {mobileScannerPanel}
           </div>
 
@@ -451,7 +453,9 @@ function ResultsHeader({
   foundLabel: string;
 }) {
   return (
-    <div className="flex items-center gap-2 mb-3 sticky top-[calc(4.25rem+1px)] z-10 py-2 -mx-1 px-1 bg-[#f4f7ff]/90 dark:bg-[#080c18]/90 backdrop-blur-sm">
+    <div className="flex items-center gap-2 mb-3 sticky z-10 py-2 -mx-1 px-1 bg-[#f4f7ff]/90 dark:bg-[#080c18]/90 backdrop-blur-sm"
+      style={{ top: 'calc(var(--rafiki-nav-offset, 4.25rem) + 0.25rem)' }}
+    >
       <span className="w-1 h-5 rounded-full shrink-0" style={{ backgroundColor: brandColors.accent }} />
       <h2 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate">{title}</h2>
       <span

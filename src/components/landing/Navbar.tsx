@@ -59,6 +59,24 @@ export default function Navbar() {
     setIsMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    if (!mounted) return;
+    const updateNavOffset = () => {
+      const mobile = window.matchMedia('(max-width: 767px)').matches;
+      const guestMobile = !session && mobile;
+      if (guestMobile) {
+        document.documentElement.setAttribute('data-rafiki-guest-mobile', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-rafiki-guest-mobile');
+      }
+      const offset = guestMobile ? '7.75rem' : window.matchMedia('(min-width: 640px)').matches ? '4.75rem' : '4.25rem';
+      document.documentElement.style.setProperty('--rafiki-nav-offset', offset);
+    };
+    updateNavOffset();
+    window.addEventListener('resize', updateNavOffset);
+    return () => window.removeEventListener('resize', updateNavOffset);
+  }, [session, mounted]);
+
   if (!mounted) {
     return (
       <header
@@ -181,7 +199,7 @@ export default function Navbar() {
               )}
             </div>
 
-            <div className="flex md:hidden items-center gap-1">
+            <div className="flex md:hidden items-center gap-1.5 shrink-0">
               <RefreshButton variant="nav" className="!px-2.5" />
               <ThemeToggle theme={theme} setTheme={setTheme} />
               <button
@@ -205,6 +223,27 @@ export default function Navbar() {
 
         <div className="h-1" style={{ background: brandColors.navGoldStripe }} aria-hidden />
       </div>
+
+      {!session && (
+        <div
+          className="md:hidden border-t border-white/10 px-3 py-2.5 flex items-center gap-2"
+          style={{ backgroundColor: brandColors.navMobileMenu }}
+        >
+          <Link
+            href={registerBusinessLink}
+            className="flex-1 min-w-0 text-center rounded-xl border border-white/25 bg-white/10 px-3 py-2.5 text-xs font-bold text-white leading-tight"
+          >
+            {messages.nav.registerBusinessPrompt}
+          </Link>
+          <Link
+            href="/signin"
+            className="shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold text-gray-900 shadow-md"
+            style={{ backgroundColor: '#fdd00d' }}
+          >
+            {messages.nav.signIn}
+          </Link>
+        </div>
+      )}
 
       <AnimatePresence>
         {isMenuOpen && (

@@ -16,7 +16,7 @@ export default function Home() {
     locale === 'sw' ? 'Pakua Programu Ya Simu' : 'Download Our App';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f7f5f3] dark:bg-gray-950">
+    <div className="min-h-screen flex flex-col overflow-x-hidden bg-[#f7f5f3] dark:bg-gray-950">
       <div
         className="pointer-events-none fixed inset-0 -z-10 opacity-50 dark:opacity-30"
         aria-hidden
@@ -30,8 +30,8 @@ export default function Home() {
 
       <Navbar />
 
-      <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-8">
-        <div className="w-full max-w-[100vw] px-3 sm:px-4 md:px-5 lg:px-6">
+      <main className="flex-grow w-full rafiki-nav-offset pb-8">
+        <div className="w-full max-w-full px-3 sm:px-4 md:px-5 lg:px-6">
           <LandingPromoImages />
           <LandingCategoriesCarousel />
           <NearbyScanPromo />

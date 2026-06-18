@@ -281,8 +281,13 @@ function SearchResults() {
         }}
       />
       <Navbar />
-      <main className="flex-grow w-full pt-[4.25rem] sm:pt-[4.75rem] pb-12">
+      <main className="flex-grow w-full rafiki-nav-offset pb-12">
         <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6">
+          <div className="md:hidden mb-3">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{messages.search.title}</h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{messages.search.subtitle}</p>
+          </div>
+
           <div className="hidden md:flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-4 md:mb-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: brandColors.accent }}>

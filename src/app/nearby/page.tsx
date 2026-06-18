@@ -11,7 +11,7 @@ export default function NearbyPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f5f3] dark:bg-gray-950">
       <Navbar />
-      <main className="flex-1 pt-[4.25rem] sm:pt-[4.75rem]">
+      <main className="flex-1 rafiki-nav-offset">
         <NearbyRadarClient />
       </main>
       <Footer />
