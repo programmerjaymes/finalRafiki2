@@ -1150,7 +1150,7 @@ const BusinessList = () => {
                 className="bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-lg transition-shadow duration-200 flex flex-col cursor-pointer"
               >
                 {/* ── Carousel (fixed height) ── */}
-                <div className="relative h-48 shrink-0 overflow-hidden rounded-t-xl">
+                <div className="relative h-48 sm:h-44 shrink-0 overflow-hidden rounded-t-xl">
                   <ProductCarousel business={business} />
 
                   {/* Status badges */}

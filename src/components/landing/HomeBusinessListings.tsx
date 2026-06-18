@@ -80,13 +80,13 @@ export default function HomeBusinessListings() {
       </div>
 
       {loading ? (
-        <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+        <div className="grid w-full grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
           {shimmerCards.map((i) => (
             <div
               key={i}
               className="rounded-xl md:rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden animate-pulse"
             >
-              <div className="h-11 md:h-28 bg-gray-100 dark:bg-gray-800" />
+              <div className="h-44 sm:h-52 md:h-56 bg-gray-100 dark:bg-gray-800" />
               <div className="hidden md:block p-4 space-y-3">
                 <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700" />
                 <div className="h-3 w-full rounded bg-gray-100 dark:bg-gray-800" />
@@ -107,7 +107,7 @@ export default function HomeBusinessListings() {
         </div>
       ) : (
         <>
-          <div className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+          <div className="grid w-full grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
             {businesses.map((business) => (
               <BusinessListingCard
                 key={business.id}

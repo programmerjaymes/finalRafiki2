@@ -9,3 +9,7 @@ node_modules
 /public/uploads/businesses/*.jpeg
 /public/uploads/businesses/*.png
 /public/uploads/businesses/*.webp
+/public/uploads/businesses/logos/*.jpg
+/public/uploads/businesses/logos/*.jpeg
+/public/uploads/businesses/logos/*.png
+/public/uploads/businesses/logos/*.webp

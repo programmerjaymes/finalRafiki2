@@ -203,77 +203,50 @@ export default function BusinessListingCard({
   business,
   viewDetailsLabel,
   unknownLocationLabel,
-  descriptionFallback = 'View details for contact info and more.',
 }: BusinessListingCardProps) {
   const location =
-    business.region?.name ||
+    business.ward?.name ||
     business.district?.name ||
+    business.region?.name ||
     unknownLocationLabel;
 
   return (
     <Link
       href={`/businesses/${business.id}`}
-      className="group block rounded-xl md:rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm hover:shadow-md md:hover:shadow-xl transition-all md:hover:-translate-y-0.5 active:scale-[0.99]"
+      className="group block rounded-xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm hover:shadow-lg transition-shadow active:scale-[0.99]"
     >
-      {/* Phone: compact list row */}
-      <div className="flex md:hidden items-center gap-3 p-3">
-        <div className="h-16 w-16 shrink-0 rounded-lg overflow-hidden">
-          <ProductCarousel business={business} className="h-full w-full" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">
+      {/* Carousel — always visible, taller on larger screens */}
+      <div className="relative h-44 sm:h-52 md:h-56 overflow-hidden">
+        <ProductCarousel business={business} className="h-full w-full" />
+
+        {/* Business name overlay */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-3 py-2 pt-10 z-10">
+          <h2 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
             {business.name}
           </h2>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-            <span aria-hidden>{business.category?.icon || '•'}</span>{' '}
-            {business.category?.name}
-            {location ? ` · ${location}` : ''}
-          </p>
-          {business.phone && (
-            <p className="text-[11px] font-semibold truncate mt-0.5" style={{ color: brandColors.accent }}>
-              <FaPhone className="inline h-2.5 w-2.5 mr-0.5 -mt-px" />
-              {business.phone}
-            </p>
-          )}
         </div>
-        <span className="shrink-0 text-gray-400 text-sm pr-0.5" aria-hidden>
-          →
-        </span>
       </div>
 
-      {/* Tablet / desktop: card with carousel filling most of card */}
-      <div className="hidden md:flex flex-col h-72 lg:h-80">
-        {/* Product Photo Carousel - Fills most of card */}
-        <div className="relative flex-1">
-          <ProductCarousel business={business} className="h-full w-full" />
-          
-          {/* Business Name overlaid on carousel */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12 z-10">
-            <h3 className="text-lg font-bold text-white leading-tight line-clamp-2">
-              {business.name}
-            </h3>
-          </div>
+      {/* Info row */}
+      <div className="px-3 py-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full truncate max-w-[140px]">
+            <span aria-hidden>{business.category?.icon || '•'}</span>
+            {business.category?.name}
+          </span>
+          {location && (
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate">{location}</p>
+          )}
         </div>
-
-        {/* Compact info at bottom */}
-        <div className="p-3 flex-none">
-          <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[10px] font-medium text-primary-600 dark:text-primary-400">
-              <span aria-hidden>{business.category?.icon || '•'}</span>
-              <span className="truncate max-w-[100px]">{business.category?.name}</span>
-            </span>
-            
-            {business.phone ? (
-              <span
-                className="inline-flex items-center font-semibold shrink-0 text-[11px]"
-                style={{ color: brandColors.accent }}
-              >
-                <FaPhone className="mr-1 h-3 w-3" />
-                <span className="truncate max-w-[80px]">{business.phone}</span>
-              </span>
-            ) : null}
-          </div>
-        </div>
+        {business.phone && (
+          <span
+            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold"
+            style={{ color: brandColors.accent }}
+          >
+            <FaPhone className="h-2.5 w-2.5" />
+            <span className="truncate max-w-[80px]">{business.phone}</span>
+          </span>
+        )}
       </div>
     </Link>
   );
