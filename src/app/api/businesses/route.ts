@@ -10,6 +10,7 @@ import {
   localizedCategoryFields,
   type AppLocale,
 } from '@/lib/categoryLocale';
+import { processProductImages, processLogoImage } from '@/lib/imageProcessing';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,8 +85,29 @@ const fetchPublicBusinessList = unstable_cache(
       prisma.business.count({ where }),
     ]);
 
-    const businessesOut = businesses.map((b) => ({
+    // Fetch images for all businesses
+    const businessIds = businesses.map(b => b.id);
+    let businessImages: Array<{ businessId: string; id: string; imageData: string; sortOrder: number }> = [];
+    
+    if (businessIds.length > 0) {
+      const inClause = businessIds.map(id => `'${id}'`).join(',');
+      businessImages = await prisma.$queryRawUnsafe(`
+        SELECT "businessId", id, "imageData", "sortOrder" 
+        FROM business_images 
+        WHERE "businessId" IN (${inClause})
+        ORDER BY "sortOrder" ASC
+      `);
+    }
+
+    const imagesByBusiness: Record<string, Array<{ id: string; imageData: string; sortOrder: number }>> = {};
+    businessImages.forEach((img) => {
+      if (!imagesByBusiness[img.businessId]) imagesByBusiness[img.businessId] = [];
+      imagesByBusiness[img.businessId].push({ id: img.id, imageData: img.imageData, sortOrder: img.sortOrder });
+    });
+
+    const businessesWithImages = businesses.map((b) => ({
       ...b,
+      images: imagesByBusiness[b.id] || [],
       category: {
         icon: b.category.icon,
         name: localizedCategoryFields(b.category, locale).name,
@@ -93,7 +115,7 @@ const fetchPublicBusinessList = unstable_cache(
     }));
 
     return jsonSafe({
-      businesses: businessesOut,
+      businesses: businessesWithImages,
       pagination: {
         page,
         limit,
@@ -199,7 +221,13 @@ export async function GET(request: Request) {
       where.wardId = toBigIntOrUndefined(wardId);
     }
 
-    if (ownerId) {
+    // Security: Enforce business owners can only see their own businesses
+    const session = await getServerSession(authOptions);
+    if (session?.user?.role === 'BUSINESS_OWNER') {
+      // Force ownerId to be the current user's ID
+      where.ownerId = session.user.id;
+    } else if (ownerId) {
+      // Admin/Registrar can filter by any ownerId
       where.ownerId = ownerId;
     }
 
@@ -253,6 +281,40 @@ export async function GET(request: Request) {
       prisma.business.findMany(businessListArgs),
       prisma.business.count({ where }),
     ]);
+
+    // Fetch images for all businesses in a single query
+    const businessIds = businesses.map(b => b.id);
+    let businessImages: Array<{ businessId: string; id: string; imageData: string; sortOrder: number }> = [];
+    
+    if (businessIds.length > 0) {
+      // Build IN clause with proper quoting for string IDs
+      const inClause = businessIds.map(id => `'${id}'`).join(',');
+      businessImages = await prisma.$queryRawUnsafe(`
+        SELECT "businessId", id, "imageData", "sortOrder" 
+        FROM business_images 
+        WHERE "businessId" IN (${inClause})
+        ORDER BY "sortOrder" ASC
+      `);
+    }
+
+    // Group images by business
+    const imagesByBusiness: Record<string, Array<{ id: string; imageData: string; sortOrder: number }>> = {};
+    businessImages.forEach((img) => {
+      if (!imagesByBusiness[img.businessId]) {
+        imagesByBusiness[img.businessId] = [];
+      }
+      imagesByBusiness[img.businessId].push({
+        id: img.id,
+        imageData: img.imageData,
+        sortOrder: img.sortOrder,
+      });
+    });
+
+    // Attach images to each business
+    const businessesWithImages = businesses.map((b) => ({
+      ...b,
+      images: imagesByBusiness[b.id] || [],
+    }));
     
     // Defer analytics so list results return immediately (admin search was blocking on N+1 inserts).
     if (search || categoryId || regionId || districtId || wardId) {
@@ -302,7 +364,7 @@ export async function GET(request: Request) {
     }
 
     const locale = getLocaleFromRequest(request);
-    const businessesOut = businesses.map((b) => ({
+    const businessesOut = businessesWithImages.map((b) => ({
       ...b,
       category: {
         icon: b.category.icon,
@@ -553,13 +615,16 @@ export async function POST(request: Request) {
           ${isAdmin}, ${isAdmin}, NOW(), NOW())
       `;
 
-      // Save product images if provided
+      // Save product images if provided - process them first
       if (images && Array.isArray(images) && images.length > 0) {
-        for (let i = 0; i < images.length; i++) {
+        // Process images to 4:3 ratio for carousel display
+        const processedImages = await processProductImages(images);
+        
+        for (let i = 0; i < processedImages.length; i++) {
           const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
           await prisma.$executeRaw`
             INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-            VALUES (${imgId}, ${id}, ${images[i]}, ${i}, NOW())
+            VALUES (${imgId}, ${id}, ${processedImages[i]}, ${i}, NOW())
           `;
         }
       }
@@ -608,13 +673,16 @@ export async function POST(request: Request) {
       }
     });
 
-    // Save product images if provided
+    // Save product images if provided - process them first
     if (images && Array.isArray(images) && images.length > 0) {
-      for (let i = 0; i < images.length; i++) {
+      // Process images to 4:3 ratio for carousel display
+      const processedImages = await processProductImages(images);
+      
+      for (let i = 0; i < processedImages.length; i++) {
         const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
         await prisma.$executeRaw`
           INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-          VALUES (${imgId}, ${business.id}, ${images[i]}, ${i}, NOW())
+          VALUES (${imgId}, ${business.id}, ${processedImages[i]}, ${i}, NOW())
         `;
       }
     }

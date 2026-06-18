@@ -2,11 +2,13 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 declare module 'next-auth' {
   interface User {
     id: string;
     role: string;
+    sessionToken?: string;
   }
 
   interface Session {
@@ -16,7 +18,46 @@ declare module 'next-auth' {
       email?: string | null;
       role: string;
     }
+    sessionToken?: string;
   }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string;
+    role?: string;
+    sessionToken?: string;
+  }
+}
+
+// Generate a unique session token
+function generateSessionToken(): string {
+  return crypto.randomUUID();
+}
+
+// Check if this is the active session for the user
+export async function isActiveSession(userId: string, sessionToken: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { activeSessionToken: true }
+  });
+  return user?.activeSessionToken === sessionToken;
+}
+
+// Set the active session for a user (invalidates other sessions)
+export async function setActiveSession(userId: string, sessionToken: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { activeSessionToken: sessionToken }
+  });
+}
+
+// Clear the active session (logout)
+export async function clearActiveSession(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { activeSessionToken: null }
+  });
 }
 
 export const authOptions: NextAuthOptions = {
@@ -27,7 +68,8 @@ export const authOptions: NextAuthOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        switchSession: { label: "Switch Session", type: "hidden" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -42,6 +84,7 @@ export const authOptions: NextAuthOptions = {
             email: true,
             role: true,
             hashedPassword: true,
+            activeSessionToken: true,
           },
         });
 
@@ -55,11 +98,24 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Generate new session token
+        const newSessionToken = generateSessionToken();
+
+        // Check if user has an active session elsewhere
+        if (user.activeSessionToken && !credentials.switchSession) {
+          // Throw error to indicate existing session - will be caught and trigger modal
+          throw new Error('ExistingSession');
+        }
+
+        // Set this as the active session (invalidates others)
+        await setActiveSession(user.id, newSessionToken);
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
+          sessionToken: newSessionToken,
         };
       }
     })
@@ -102,6 +158,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.sessionToken = (user as any).sessionToken;
       }
       return token;
     },
@@ -109,8 +166,26 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        (session as any).sessionToken = token.sessionToken;
+
+        // Validate that this is still the active session
+        if (token.id && token.sessionToken) {
+          const isActive = await isActiveSession(token.id as string, token.sessionToken as string);
+          if (!isActive) {
+            // Session has been invalidated (logged in elsewhere)
+            (session as any).isInvalidated = true;
+          }
+        }
       }
       return session;
+    }
+  },
+  events: {
+    async signOut({ token }) {
+      // Clear active session on logout
+      if (token?.id) {
+        await clearActiveSession(token.id as string);
+      }
     }
   }
 };

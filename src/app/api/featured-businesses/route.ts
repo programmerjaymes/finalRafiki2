@@ -31,22 +31,46 @@ const getFeaturedBusinesses = unstable_cache(
         description: true,
         phone: true,
         logo: true,
+        coverImage: true,
         category: {
           select: { name: true, icon: true },
         },
         region: { select: { name: true } },
+        district: { select: { name: true } },
+        ward: { select: { name: true } },
       },
+    });
+
+    // Fetch images for featured businesses
+    const businessIds = rows.map(b => b.id);
+    let businessImages: Array<{ businessId: string; id: string; imageData: string; sortOrder: number }> = [];
+    
+    if (businessIds.length > 0) {
+      const inClause = businessIds.map(id => `'${id}'`).join(',');
+      businessImages = await prisma.$queryRawUnsafe(`
+        SELECT "businessId", id, "imageData", "sortOrder" 
+        FROM business_images 
+        WHERE "businessId" IN (${inClause})
+        ORDER BY "sortOrder" ASC
+      `);
+    }
+
+    const imagesByBusiness: Record<string, Array<{ id: string; imageData: string; sortOrder: number }>> = {};
+    businessImages.forEach((img) => {
+      if (!imagesByBusiness[img.businessId]) imagesByBusiness[img.businessId] = [];
+      imagesByBusiness[img.businessId].push({ id: img.id, imageData: img.imageData, sortOrder: img.sortOrder });
     });
 
     return rows.map((b) => ({
       ...b,
+      images: imagesByBusiness[b.id] || [],
       category: {
         icon: b.category.icon,
         name: localizedCategoryFields(b.category, locale).name,
       },
     }));
   },
-  ['featured-businesses:v3'],
+  ['featured-businesses:v4'],
   { revalidate, tags: ['businesses', 'featured-businesses'] },
 );
 

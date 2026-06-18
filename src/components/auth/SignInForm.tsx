@@ -15,6 +15,7 @@ import * as z from "zod";
 import { signIn } from "next-auth/react";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/lib/useLocale";
+import SessionConflictModal from "./SessionConflictModal";
 
 // Define login schema with validation
 const loginSchema = z.object({
@@ -31,6 +32,8 @@ export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [loginCredentials, setLoginCredentials] = useState({ email: '', password: '' });
   const router = useRouter();
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<LoginFormValues>({
@@ -58,6 +61,14 @@ export default function SignInForm() {
         email: values.email,
         password: values.password,
       });
+      
+      // Check for existing session (handled by custom authorize)
+      if (result?.error === 'ExistingSession') {
+        setLoginCredentials({ email: values.email, password: values.password });
+        setShowConflictModal(true);
+        setIsLoading(false);
+        return;
+      }
       
       if (!result?.ok) {
         throw new Error(result?.error || 'Login failed');
@@ -104,6 +115,17 @@ export default function SignInForm() {
     }
   };
 
+  const handleSwitchSuccess = () => {
+    setShowConflictModal(false);
+    toast.success('Session switched successfully');
+    // Re-submit the form to complete login
+    onSubmit({ 
+      email: loginCredentials.email, 
+      password: loginCredentials.password,
+      rememberMe: false 
+    });
+  };
+
   const handleNavigateToSignup = () => {
     setIsNavigating(true);
     setTimeout(() => {
@@ -136,6 +158,13 @@ export default function SignInForm() {
           {messages.auth.backHome}
         </Link>
       </div>
+      <SessionConflictModal
+        isOpen={showConflictModal}
+        email={loginCredentials.email}
+        password={loginCredentials.password}
+        onClose={() => setShowConflictModal(false)}
+        onSwitchSuccess={handleSwitchSuccess}
+      />
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-8 text-center">

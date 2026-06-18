@@ -1,8 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useMemo, useEffect } from 'react';
 import { FaPhone } from 'react-icons/fa';
+import { FiChevronLeft, FiChevronRight, FiImage } from 'react-icons/fi';
 import { brandColors } from '@/lib/brandColors';
+
+interface BusinessImage {
+  id: string;
+  imageData: string;
+  sortOrder: number;
+}
 
 export type BusinessCardData = {
   id: string;
@@ -10,6 +18,8 @@ export type BusinessCardData = {
   description: string | null;
   phone: string | null;
   logo: string | null;
+  coverImage?: string | null;
+  images?: BusinessImage[];
   category: { name: string; icon?: string | null };
   region?: { name: string | null } | null;
   district?: { name: string | null } | null;
@@ -22,6 +32,12 @@ function logoSrc(logo: string | null) {
   return `data:image/jpeg;base64,${logo}`;
 }
 
+function imageSrc(image: string | null) {
+  if (!image) return null;
+  if (image.startsWith('data:')) return image;
+  return `data:image/jpeg;base64,${image}`;
+}
+
 type BusinessListingCardProps = {
   business: BusinessCardData;
   viewDetailsLabel: string;
@@ -29,13 +45,121 @@ type BusinessListingCardProps = {
   descriptionFallback?: string;
 };
 
+// Product Photo Carousel Component
+function ProductCarousel({ business, className = '' }: { business: BusinessCardData; className?: string }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const productImages = useMemo(() => {
+    const imgs: string[] = [];
+    if (business.coverImage) imgs.push(business.coverImage);
+    if (business.images && business.images.length > 0) {
+      imgs.push(...business.images.map(img => img.imageData));
+    }
+    if (business.logo) imgs.push(business.logo);
+    return imgs;
+  }, [business.coverImage, business.images, business.logo]);
+
+  const hasImages = productImages.length > 0;
+  const totalImages = productImages.length;
+
+  // Auto-play carousel when more than one image
+  useEffect(() => {
+    if (totalImages <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % totalImages);
+    }, 3000); // Change every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [totalImages]);
+
+  if (!hasImages) {
+    return (
+      <div className={`bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex flex-col items-center justify-center ${className}`}>
+        <div className="h-12 w-12 rounded-full bg-white/50 dark:bg-gray-700/50 flex items-center justify-center mb-2">
+          <FiImage className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+        </div>
+        <span className="text-[10px] text-gray-500 dark:text-gray-400 text-center px-2">
+          Photo of products of this business for now
+        </span>
+      </div>
+    );
+  }
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev + 1) % totalImages);
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev - 1 + totalImages) % totalImages);
+  };
+
+  const currentImage = productImages[currentIndex];
+  const displayImage = imageSrc(currentImage);
+
+  return (
+    <div className={`relative overflow-hidden group/carousel ${className}`}>
+      <img
+        src={displayImage || ''}
+        alt={`${business.name} - Photo ${currentIndex + 1}`}
+        className="h-full w-full object-cover transition-opacity duration-500"
+        loading="lazy"
+      />
+
+      {/* Photo Count Badge */}
+      {totalImages > 1 && (
+        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-sm">
+          {currentIndex + 1} / {totalImages}
+        </div>
+      )}
+
+      {/* Navigation Arrows */}
+      {totalImages > 1 && (
+        <>
+          <button
+            onClick={prevImage}
+            className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-white/90 dark:bg-black/60 hover:bg-white dark:hover:bg-black/80 text-gray-800 dark:text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+            aria-label="Previous photo"
+          >
+            <FiChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={nextImage}
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-white/90 dark:bg-black/60 hover:bg-white dark:hover:bg-black/80 text-gray-800 dark:text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+            aria-label="Next photo"
+          >
+            <FiChevronRight className="h-4 w-4" />
+          </button>
+
+          {/* Dots Indicator */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {productImages.slice(0, 5).map((_: string, idx: number) => (
+              <button
+                key={idx}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentIndex(idx); }}
+                className={`h-1 rounded-full transition-all ${
+                  idx === currentIndex ? 'w-4 bg-white' : 'w-1 bg-white/50'
+                }`}
+                aria-label={`Go to photo ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function BusinessListingCard({
   business,
   viewDetailsLabel,
   unknownLocationLabel,
   descriptionFallback = 'View details for contact info and more.',
 }: BusinessListingCardProps) {
-  const img = logoSrc(business.logo);
   const location =
     business.region?.name ||
     business.district?.name ||
@@ -46,19 +170,10 @@ export default function BusinessListingCard({
       href={`/businesses/${business.id}`}
       className="group block rounded-xl md:rounded-2xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm hover:shadow-md md:hover:shadow-xl transition-all md:hover:-translate-y-0.5 active:scale-[0.99]"
     >
-      {/* Phone: compact list row */}
-      <div className="flex md:hidden items-center gap-2.5 p-2.5 min-h-[4.25rem]">
-        <div
-          className="h-10 w-10 shrink-0 rounded-lg overflow-hidden flex items-center justify-center border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-          style={{ background: img ? undefined : brandColors.cardHeader }}
-        >
-          {img ? (
-            <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-          ) : (
-            <span className="text-sm font-bold text-white">
-              {business.name?.charAt(0)?.toUpperCase() || 'B'}
-            </span>
-          )}
+      {/* Phone: compact list row with small carousel */}
+      <div className="flex md:hidden items-center gap-3 p-3">
+        <div className="h-16 w-16 shrink-0 rounded-lg overflow-hidden">
+          <ProductCarousel business={business} className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">
@@ -81,44 +196,28 @@ export default function BusinessListingCard({
         </span>
       </div>
 
-      {/* Tablet / desktop: card layout */}
+      {/* Tablet / desktop: card layout with product carousel */}
       <div className="hidden md:flex flex-col">
-        <div className="relative h-24 lg:h-28 overflow-hidden" style={{ background: brandColors.cardHeader }}>
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle at 20% 80%, rgba(232, 200, 74, 0.45), transparent 50%)',
-            }}
-          />
-          <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end gap-2.5">
-            <div className="h-11 w-11 lg:h-12 lg:w-12 shrink-0 rounded-lg border-2 border-white/90 bg-white dark:bg-gray-800 shadow overflow-hidden flex items-center justify-center">
-              {img ? (
-                <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-              ) : (
-                <span className="text-base font-bold" style={{ color: brandColors.accent }}>
-                  {business.name?.charAt(0)?.toUpperCase() || 'B'}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1 pb-0.5">
-              <h2 className="text-sm lg:text-base font-bold text-white truncate drop-shadow-sm">
-                {business.name}
-              </h2>
-              <span className="inline-flex mt-0.5 items-center gap-1 rounded-full bg-white/20 backdrop-blur px-2 py-0.5 text-[10px] font-medium text-white border border-white/25">
-                <span aria-hidden>{business.category?.icon || '•'}</span>
-                <span className="truncate max-w-[120px]">{business.category?.name}</span>
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* Product Photo Carousel - Main Feature */}
+        <ProductCarousel business={business} className="h-36 lg:h-40 w-full" />
 
         <div className="flex flex-col flex-1 p-3 lg:p-4">
-          <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-snug">
+          {/* Category Badge */}
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[10px] font-medium text-primary-600 dark:text-primary-400 mb-2">
+            <span aria-hidden>{business.category?.icon || '•'}</span>
+            <span className="truncate max-w-[140px]">{business.category?.name}</span>
+          </span>
+
+          {/* Business Name */}
+          <h2 className="text-sm lg:text-base font-bold text-gray-900 dark:text-white line-clamp-1 mb-1">
+            {business.name}
+          </h2>
+
+          <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 leading-snug mb-2">
             {business.description || descriptionFallback}
           </p>
 
-          <div className="mt-2 flex items-center justify-between gap-2 text-[11px] lg:text-xs">
+          <div className="flex items-center justify-between gap-2 text-[11px] lg:text-xs mb-3">
             <span className="text-gray-500 dark:text-gray-400 truncate">{location}</span>
             {business.phone ? (
               <span
@@ -131,7 +230,7 @@ export default function BusinessListingCard({
             ) : null}
           </div>
 
-          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <div className="mt-auto pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <span className="text-xs lg:text-sm font-semibold text-gray-900 dark:text-white">
               {viewDetailsLabel}
             </span>

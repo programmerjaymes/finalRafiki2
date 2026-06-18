@@ -6,6 +6,7 @@ import {
   localizedCategoryFields,
   type AppLocale,
 } from '@/lib/categoryLocale'
+import { processProductImages } from '@/lib/imageProcessing'
 
 export const dynamic = 'force-dynamic';
 
@@ -156,16 +157,20 @@ export async function PUT(
       data: updateData
     })
 
-    // Handle images if provided
-    if (body.images && Array.isArray(body.images)) {
+    // Handle images if provided - process them first
+    if (body.images && Array.isArray(body.images) && body.images.length > 0) {
       // Delete existing images
       await prisma.$executeRaw`DELETE FROM business_images WHERE "businessId" = ${id}`
+      
+      // Process images to 4:3 ratio for carousel display
+      const processedImages = await processProductImages(body.images);
+      
       // Insert new ones
-      for (let i = 0; i < body.images.length; i++) {
+      for (let i = 0; i < processedImages.length; i++) {
         const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25)
         await prisma.$executeRaw`
           INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-          VALUES (${imgId}, ${id}, ${body.images[i]}, ${i}, NOW())
+          VALUES (${imgId}, ${id}, ${processedImages[i]}, ${i}, NOW())
         `
       }
     }

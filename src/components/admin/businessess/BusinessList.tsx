@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
 import { Modal } from '@/components/ui/modal';
@@ -12,6 +12,7 @@ import Checkbox from '@/components/form/input/Checkbox';
 import toast from '@/utils/toast';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
+import { useSession } from 'next-auth/react';
 
 interface BusinessImage {
   id: string;
@@ -221,6 +222,10 @@ const BusinessList = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+  const userId = session?.user?.id;
+
   // Fetch businesses with pagination and search
   const fetchBusinesses = async () => {
     try {
@@ -247,6 +252,11 @@ const BusinessList = () => {
       }
       if (filterWardId) {
         queryParams.append('ward', filterWardId);
+      }
+
+      // If user is BUSINESS_OWNER, only show their businesses
+      if (userRole === 'BUSINESS_OWNER' && userId) {
+        queryParams.append('ownerId', userId);
       }
 
       const response = await fetch(`/api/businesses?${queryParams.toString()}`);
@@ -357,6 +367,8 @@ const BusinessList = () => {
     filterRegionId,
     filterDistrictId,
     filterWardId,
+    userRole,
+    userId,
   ]);
   
   // Update filtered districts when region changes
@@ -798,6 +810,147 @@ const BusinessList = () => {
   const showUserPicker =
     !selectedUser && assignUserFocused && filteredUsers.length > 0;
 
+  // Product Photo Carousel - Main feature of business cards
+  const ProductCarousel = ({ business }: { business: Business }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [imageError, setImageError] = useState<Record<number, boolean>>({});
+
+    // Get product photos (prioritize images over logo)
+    const productImages = useMemo(() => {
+      const imgs: string[] = [];
+      // Add product photos first
+      if (business.images && business.images.length > 0) {
+        imgs.push(...business.images.map(img => img.imageData));
+      }
+      // Add logo as fallback/last image
+      if (business.logo) imgs.push(business.logo);
+      // Add cover image if exists
+      if (business.coverImage) imgs.unshift(business.coverImage);
+      return imgs;
+    }, [business.images, business.logo, business.coverImage]);
+
+    const hasImages = productImages.length > 0;
+    const currentImage = hasImages ? productImages[currentIndex] : null;
+    const totalImages = productImages.length;
+
+    // Auto-play carousel when more than one image
+    useEffect(() => {
+      if (totalImages <= 1) return;
+      
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % totalImages);
+      }, 3000); // Change every 3 seconds
+      
+      return () => clearInterval(interval);
+    }, [totalImages]);
+
+    const nextImage = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setCurrentIndex((prev) => (prev + 1) % totalImages);
+    };
+
+    const prevImage = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setCurrentIndex((prev) => (prev - 1 + totalImages) % totalImages);
+    };
+
+    const handleImageError = (idx: number) => {
+      setImageError(prev => ({ ...prev, [idx]: true }));
+    };
+
+    // Fallback when no images
+    if (!hasImages) {
+      return (
+        <div className="h-48 w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex flex-col items-center justify-center">
+          <div className="h-16 w-16 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-2">
+            <FiImage className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+          </div>
+          <span className="text-xs text-gray-500 dark:text-gray-400 text-center px-4">
+            Photo of products of this business for now
+          </span>
+        </div>
+      );
+    }
+
+    const displayImage = currentImage && !imageError[currentIndex]
+      ? (currentImage.startsWith('data:') ? currentImage : `data:image/jpeg;base64,${currentImage}`)
+      : null;
+
+    return (
+      <div className="h-48 w-full bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
+        {/* Main Image */}
+        {displayImage ? (
+          <img
+            src={displayImage}
+            alt={`${business.name} - Photo ${currentIndex + 1}`}
+            className="h-full w-full object-cover transition-opacity duration-500"
+            loading="lazy"
+            onError={() => handleImageError(currentIndex)}
+          />
+        ) : (
+          <div className="h-full w-full flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-700">
+            <FiImage className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2" />
+            <span className="text-xs text-gray-500 dark:text-gray-400">Image unavailable</span>
+          </div>
+        )}
+
+        {/* Photo Count Badge */}
+        {totalImages > 1 && (
+          <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded-full backdrop-blur-sm">
+            <FiImage className="h-3 w-3 inline mr-1" />
+            {currentIndex + 1} / {totalImages}
+          </div>
+        )}
+
+        {/* Navigation Arrows - Always visible on mobile, hover on desktop */}
+        {totalImages > 1 && (
+          <>
+            <button
+              onClick={prevImage}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/90 dark:bg-black/60 hover:bg-white dark:hover:bg-black/80 text-gray-800 dark:text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+              aria-label="Previous photo"
+            >
+              <FiChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={nextImage}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-white/90 dark:bg-black/60 hover:bg-white dark:hover:bg-black/80 text-gray-800 dark:text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+              aria-label="Next photo"
+            >
+              <FiChevronRight className="h-5 w-5" />
+            </button>
+
+            {/* Thumbnail Strip */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+              <div className="flex justify-center gap-1.5">
+                {productImages.slice(0, 5).map((_: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+                    className={`h-1.5 rounded-full transition-all ${
+                      idx === currentIndex
+                        ? 'w-6 bg-white'
+                        : 'w-1.5 bg-white/50 hover:bg-white/80'
+                    }`}
+                    aria-label={`View photo ${idx + 1}`}
+                  />
+                ))}
+                {totalImages > 5 && (
+                  <span className="text-white/70 text-xs self-center">+{totalImages - 5}</span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Hover overlay with business name */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      </div>
+    );
+  };
+
   return (
     <div className="w-full">
       {/* Header with Add Button */}
@@ -927,105 +1080,120 @@ const BusinessList = () => {
       ) : (
         <>
           {/* Business Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {businesses.map((business) => (
               <div 
                 key={business.id}
-                className="relative bg-white dark:bg-boxdark p-4 rounded-lg border border-stroke dark:border-strokedark shadow-sm hover:shadow-md transition-shadow"
+                className="relative bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
               >
-                {/* Status Badges */}
-                <div className="absolute top-2 right-2 flex gap-1">
+                {/* Product Photo Carousel - Main Feature */}
+                <ProductCarousel business={business} />
+                
+                {/* Status Badges - positioned on the image */}
+                <div className="absolute top-3 right-3 flex gap-1.5 z-10">
                   {business.isVerified && (
-                    <span className="bg-success-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                      ✓
+                    <span className="bg-success-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                      ✓ Verified
                     </span>
                   )}
                   {business.isApproved ? (
-                    <span className="bg-primary-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                      ✓
+                    <span className="bg-primary-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                      Approved
                     </span>
                   ) : (
-                    <span className="bg-warning-500 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-                      !
+                    <span className="bg-warning-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                      Pending
                     </span>
                   )}
                 </div>
-                
-                {/* Business Logo */}
-                <div className="h-20 w-20 mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                  {business.logo ? (
-                    <img 
-                      src={business.logo.startsWith('data:') ? business.logo : `data:image/jpeg;base64,${business.logo}`} 
-                      alt={business.name} 
-                      className="h-full w-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-gray-400 dark:text-gray-500 text-2xl font-bold">
-                      {business.name.charAt(0)}
+
+                {/* Business Info Section */}
+                <div className="p-4">
+                  {/* Category Badge */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full">
+                      {business.category?.icon} {business.category?.name || 'Uncategorized'}
                     </span>
-                  )}
-                </div>
-                
-                {/* Business Name and Category */}
-                <h3 className="text-sm font-semibold text-black dark:text-white mb-1 text-center truncate" title={business.name}>
-                  {business.name}
-                </h3>
-                <div className="flex items-center justify-center gap-1 mb-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {business.category?.name || 'Uncategorized'}
-                  </span>
-                </div>
-                
-                {/* Business Location */}
-                <div className="text-xs text-gray-600 dark:text-gray-300 mb-3 text-center truncate">
-                  <p title={[business.ward?.name, business.district?.name, business.region?.name].filter(Boolean).join(', ')}>
-                    {business.district?.name || business.region?.name || 'N/A'}
-                  </p>
-                </div>
-                
-                {/* Business Ratings */}
-                <div className="flex items-center justify-center gap-1 mb-3">
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg 
-                        key={star}
-                        className={`h-3 w-3 ${star <= business.avgRating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
+                    {business.categoryId2 && (
+                      <span className="text-xs text-gray-400">+1</span>
+                    )}
                   </div>
-                  <span className="text-[10px] text-gray-500">({business.numReviews})</span>
-                </div>
-                
-                {/* Actions */}
-                <div className="flex justify-center gap-2 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
-                  <button 
-                    className="p-1.5 rounded-md text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => handleView(business)}
-                    title="View"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
-                  <button 
-                    className="p-1.5 rounded-md text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => handleEdit(business)}
-                    title="Edit"
-                  >
-                    <FiEdit className="h-4 w-4" />
-                  </button>
-                  <button 
-                    className="p-1.5 rounded-md text-gray-500 hover:text-danger hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => handleDelete(business)}
-                    title="Delete"
-                  >
-                    <RiDeleteBin6Line className="h-4 w-4" />
-                  </button>
+                  
+                  {/* Business Name */}
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1 line-clamp-2" title={business.name}>
+                    {business.name}
+                  </h3>
+                  
+                  {/* Location */}
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    <FiMapPin className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="truncate" title={[business.ward?.name, business.district?.name, business.region?.name].filter(Boolean).join(', ')}>
+                      {business.district?.name || business.region?.name || 'Location N/A'}
+                    </span>
+                  </div>
+                  
+                  {/* Ratings & Stats Row */}
+                  <div className="flex items-center justify-between mb-3">
+                    {/* Star Rating */}
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg 
+                            key={star}
+                            className={`h-3.5 w-3.5 ${star <= business.avgRating ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">({business.numReviews || 0})</span>
+                    </div>
+                    
+                    {/* Bundle Info */}
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {business.bundle?.name}
+                    </span>
+                  </div>
+                  
+                  {/* Contact Preview */}
+                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    {business.phone && (
+                      <span className="flex items-center gap-1">
+                        <FiPhone className="h-3 w-3" />
+                        {business.phone.slice(0, 12)}...
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <button 
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-xs font-medium"
+                      onClick={() => handleView(business)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View
+                    </button>
+                    <button 
+                      className="flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      onClick={() => handleEdit(business)}
+                      title="Edit"
+                    >
+                      <FiEdit className="h-4 w-4" />
+                    </button>
+                    <button 
+                      className="flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                      onClick={() => handleDelete(business)}
+                      title="Delete"
+                    >
+                      <RiDeleteBin6Line className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1253,11 +1421,11 @@ const BusinessList = () => {
               </div>
 
               {/* ── Categories (multi-select up to 2) ── */}
-              <div className="col-span-1">
+              <div className="col-span-1 flex flex-col">
                 <Label>Categories (up to 2) *</Label>
-                <div className="border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 flex flex-col max-h-[280px]">
                   {/* Search input */}
-                  <div className="p-2 border-b border-gray-300 dark:border-gray-700">
+                  <div className="p-2 border-b border-gray-300 dark:border-gray-700 flex-shrink-0">
                     <div className="relative">
                       <input
                         type="text"
@@ -1269,10 +1437,10 @@ const BusinessList = () => {
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     </div>
                   </div>
-                  
-                  <div className="p-3 max-h-40 overflow-y-auto">
+
+                  <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                     {selectedCategoryIds.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
+                      <div className="flex flex-wrap gap-1.5 p-2 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 max-h-[80px] overflow-y-auto">
                         {selectedCategoryIds.map(id => {
                           const cat = categories.find(c => c.id === id);
                           return cat ? (
@@ -1284,23 +1452,25 @@ const BusinessList = () => {
                         })}
                       </div>
                     )}
-                    <div className="space-y-1">
-                      {filteredCategories.length > 0 ? (
-                        filteredCategories.map(cat => (
-                          <label key={cat.id} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${selectedCategoryIds.includes(cat.id) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
-                            <input
-                              type="checkbox"
-                              checked={selectedCategoryIds.includes(cat.id)}
-                              onChange={() => toggleCategory(cat.id)}
-                              disabled={!selectedCategoryIds.includes(cat.id) && selectedCategoryIds.length >= 2}
-                              className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                            />
-                            <span>{cat.icon} {cat.name}</span>
-                          </label>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No categories found</p>
-                      )}
+                    <div className="flex-1 overflow-y-auto p-2 min-h-0">
+                      <div className="space-y-1">
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map(cat => (
+                            <label key={cat.id} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${selectedCategoryIds.includes(cat.id) ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
+                              <input
+                                type="checkbox"
+                                checked={selectedCategoryIds.includes(cat.id)}
+                                onChange={() => toggleCategory(cat.id)}
+                                disabled={!selectedCategoryIds.includes(cat.id) && selectedCategoryIds.length >= 2}
+                                className="rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                              />
+                              <span>{cat.icon} {cat.name}</span>
+                            </label>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No categories found</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
