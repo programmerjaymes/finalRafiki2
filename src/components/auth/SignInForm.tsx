@@ -115,15 +115,25 @@ export default function SignInForm() {
     }
   };
 
-  const handleSwitchSuccess = () => {
+  const handleSwitchSuccess = async () => {
     setShowConflictModal(false);
     toast.success('Session switched successfully');
-    // Re-submit the form to complete login
-    onSubmit({ 
-      email: loginCredentials.email, 
-      password: loginCredentials.password,
-      rememberMe: false 
-    });
+    // User is already signed in after the switch — just read the session and redirect.
+    // Do NOT call onSubmit() again: that would call signIn() without switchSession and
+    // trigger ExistingSession immediately, causing an infinite loop.
+    try {
+      const sessionRes = await fetch('/api/auth/session', { cache: 'no-store' });
+      const session = await sessionRes.json();
+      if (session?.user?.role === 'ADMIN') {
+        window.location.assign('/dashboard');
+      } else if (session?.user?.role === 'BUSINESS_OWNER') {
+        window.location.assign('/business-dashboard');
+      } else {
+        window.location.assign('/');
+      }
+    } catch {
+      window.location.assign('/');
+    }
   };
 
   const handleNavigateToSignup = () => {
