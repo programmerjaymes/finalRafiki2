@@ -226,8 +226,16 @@ export async function GET(request: Request) {
       where.wardId = toBigIntOrUndefined(wardId);
     }
 
-    // Security: Enforce business owners can only see their own businesses
     const session = await getServerSession(authOptions);
+
+    // Pending-approval lists are admin-only (used by notification bell)
+    if (isApproved !== null || isVerified !== null) {
+      if (session?.user?.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // Security: Enforce business owners can only see their own businesses
     if (session?.user?.role === 'BUSINESS_OWNER') {
       // Force ownerId to be the current user's ID
       where.ownerId = session.user.id;

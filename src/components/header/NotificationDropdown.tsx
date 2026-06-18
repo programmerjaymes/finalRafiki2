@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Modal } from "../ui/modal";
@@ -38,6 +39,8 @@ interface Business {
 }
 
 export default function NotificationDropdown() {
+  const { data: session, status } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [isOpen, setIsOpen] = useState(false);
   const [notifying, setNotifying] = useState(true);
   const [unapprovedBusinesses, setUnapprovedBusinesses] = useState<Business[]>([]);
@@ -46,8 +49,10 @@ export default function NotificationDropdown() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [approving, setApproving] = useState(false);
 
-  // Fetch unapproved or unverified businesses
+  // Fetch unapproved or unverified businesses (admin only)
   useEffect(() => {
+    if (status !== "authenticated" || !isAdmin) return;
+
     const fetchUnapprovedBusinesses = async () => {
       try {
         setLoading(true);
@@ -66,7 +71,9 @@ export default function NotificationDropdown() {
     };
 
     fetchUnapprovedBusinesses();
-  }, []);
+  }, [status, isAdmin]);
+
+  if (!isAdmin) return null;
 
   function toggleDropdown() {
     setIsOpen(!isOpen);

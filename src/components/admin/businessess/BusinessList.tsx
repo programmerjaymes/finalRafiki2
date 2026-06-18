@@ -161,6 +161,7 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
   // UI states
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -568,6 +569,30 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
   // Handle checkbox change
   const handleCheckboxChange = (checked: boolean, name: string) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device');
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        toast.success('Location detected successfully');
+        setDetectingLocation(false);
+      },
+      (err) => {
+        toast.error(err.message || 'Could not detect your location');
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
   };
 
   // Handle logo file selection
@@ -1586,11 +1611,30 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
               </div>
 
               {/* ── GPS Location ── */}
-              <div className="col-span-1">
+              <div className="col-span-1 sm:col-span-2">
                 <Label>GPS Coordinates</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="text" name="latitude" placeholder="Latitude (-6.8235)" defaultValue={formData.latitude} onChange={handleChange} />
-                  <Input type="text" name="longitude" placeholder="Longitude (39.2695)" defaultValue={formData.longitude} onChange={handleChange} />
+                <div className="space-y-3">
+                  <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/20 p-3">
+                    <FiMapPin className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+                    <div className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed">
+                      <p className="font-semibold">{messages.business.gpsAtLocationTitle}</p>
+                      <p className="mt-1">{messages.business.gpsAtLocationBody}</p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleDetectLocation}
+                    loading={detectingLocation}
+                    startIcon={<FiMapPin className="h-4 w-4" />}
+                    className="w-full sm:w-auto"
+                  >
+                    Detect my location
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input type="text" name="latitude" placeholder="Latitude (-6.8235)" value={formData.latitude} onChange={handleChange} disabled={detectingLocation} />
+                    <Input type="text" name="longitude" placeholder="Longitude (39.2695)" value={formData.longitude} onChange={handleChange} disabled={detectingLocation} />
+                  </div>
                 </div>
               </div>
 

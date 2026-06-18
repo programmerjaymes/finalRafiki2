@@ -3,14 +3,16 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
-import Image from "next/image";
 import Link from "next/link";
 import React, { useState ,useEffect,useRef} from "react";
+import { useSession } from "next-auth/react";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/lib/useLocale";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const locale = useLocale();
@@ -192,8 +194,8 @@ const AppHeader: React.FC = () => {
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}
 
-           <NotificationDropdown /> 
-            {/* <!-- Notification Menu Area --> */}
+            {isAdmin && <NotificationDropdown />}
+            {/* <!-- Notification Menu Area (admin only) --> */}
           </div>
           {/* <!-- User Area --> */}
           <UserDropdown /> 

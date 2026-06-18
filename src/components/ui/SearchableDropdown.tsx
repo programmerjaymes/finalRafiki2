@@ -7,6 +7,8 @@ import Label from '@/components/form/Label';
 export type SearchableDropdownOption = {
   value: string;
   label: string;
+  /** Extra text included when filtering search results (e.g. alternate locale names). */
+  keywords?: string;
 };
 
 type SearchableDropdownProps = {
@@ -55,9 +57,10 @@ export default function SearchableDropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open, onSearchChange]);
 
-  const filtered = options.filter((o) =>
-    o.label.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = options.filter((o) => {
+    const hay = `${o.label} ${o.keywords ?? ''}`.toLowerCase();
+    return hay.includes(search.toLowerCase());
+  });
 
   return (
     <div ref={rootRef} className="w-full">

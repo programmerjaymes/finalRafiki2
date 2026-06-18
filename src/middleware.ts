@@ -29,6 +29,7 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/search') ||
+    pathname.startsWith('/nearby') ||
     isPublicBusinessDetails ||
     pathname.startsWith('/signin') ||
     pathname.startsWith('/signup') ||
@@ -58,9 +59,14 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/businessowner-dashboard') ||
       pathname.startsWith('/account');
 
+    const isPublicConsumerRoute =
+      pathname.startsWith('/search') ||
+      pathname.startsWith('/nearby') ||
+      isPublicBusinessDetails;
+
     if (
       pathname === '/' ||
-      (!isAlreadyOnBusinessRoute && !pathname.startsWith('/api/'))
+      (!isAlreadyOnBusinessRoute && !isPublicConsumerRoute && !pathname.startsWith('/api/'))
     ) {
       return NextResponse.redirect(
         new URL('/business-dashboard', request.url)

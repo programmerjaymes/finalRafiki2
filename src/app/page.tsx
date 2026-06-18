@@ -2,10 +2,11 @@
 
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/landing/Footer';
-import HomeBusinessListings from '@/components/landing/HomeBusinessListings';
 import LandingPromoImages from '@/components/landing/LandingPromoImages';
 import LandingCategoriesCarousel from '@/components/landing/LandingCategoriesCarousel';
 import LandingFeaturedCarousel from '@/components/landing/LandingFeaturedCarousel';
+import NearbyScanPromo from '@/components/landing/NearbyScanPromo';
+import HomeBusinessListings from '@/components/landing/HomeBusinessListings';
 import { useLocale } from '@/lib/useLocale';
 import { brandColors } from '@/lib/brandColors';
 
@@ -33,6 +34,7 @@ export default function Home() {
         <div className="w-full max-w-[100vw] px-3 sm:px-4 md:px-5 lg:px-6">
           <LandingPromoImages />
           <LandingCategoriesCarousel />
+          <NearbyScanPromo />
           <LandingFeaturedCarousel />
           <HomeBusinessListings />
         </div>

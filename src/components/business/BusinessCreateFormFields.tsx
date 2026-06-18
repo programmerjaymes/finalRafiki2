@@ -11,6 +11,8 @@ import Button from '@/components/ui/button/Button';
 import SearchableDropdown from '@/components/ui/SearchableDropdown';
 import { bundleAllows } from '@/lib/bundleFields';
 import { fileToBase64 } from '@/lib/fileToBase64';
+import { t } from '@/lib/i18n';
+import { useLocale } from '@/lib/useLocale';
 import toast from '@/utils/toast';
 
 export type BusinessCreateFormData = {
@@ -95,6 +97,9 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
     detectingLocation,
     onDetectLocation,
   } = props;
+
+  const locale = useLocale();
+  const bizMessages = t(locale).business;
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -551,17 +556,32 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       </div>
       {showGps && (
         <div className="col-span-1 md:col-span-2 xl:col-span-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/20 p-4 space-y-4">
-          <div className="flex gap-2">
-            <FiMapPin className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
-            <p className="text-sm text-amber-900 dark:text-amber-100 leading-relaxed">
-              <strong>Important:</strong> Make sure you are physically at your business location before detecting or saving GPS coordinates. This helps customers find you accurately on the map.
-            </p>
+          <div className="flex gap-2 rounded-lg border border-amber-300/60 bg-amber-100/80 dark:border-amber-700/50 dark:bg-amber-900/30 p-3">
+            <FiMapPin className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300 mt-0.5" />
+            <div className="text-sm text-amber-950 dark:text-amber-50 leading-relaxed">
+              <p className="font-semibold">{bizMessages.gpsAtLocationTitle}</p>
+              <p className="mt-1">{bizMessages.gpsAtLocationBody}</p>
+            </div>
           </div>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={onDetectLocation}
+            loading={detectingLocation}
+            startIcon={<FiMapPin className="h-4 w-4" />}
+            className="w-full"
+          >
+            Detect my location
+          </Button>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><Label htmlFor="latitude">Latitude</Label><Input id="latitude" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="-6.8235" /></div>
-            <div><Label htmlFor="longitude">Longitude</Label><Input id="longitude" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="39.2695" /></div>
+            <div><Label htmlFor="latitude">Latitude</Label><Input id="latitude" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="-6.8235" disabled={detectingLocation} /></div>
+            <div><Label htmlFor="longitude">Longitude</Label><Input id="longitude" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="39.2695" disabled={detectingLocation} /></div>
           </div>
-          <Button type="button" variant="outline" onClick={onDetectLocation} loading={detectingLocation} className="w-full sm:w-auto">Detect my location</Button>
+          {(formData.latitude || formData.longitude) && (
+            <p className="text-xs text-amber-800 dark:text-amber-200">
+              {bizMessages.gpsDetectedHint}
+            </p>
+          )}
         </div>
       )}
     </div>

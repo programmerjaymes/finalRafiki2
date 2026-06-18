@@ -122,6 +122,9 @@ export default function Navbar() {
                 <NavLink href="/search" active={pathname === '/search'}>
                   {messages.nav.search}
                 </NavLink>
+                <NavLink href="/nearby" active={pathname === '/nearby'}>
+                  {messages.nav.nearby}
+                </NavLink>
                 <NavLink href={registerBusinessLink} active={pathname === '/business-create'}>
                   {messages.nav.registerBusiness}
                 </NavLink>
@@ -216,6 +219,9 @@ export default function Navbar() {
             <div className="w-full px-3 sm:px-4 md:px-5 lg:px-6 py-3 space-y-0.5">
               <MobileNavLink href="/search" onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.search}
+              </MobileNavLink>
+              <MobileNavLink href="/nearby" onClick={() => setIsMenuOpen(false)}>
+                {messages.nav.nearby}
               </MobileNavLink>
               <MobileNavLink href={registerBusinessLink} onClick={() => setIsMenuOpen(false)}>
                 {messages.nav.registerBusiness}
