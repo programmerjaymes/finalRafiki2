@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser } from 'react-icons/fi';
+import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser, FiRefreshCw } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
@@ -259,29 +259,24 @@ const BusinessList = () => {
         queryParams.append('ownerId', userId);
       }
 
-      const response = await fetch(`/api/businesses?${queryParams.toString()}`);
+      // Add cache-busting timestamp and use keep-alive for faster loading
+      queryParams.append('_', Date.now().toString());
+      
+      // Use lean mode to exclude heavy image data from list view
+      queryParams.append('lean', 'true');
+      
+      const response = await fetch(`/api/businesses?${queryParams.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch businesses');
       }
       
       const data = await response.json();
-      console.log('📦 API Response:', {
-        totalBusinesses: data.businesses?.length || 0,
-        pagination: data.pagination || data.meta
-      });
-      
-      // Check first business for logo
-      if (data.businesses && data.businesses.length > 0) {
-        console.log('🔍 First business from API:', {
-          id: data.businesses[0].id,
-          name: data.businesses[0].name,
-          hasLogo: !!data.businesses[0].logo,
-          logoType: typeof data.businesses[0].logo,
-          logoLength: data.businesses[0].logo?.length || 0,
-          logoPreview: data.businesses[0].logo ? data.businesses[0].logo.substring(0, 60) + '...' : 'NO LOGO'
-        });
-      }
       
       setBusinesses(data.businesses || []);
       const raw = data.meta || data.pagination;
@@ -300,10 +295,33 @@ const BusinessList = () => {
     }
   };
 
+  // Handle refresh to clear caches
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      // Clear client-side caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      // Revalidate Next.js data cache
+      await fetch('/api/revalidate?path=/api/businesses', { method: 'POST' }).catch(() => {});
+      // Refetch data with cache busting
+      await fetchBusinesses();
+      toast.success('Data refreshed');
+    } catch (err) {
+      toast.error('Failed to refresh');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch full business details (including images) for view/edit
   const fetchBusinessDetails = async (id: string): Promise<Business | null> => {
     try {
-      const response = await fetch(`/api/businesses/${id}`);
+      const response = await fetch(`/api/businesses/${id}?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       if (!response.ok) throw new Error('Failed to fetch business details');
       return await response.json();
     } catch (err) {
@@ -810,38 +828,70 @@ const BusinessList = () => {
   const showUserPicker =
     !selectedUser && assignUserFocused && filteredUsers.length > 0;
 
-  // Product Photo Carousel - Main feature of business cards
+  // Product Photo Carousel - Optimized to load only first image initially
   const ProductCarousel = ({ business }: { business: Business }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set([0])); // Only load first image
     const [imageError, setImageError] = useState<Record<number, boolean>>({});
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    // Get product photos (prioritize images over logo)
+    // Get product photos metadata (lightweight - just strings, no actual image data loaded yet)
     const productImages = useMemo(() => {
       const imgs: string[] = [];
-      // Add product photos first
       if (business.images && business.images.length > 0) {
         imgs.push(...business.images.map(img => img.imageData));
       }
-      // Add logo as fallback/last image
       if (business.logo) imgs.push(business.logo);
-      // Add cover image if exists
       if (business.coverImage) imgs.unshift(business.coverImage);
       return imgs;
-    }, [business.images, business.logo, business.coverImage]);
+    }, [business.images?.length, business.logo, business.coverImage]);
 
     const hasImages = productImages.length > 0;
-    const currentImage = hasImages ? productImages[currentIndex] : null;
     const totalImages = productImages.length;
 
-    // Auto-play carousel when more than one image
+    // Load image when index changes (lazy loading)
     useEffect(() => {
-      if (totalImages <= 1) return;
+      if (!hasImages) return;
       
-      const interval = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % totalImages);
-      }, 3000); // Change every 3 seconds
+      // Mark current and adjacent images for loading
+      setLoadedImages(prev => {
+        const next = new Set(prev);
+        next.add(currentIndex);
+        // Preload next image
+        next.add((currentIndex + 1) % totalImages);
+        return next;
+      });
+    }, [currentIndex, hasImages, totalImages]);
+
+    // Auto-play with intersection observer (pause when not visible)
+    useEffect(() => {
+      if (totalImages <= 1 || !containerRef.current) return;
+
+      let interval: NodeJS.Timeout;
       
-      return () => clearInterval(interval);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              // Start auto-play when visible
+              interval = setInterval(() => {
+                setCurrentIndex((prev) => (prev + 1) % totalImages);
+              }, 3000);
+            } else {
+              // Pause when not visible
+              clearInterval(interval);
+            }
+          });
+        },
+        { threshold: 0.5 }
+      );
+
+      observer.observe(containerRef.current);
+      
+      return () => {
+        clearInterval(interval);
+        observer.disconnect();
+      };
     }, [totalImages]);
 
     const nextImage = (e: React.MouseEvent) => {
@@ -863,7 +913,7 @@ const BusinessList = () => {
     // Fallback when no images
     if (!hasImages) {
       return (
-        <div className="h-48 w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex flex-col items-center justify-center">
+        <div className="h-full w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 flex flex-col items-center justify-center">
           <div className="h-16 w-16 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mb-2">
             <FiImage className="h-8 w-8 text-primary-600 dark:text-primary-400" />
           </div>
@@ -874,27 +924,31 @@ const BusinessList = () => {
       );
     }
 
-    const displayImage = currentImage && !imageError[currentIndex]
-      ? (currentImage.startsWith('data:') ? currentImage : `data:image/jpeg;base64,${currentImage}`)
-      : null;
-
     return (
-      <div className="h-48 w-full bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
-        {/* Main Image */}
-        {displayImage ? (
-          <img
-            src={displayImage}
-            alt={`${business.name} - Photo ${currentIndex + 1}`}
-            className="h-full w-full object-cover transition-opacity duration-500"
-            loading="lazy"
-            onError={() => handleImageError(currentIndex)}
-          />
-        ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-700">
-            <FiImage className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Image unavailable</span>
-          </div>
-        )}
+      <div ref={containerRef} className="h-full w-full bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
+        {/* Only render images that have been marked for loading */}
+        {productImages.map((imgData, idx) => {
+          const isLoaded = loadedImages.has(idx);
+          const isCurrent = idx === currentIndex;
+          const hasError = imageError[idx];
+          
+          if (!isLoaded || hasError) return null;
+          
+          const displaySrc = imgData.startsWith('data:') ? imgData : `data:image/jpeg;base64,${imgData}`;
+          
+          return (
+            <img
+              key={idx}
+              src={displaySrc}
+              alt={`${business.name} - Photo ${idx + 1}`}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                isCurrent ? 'opacity-100 z-10' : 'opacity-0 z-0'
+              }`}
+              loading={idx === 0 ? 'eager' : 'lazy'}
+              onError={() => handleImageError(idx)}
+            />
+          );
+        })}
 
         {/* Photo Count Badge */}
         {totalImages > 1 && (
@@ -952,14 +1006,20 @@ const BusinessList = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
         <h4 className="text-xl font-medium">Business Management</h4>
-        <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={handleOpenAddModal}>
-          <FiPlus className="h-4 w-4" />
-          Add Business
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleRefresh}>
+            <FiRefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button variant="primary" size="sm" className="flex items-center gap-1" onClick={handleOpenAddModal}>
+            <FiPlus className="h-4 w-4" />
+            Add Business
+          </Button>
+        </div>
       </div>
       
       {/* Search and Filter Section */}
@@ -1080,35 +1140,44 @@ const BusinessList = () => {
       ) : (
         <>
           {/* Business Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 overflow-y-auto flex-1 min-h-0 pb-4">
             {businesses.map((business) => (
               <div 
                 key={business.id}
-                className="relative bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+                className="relative bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full"
               >
                 {/* Product Photo Carousel - Main Feature */}
-                <ProductCarousel business={business} />
-                
-                {/* Status Badges - positioned on the image */}
-                <div className="absolute top-3 right-3 flex gap-1.5 z-10">
-                  {business.isVerified && (
-                    <span className="bg-success-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
-                      ✓ Verified
-                    </span>
-                  )}
-                  {business.isApproved ? (
-                    <span className="bg-primary-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
-                      Approved
-                    </span>
-                  ) : (
-                    <span className="bg-warning-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
-                      Pending
-                    </span>
-                  )}
+                <div className="relative flex-1 min-h-[200px]">
+                  <ProductCarousel business={business} />
+                  
+                  {/* Status Badges - positioned on the image */}
+                  <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+                    {business.isVerified && (
+                      <span className="bg-success-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                        ✓ Verified
+                      </span>
+                    )}
+                    {business.isApproved ? (
+                      <span className="bg-primary-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                        Approved
+                      </span>
+                    ) : (
+                      <span className="bg-warning-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Business Name - overlaid on carousel */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12 z-10">
+                    <h3 className="text-lg font-bold text-white leading-tight line-clamp-2">
+                      {business.name}
+                    </h3>
+                  </div>
                 </div>
 
                 {/* Business Info Section */}
-                <div className="p-4">
+                <div className="p-3 flex-none">
                   {/* Category Badge */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full">

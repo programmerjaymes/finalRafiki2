@@ -142,6 +142,7 @@ export async function GET(request: Request) {
     const isApproved = url.searchParams.get('isApproved');
     const isVerified = url.searchParams.get('isVerified');
     const ownerId = url.searchParams.get('ownerId') || undefined;
+    const lean = url.searchParams.get('lean') === 'true';
 
     const skip = (page - 1) * limit;
 
@@ -287,14 +288,23 @@ export async function GET(request: Request) {
     let businessImages: Array<{ businessId: string; id: string; imageData: string; sortOrder: number }> = [];
     
     if (businessIds.length > 0) {
-      // Build IN clause with proper quoting for string IDs
       const inClause = businessIds.map(id => `'${id}'`).join(',');
-      businessImages = await prisma.$queryRawUnsafe(`
-        SELECT "businessId", id, "imageData", "sortOrder" 
-        FROM business_images 
-        WHERE "businessId" IN (${inClause})
-        ORDER BY "sortOrder" ASC
-      `);
+      if (lean) {
+        // Lean mode: only fetch the first image per business (much smaller payload)
+        businessImages = await prisma.$queryRawUnsafe(`
+          SELECT DISTINCT ON ("businessId") "businessId", id, "imageData", "sortOrder" 
+          FROM business_images 
+          WHERE "businessId" IN (${inClause})
+          ORDER BY "businessId", "sortOrder" ASC
+        `);
+      } else {
+        businessImages = await prisma.$queryRawUnsafe(`
+          SELECT "businessId", id, "imageData", "sortOrder" 
+          FROM business_images 
+          WHERE "businessId" IN (${inClause})
+          ORDER BY "sortOrder" ASC
+        `);
+      }
     }
 
     // Group images by business

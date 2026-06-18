@@ -96,7 +96,12 @@ function SearchResults() {
       if (selectedWard) params.append('ward', selectedWard);
       if (priceRange) params.append('priceRange', priceRange);
 
-      const response = await fetch(`/api/businesses?${params.toString()}`);
+      params.append('lean', 'true');
+      params.append('_', Date.now().toString());
+
+      const response = await fetch(`/api/businesses?${params.toString()}`, {
+        cache: 'no-store',
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch businesses');
       }
