@@ -6,7 +6,7 @@ import {
   localizedCategoryFields,
   type AppLocale,
 } from '@/lib/categoryLocale'
-import { processProductImages } from '@/lib/imageProcessing'
+import { saveProductImages, saveLogoImage, isStoredPath, deleteStoredImage } from '@/lib/imageStorage'
 
 export const dynamic = 'force-dynamic';
 
@@ -131,7 +131,11 @@ export async function PUT(
     if (body.phone !== undefined) updateData.phone = body.phone
     if (body.email !== undefined) updateData.email = body.email
     if (body.website !== undefined) updateData.website = body.website
-    if (body.logo !== undefined) updateData.logo = body.logo
+    if (body.logo !== undefined) {
+      updateData.logo = body.logo && !isStoredPath(body.logo)
+        ? await saveLogoImage(body.logo)
+        : body.logo;
+    }
     if (body.coverImage !== undefined) updateData.coverImage = body.coverImage
     if (body.facebook !== undefined) updateData.facebook = body.facebook
     if (body.instagram !== undefined) updateData.instagram = body.instagram
@@ -157,21 +161,22 @@ export async function PUT(
       data: updateData
     })
 
-    // Handle images if provided - process them first
+    // Handle images if provided - save to files and store paths
     if (body.images && Array.isArray(body.images) && body.images.length > 0) {
-      // Delete existing images
-      await prisma.$executeRaw`DELETE FROM business_images WHERE "businessId" = ${id}`
-      
-      // Process images to 4:3 ratio for carousel display
-      const processedImages = await processProductImages(body.images);
-      
-      // Insert new ones
-      for (let i = 0; i < processedImages.length; i++) {
-        const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25)
+      // Delete existing image files and DB rows
+      const existing = await prisma.$queryRaw<Array<{ imageData: string }>>` 
+        SELECT "imageData" FROM business_images WHERE "businessId" = ${id}
+      `;
+      await Promise.all(existing.map(img => deleteStoredImage(img.imageData)));
+      await prisma.$executeRaw`DELETE FROM business_images WHERE "businessId" = ${id}`;
+
+      const imagePaths = await saveProductImages(body.images as string[]);
+      for (let i = 0; i < imagePaths.length; i++) {
+        const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
         await prisma.$executeRaw`
           INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-          VALUES (${imgId}, ${id}, ${processedImages[i]}, ${i}, NOW())
-        `
+          VALUES (${imgId}, ${id}, ${imagePaths[i]}, ${i}, NOW())
+        `;
       }
     }
 

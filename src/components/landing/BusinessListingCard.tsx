@@ -29,7 +29,8 @@ export type BusinessCardData = {
 function imageSrc(image: string | null) {
   if (!image) return null;
   if (image.startsWith('data:')) return image;
-  return `data:image/jpeg;base64,${image}`;
+  if (image.startsWith('/') || image.startsWith('http')) return image; // stored path or URL
+  return `data:image/jpeg;base64,${image}`; // legacy base64
 }
 
 type BusinessListingCardProps = {
@@ -130,7 +131,8 @@ function ProductCarousel({ business, className = '' }: { business: BusinessCardD
         const isCurrent = idx === currentIndex;
         if (!isLoaded) return null;
 
-        const displaySrc = imgData.startsWith('data:') ? imgData : `data:image/jpeg;base64,${imgData}`;
+        const displaySrc = imageSrc(imgData);
+        if (!displaySrc) return null;
         return (
           <img
             key={idx}

@@ -10,7 +10,7 @@ import {
   localizedCategoryFields,
   type AppLocale,
 } from '@/lib/categoryLocale';
-import { processProductImages, processLogoImage } from '@/lib/imageProcessing';
+import { saveProductImages, saveLogoImage } from '@/lib/imageStorage';
 
 export const dynamic = 'force-dynamic';
 
@@ -603,7 +603,7 @@ export async function POST(request: Request) {
       categoryId2: categoryId2 || null,
       bundleExpiresAt,
       ownerId: finalOwnerId,
-      logo: logo || null,
+      logo: logo ? await saveLogoImage(logo) : null,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       // Admin-created businesses are auto-approved
@@ -625,16 +625,14 @@ export async function POST(request: Request) {
           ${isAdmin}, ${isAdmin}, NOW(), NOW())
       `;
 
-      // Save product images if provided - process them first
+      // Save product images as files and store paths
       if (images && Array.isArray(images) && images.length > 0) {
-        // Process images to 4:3 ratio for carousel display
-        const processedImages = await processProductImages(images);
-        
-        for (let i = 0; i < processedImages.length; i++) {
+        const imagePaths = await saveProductImages(images);
+        for (let i = 0; i < imagePaths.length; i++) {
           const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
           await prisma.$executeRaw`
             INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-            VALUES (${imgId}, ${id}, ${processedImages[i]}, ${i}, NOW())
+            VALUES (${imgId}, ${id}, ${imagePaths[i]}, ${i}, NOW())
           `;
         }
       }
@@ -683,16 +681,14 @@ export async function POST(request: Request) {
       }
     });
 
-    // Save product images if provided - process them first
+    // Save product images as files and store paths
     if (images && Array.isArray(images) && images.length > 0) {
-      // Process images to 4:3 ratio for carousel display
-      const processedImages = await processProductImages(images);
-      
-      for (let i = 0; i < processedImages.length; i++) {
+      const imagePaths = await saveProductImages(images);
+      for (let i = 0; i < imagePaths.length; i++) {
         const imgId = crypto.randomUUID().replace(/-/g, '').substring(0, 25);
         await prisma.$executeRaw`
           INSERT INTO business_images (id, "businessId", "imageData", "sortOrder", "createdAt")
-          VALUES (${imgId}, ${business.id}, ${processedImages[i]}, ${i}, NOW())
+          VALUES (${imgId}, ${business.id}, ${imagePaths[i]}, ${i}, NOW())
         `;
       }
     }

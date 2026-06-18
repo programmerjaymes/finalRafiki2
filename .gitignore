@@ -3,3 +3,9 @@ node_modules
 
 # Local Netlify folder
 .netlify
+
+# Uploaded business images (stored on server, not in git)
+/public/uploads/businesses/*.jpg
+/public/uploads/businesses/*.jpeg
+/public/uploads/businesses/*.png
+/public/uploads/businesses/*.webp
