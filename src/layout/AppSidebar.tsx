@@ -52,7 +52,14 @@ const AppSidebar: React.FC = () => {
     {
       icon: <BusinessIcon />,
       name: messages.admin.businesses,
-      path: "/businesses",
+      subItems: [
+        { name: messages.admin.allBusinesses, path: "/businesses", pro: false },
+        {
+          name: messages.admin.pendingApprovals,
+          path: "/businesses/pending",
+          pro: false,
+        },
+      ],
     },
     {
       icon: <CategoryIcon />,

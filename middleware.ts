@@ -25,7 +25,9 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  const isPublicBusinessDetails = /^\/businesses\/[^/]+$/.test(pathname);
+  const isPublicBusinessDetails =
+    /^\/businesses\/[^/]+$/.test(pathname) &&
+    pathname !== '/businesses/pending';
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/search') ||
@@ -78,6 +80,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/users') ||
     pathname === '/businesses' ||
+    pathname === '/businesses/pending' ||
     pathname.startsWith('/bundles') ||
     pathname.startsWith('/categories') ||
     pathname.startsWith('/payments') ||
