@@ -1008,7 +1008,7 @@ const BusinessList = () => {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
+    <div className="w-full flex flex-col">
       {/* Header with Add Button */}
       <div className="flex justify-between items-center mb-6">
         <h4 className="text-xl font-medium">Business Management</h4>
@@ -1142,129 +1142,82 @@ const BusinessList = () => {
       ) : (
         <>
           {/* Business Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 overflow-y-auto flex-1 min-h-0 pb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-8">
             {businesses.map((business) => (
-              <div 
+              <div
                 key={business.id}
-                className="relative bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col h-full"
+                onClick={() => handleView(business)}
+                className="bg-white dark:bg-boxdark rounded-xl border border-stroke dark:border-strokedark shadow-sm hover:shadow-lg transition-shadow duration-200 flex flex-col cursor-pointer"
               >
-                {/* Product Photo Carousel - Main Feature */}
-                <div className="relative flex-1 min-h-[200px]">
+                {/* ── Carousel (fixed height) ── */}
+                <div className="relative h-48 shrink-0 overflow-hidden rounded-t-xl">
                   <ProductCarousel business={business} />
-                  
-                  {/* Status Badges - positioned on the image */}
-                  <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+
+                  {/* Status badges */}
+                  <div className="absolute top-2 right-2 flex gap-1 z-10">
                     {business.isVerified && (
-                      <span className="bg-success-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
+                      <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow">
                         ✓ Verified
                       </span>
                     )}
-                    {business.isApproved ? (
-                      <span className="bg-primary-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
-                        Approved
-                      </span>
-                    ) : (
-                      <span className="bg-warning-500 text-white text-[10px] font-semibold px-2 py-1 rounded-full shadow-md">
-                        Pending
-                      </span>
-                    )}
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow ${business.isApproved ? 'bg-primary text-white' : 'bg-secondary text-gray-800'}`}>
+                      {business.isApproved ? 'Approved' : 'Pending'}
+                    </span>
                   </div>
 
-                  {/* Business Name - overlaid on carousel */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12 z-10">
-                    <h3 className="text-lg font-bold text-white leading-tight line-clamp-2">
-                      {business.name}
-                    </h3>
+                  {/* Name overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent px-3 py-2 z-10">
+                    <p className="text-sm font-bold text-white leading-snug line-clamp-1">{business.name}</p>
                   </div>
                 </div>
 
-                {/* Business Info Section */}
-                <div className="p-3 flex-none">
-                  {/* Category Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full">
-                      {business.category?.icon} {business.category?.name || 'Uncategorized'}
-                    </span>
-                    {business.categoryId2 && (
-                      <span className="text-xs text-gray-400">+1</span>
-                    )}
+                {/* ── Body ── */}
+                <div className="px-3 pt-2 pb-1 flex-1">
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">
+                    {business.category?.icon} {business.category?.name || 'Uncategorized'}
+                  </span>
+
+                  <div className="flex items-center gap-1 mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    <FiMapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{business.district?.name || business.region?.name || 'Location N/A'}</span>
                   </div>
-                  
-                  {/* Business Name */}
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1 line-clamp-2" title={business.name}>
-                    {business.name}
-                  </h3>
-                  
-                  {/* Location */}
-                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    <FiMapPin className="h-3.5 w-3.5 text-gray-400" />
-                    <span className="truncate" title={[business.ward?.name, business.district?.name, business.region?.name].filter(Boolean).join(', ')}>
-                      {business.district?.name || business.region?.name || 'Location N/A'}
-                    </span>
-                  </div>
-                  
-                  {/* Ratings & Stats Row */}
-                  <div className="flex items-center justify-between mb-3">
-                    {/* Star Rating */}
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex items-center">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <svg 
-                            key={star}
-                            className={`h-3.5 w-3.5 ${star <= business.avgRating ? 'text-yellow-400' : 'text-gray-200 dark:text-gray-700'}`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        ))}
-                      </div>
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">({business.numReviews || 0})</span>
+
+                  {business.phone && (
+                    <div className="flex items-center gap-1 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                      <FiPhone className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{business.phone}</span>
                     </div>
-                    
-                    {/* Bundle Info */}
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {business.bundle?.name}
-                    </span>
-                  </div>
-                  
-                  {/* Contact Preview */}
-                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    {business.phone && (
-                      <span className="flex items-center gap-1">
-                        <FiPhone className="h-3 w-3" />
-                        {business.phone.slice(0, 12)}...
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-                    <button 
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-xs font-medium"
-                      onClick={() => handleView(business)}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  )}
+
+                  <div className="flex items-center gap-1 mt-1.5">
+                    {[1,2,3,4,5].map(s => (
+                      <svg key={s} className={`h-3 w-3 ${s <= business.avgRating ? 'text-secondary' : 'text-gray-200 dark:text-gray-700'}`} fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
                       </svg>
-                      View
-                    </button>
-                    <button 
-                      className="flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                      onClick={() => handleEdit(business)}
-                      title="Edit"
-                    >
-                      <FiEdit className="h-4 w-4" />
-                    </button>
-                    <button 
-                      className="flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                      onClick={() => handleDelete(business)}
-                      title="Delete"
-                    >
-                      <RiDeleteBin6Line className="h-4 w-4" />
-                    </button>
+                    ))}
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-0.5">({business.numReviews || 0})</span>
+                    <span className="ml-auto text-[10px] text-gray-400">{business.bundle?.name}</span>
                   </div>
+                </div>
+
+                {/* ── Footer: Edit & Delete ── */}
+                <div className="flex items-stretch border-t border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleEdit(business); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors"
+                  >
+                    <FiEdit className="h-4 w-4" />
+                    Edit
+                  </button>
+                  <div className="w-px bg-primary-dark" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(business); }}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-secondary hover:bg-secondary-dark text-gray-900 text-xs font-semibold transition-colors"
+                    title="Delete"
+                  >
+                    <RiDeleteBin6Line className="h-4 w-4" />
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
