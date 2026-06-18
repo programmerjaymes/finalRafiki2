@@ -1,6 +1,11 @@
 node_modules
 .next
 
+# Environment variables (contain secrets — never commit)
+.env
+.env.local
+.env.*.local
+
 # Local Netlify folder
 .netlify
 
