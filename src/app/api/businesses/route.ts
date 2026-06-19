@@ -13,6 +13,7 @@ import {
 import { saveProductImages, saveLogoImage, saveProductImage } from '@/lib/imageStorage';
 import { normalizeWhatsapp } from '@/lib/phoneNumber';
 import { setBusinessWhatsapp } from '@/lib/businessWhatsapp';
+import { businessTextSearchWhere } from '@/lib/businessSearch';
 
 export const dynamic = 'force-dynamic';
 
@@ -177,29 +178,15 @@ export async function GET(request: Request) {
     }
     
     if (search) {
-      const q = search.trim();
-      if (q) {
-        // If we already have OR for approval/verification, combine with AND
+      const textSearch = businessTextSearchWhere(search);
+      if (textSearch) {
         if (where.OR) {
-          where.AND = [
-            { OR: where.OR },
-            {
-              OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-                { phone: { contains: q, mode: 'insensitive' } },
-                { email: { contains: q, mode: 'insensitive' } },
-              ],
-            },
-          ];
+          where.AND = [{ OR: where.OR }, textSearch];
           delete where.OR;
-        } else {
-          where.OR = [
-            { name: { contains: q, mode: 'insensitive' } },
-            { description: { contains: q, mode: 'insensitive' } },
-            { phone: { contains: q, mode: 'insensitive' } },
-            { email: { contains: q, mode: 'insensitive' } },
-          ];
+        } else if (textSearch.OR) {
+          where.OR = textSearch.OR;
+        } else if (textSearch.AND) {
+          where.AND = textSearch.AND;
         }
       }
     }
@@ -227,21 +214,29 @@ export async function GET(request: Request) {
     }
 
     const session = await getServerSession(authOptions);
+    const role = session?.user?.role;
 
     // Pending-approval lists are admin-only (used by notification bell)
     if (isApproved !== null || isVerified !== null) {
-      if (session?.user?.role !== 'ADMIN') {
+      if (role !== 'ADMIN') {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
     // Security: Enforce business owners can only see their own businesses
-    if (session?.user?.role === 'BUSINESS_OWNER') {
+    if (role === 'BUSINESS_OWNER') {
       // Force ownerId to be the current user's ID
-      where.ownerId = session.user.id;
+      where.ownerId = session!.user!.id;
     } else if (ownerId) {
       // Admin/Registrar can filter by any ownerId
       where.ownerId = ownerId;
+    } else if (
+      role !== 'ADMIN' &&
+      isApproved === null &&
+      isVerified === null
+    ) {
+      // Public search: only approved listings (matches cached public list)
+      where.isApproved = true;
     }
 
     const businessListArgs = {
