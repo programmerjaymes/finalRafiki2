@@ -4,6 +4,7 @@ import React from 'react';
 import { Bundle } from '@prisma/client';
 import { FiCheck } from 'react-icons/fi';
 import { brandColors } from '@/lib/brandColors';
+import { useLocale } from '@/lib/useLocale';
 
 interface BundleSelectionProps {
   bundles: Bundle[];
@@ -68,14 +69,15 @@ function bundleFeatures(bundle: Bundle): string[] {
 }
 
 export default function BundleSelection({ bundles, selectedBundle, onSelect }: BundleSelectionProps) {
+  const sw = useLocale() === 'sw';
   if (!bundles || bundles.length === 0) {
     return (
       <div className="text-center p-8">
         <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200">
-          No subscription bundles available
+          {sw ? 'Hakuna vifurushi vya usajili vilivyopo' : 'No subscription bundles available'}
         </h3>
         <p className="text-gray-500 dark:text-gray-400 mt-2">
-          Please try again later or contact support for assistance.
+          {sw ? 'Tafadhali jaribu tena baadaye au wasiliana na huduma kwa msaada.' : 'Please try again later or contact support for assistance.'}
         </p>
       </div>
     );
@@ -119,7 +121,7 @@ export default function BundleSelection({ bundles, selectedBundle, onSelect }: B
                 className="mb-3 inline-flex w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white"
                 style={{ backgroundColor: brandColors.accent }}
               >
-                Popular
+                {sw ? 'Maarufu' : 'Popular'}
               </span>
             )}
 
@@ -137,7 +139,7 @@ export default function BundleSelection({ bundles, selectedBundle, onSelect }: B
                   TZS {Number(bundle.price).toLocaleString()}
                 </span>
                 <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  / {bundle.duration} days
+                  / {bundle.duration} {sw ? 'siku' : 'days'}
                 </span>
               </div>
             </div>
@@ -162,7 +164,7 @@ export default function BundleSelection({ bundles, selectedBundle, onSelect }: B
               }`}
               style={isSelected ? { backgroundColor: brandColors.accent } : undefined}
             >
-              {isSelected ? 'Selected' : 'Choose plan'}
+              {isSelected ? (sw ? 'Kimechaguliwa' : 'Selected') : (sw ? 'Chagua kifurushi' : 'Choose plan')}
             </span>
           </button>
         );

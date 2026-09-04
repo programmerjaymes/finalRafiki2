@@ -100,6 +100,8 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
 
   const locale = useLocale();
   const bizMessages = t(locale).business;
+  const sw = locale === 'sw';
+  const text = (en: string, swText: string) => sw ? swText : en;
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -138,7 +140,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       setLogoPreview(base64);
       setFormData((prev) => ({ ...prev, logo: base64 }));
     } catch {
-      toast.error('Failed to read logo file');
+      toast.error(text('Failed to read logo file', 'Imeshindwa kusoma faili la nembo'));
     }
   };
 
@@ -150,7 +152,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       setCoverPreview(base64);
       setFormData((prev) => ({ ...prev, coverImage: base64 }));
     } catch {
-      toast.error('Failed to read cover image');
+      toast.error(text('Failed to read cover image', 'Imeshindwa kusoma picha ya jalada'));
     }
   };
 
@@ -166,26 +168,26 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
     const maxImages = bundle.maxImages || 1;
     const remaining = maxImages - productImages.length;
     if (remaining <= 0) {
-      toast.error(`You can only upload up to ${maxImages} photo${maxImages === 1 ? '' : 's'}`);
+      toast.error(text(`You can only upload up to ${maxImages} photo${maxImages === 1 ? '' : 's'}`, `Unaweza kupakia hadi picha ${maxImages} pekee`));
       return;
     }
 
     const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
     if (fileArray.length === 0) {
-      toast.error('Please select image files only');
+      toast.error(text('Please select image files only', 'Tafadhali chagua faili za picha pekee'));
       return;
     }
 
     const toProcess = fileArray.slice(0, remaining);
     if (fileArray.length > remaining) {
-      toast.info(`Only ${remaining} more photo${remaining === 1 ? '' : 's'} added (bundle limit: ${maxImages})`);
+      toast.info(text(`Only ${remaining} more photo${remaining === 1 ? '' : 's'} added (bundle limit: ${maxImages})`, `Picha ${remaining} pekee zimeongezwa (kikomo cha kifurushi: ${maxImages})`));
     }
 
     try {
       const newImages = await Promise.all(toProcess.map((f) => fileToBase64(f)));
       setProductImages((prev) => [...prev, ...newImages]);
     } catch {
-      toast.error('Failed to read product photos');
+      toast.error(text('Failed to read product photos', 'Imeshindwa kusoma picha za bidhaa'));
     }
   };
 
@@ -232,7 +234,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 w-full">
         {bundleAllows(bundle, 'logo') && (
           <div className="col-span-1 md:col-span-2 xl:col-span-3">
-            <Label>Company Logo</Label>
+            <Label>{text('Company Logo', 'Nembo ya Kampuni')}</Label>
             <div className="flex items-center gap-4 mt-1">
               <button
                 type="button"
@@ -240,14 +242,14 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
                 className="h-20 w-20 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-800 hover:border-primary-400"
               >
                 {logoPreview ? (
-                  <img src={logoPreview} alt="Logo" className="h-full w-full object-cover" />
+                  <img src={logoPreview} alt={text('Logo', 'Nembo')} className="h-full w-full object-cover" />
                 ) : (
                   <FiUpload className="h-6 w-6 text-gray-400" />
                 )}
               </button>
               <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
               <div className="text-sm text-gray-500">
-                <p>Click to upload your business logo</p>
+                <p>{text('Click to upload your business logo', 'Bofya kupakia nembo ya biashara yako')}</p>
                 {logoPreview && (
                   <button
                     type="button"
@@ -257,7 +259,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
                     }}
                     className="text-red-500 text-xs mt-1 hover:underline"
                   >
-                    Remove
+                    {text('Remove', 'Ondoa')}
                   </button>
                 )}
               </div>
@@ -266,12 +268,12 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
         )}
 
         <div className="col-span-1 md:col-span-2 xl:col-span-3">
-          <Label htmlFor="name">Business Name *</Label>
+          <Label htmlFor="name">{text('Business Name *', 'Jina la Biashara *')}</Label>
           <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
         </div>
 
         <div className="col-span-1 md:col-span-2 xl:col-span-3">
-          <Label htmlFor="description">Description *</Label>
+          <Label htmlFor="description">{text('Description *', 'Maelezo *')}</Label>
           <textarea
             id="description"
             name="description"
@@ -280,19 +282,19 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             required
             rows={4}
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-            placeholder="Describe your business, products, and services"
+            placeholder={text('Describe your business, products, and services', 'Eleza biashara, bidhaa na huduma zako')}
           />
         </div>
 
         <div className="col-span-1">
-          <Label>Phone Number *</Label>
+          <Label>{text('Phone Number *', 'Namba ya Simu *')}</Label>
           <TanzaniaPhoneInput name="phone" value={formData.phone} onChange={handleChange} required />
         </div>
 
         <div className="col-span-1">
-          <Label>WhatsApp Number</Label>
+          <Label>{text('WhatsApp Number', 'Namba ya WhatsApp')}</Label>
           <TanzaniaPhoneInput name="whatsapp" value={formData.whatsapp} onChange={handleChange} />
-          <p className="mt-1 text-xs text-gray-400">Optional — customers can tap to chat on WhatsApp</p>
+          <p className="mt-1 text-xs text-gray-400">{text('Optional — customers can tap to chat on WhatsApp', 'Si lazima — wateja wanaweza kubofya kuzungumza kwa WhatsApp')}</p>
         </div>
 
         <div className="col-span-1">
@@ -301,7 +303,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
         </div>
 
         <div className="col-span-1 md:col-span-2 xl:col-span-3" ref={categoryDropdownRef}>
-          <Label>Categories (up to 2) *</Label>
+          <Label>{text('Categories (up to 2) *', 'Aina za Biashara (hadi 2) *')}</Label>
           <div className="relative mt-1">
             <button
               type="button"
@@ -310,7 +312,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             >
               <span className="flex flex-wrap items-center gap-1.5 text-left min-h-[1.25rem]">
                 {selectedCategoryIds.length === 0 ? (
-                  <span className="text-gray-400">Select categories...</span>
+                  <span className="text-gray-400">{text('Select categories...', 'Chagua aina...')}</span>
                 ) : (
                   selectedCategoryIds.map((id) => {
                     const cat = categories.find((c) => c.id === id);
@@ -334,7 +336,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Search categories..."
+                      placeholder={text('Search categories...', 'Tafuta aina...')}
                       value={categorySearch}
                       onChange={(e) => setCategorySearch(e.target.value)}
                       className="h-9 w-full rounded-md border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
@@ -345,7 +347,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
                 </div>
                 <div className="max-h-52 overflow-y-auto p-2">
                   {filteredCategories.length === 0 ? (
-                    <p className="px-2 py-3 text-center text-sm text-gray-400">No categories found</p>
+                    <p className="px-2 py-3 text-center text-sm text-gray-400">{text('No categories found', 'Hakuna aina iliyopatikana')}</p>
                   ) : (
                     filteredCategories.map((cat) => (
                       <label
@@ -400,13 +402,13 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             {bundleAllows(bundle, 'allowsOnlineBooking') && (
               <div className="flex items-center">
                 <Checkbox id="allowsOnlineBooking" checked={formData.allowsOnlineBooking} onChange={(c) => handleCheckbox(c, 'allowsOnlineBooking')} />
-                <Label htmlFor="allowsOnlineBooking" className="ml-2 cursor-pointer">Online booking</Label>
+                <Label htmlFor="allowsOnlineBooking" className="ml-2 cursor-pointer">{text('Online booking', 'Uhifadhi mtandaoni')}</Label>
               </div>
             )}
             {bundleAllows(bundle, 'allowsDelivery') && (
               <div className="flex items-center">
                 <Checkbox id="allowsDelivery" checked={formData.allowsDelivery} onChange={(c) => handleCheckbox(c, 'allowsDelivery')} />
-                <Label htmlFor="allowsDelivery" className="ml-2 cursor-pointer">Delivery available</Label>
+                <Label htmlFor="allowsDelivery" className="ml-2 cursor-pointer">{text('Delivery available', 'Huduma ya kupeleka bidhaa')}</Label>
               </div>
             )}
           </div>
@@ -414,14 +416,14 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
 
         {bundleAllows(bundle, 'coverImage') && (
           <div className="col-span-1 md:col-span-2 xl:col-span-3">
-            <Label>Cover Image</Label>
+            <Label>{text('Cover Image', 'Picha ya Jalada')}</Label>
             <div className="flex items-center gap-4 mt-1">
               <button type="button" onClick={() => coverInputRef.current?.click()} className="h-24 w-40 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-800">
                 {coverPreview ? <img src={coverPreview} alt="Cover" className="h-full w-full object-cover" /> : <FiImage className="h-8 w-8 text-gray-400" />}
               </button>
               <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
               {coverPreview && (
-                <button type="button" onClick={() => { setCoverPreview(null); setFormData((prev) => ({ ...prev, coverImage: '' })); }} className="text-red-500 text-sm hover:underline">Remove cover</button>
+                <button type="button" onClick={() => { setCoverPreview(null); setFormData((prev) => ({ ...prev, coverImage: '' })); }} className="text-red-500 text-sm hover:underline">{text('Remove cover', 'Ondoa jalada')}</button>
               )}
             </div>
           </div>
@@ -429,7 +431,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
 
         {bundle && (
           <div className="col-span-1 md:col-span-2 xl:col-span-3">
-            <Label>Product Photos (up to {maxPhotos})</Label>
+            <Label>{text(`Product Photos (up to ${maxPhotos})`, `Picha za Bidhaa (hadi ${maxPhotos})`)}</Label>
             {productImages.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2 mb-3">
                 {productImages.map((img, i) => (
@@ -459,18 +461,18 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             >
               <FiImage className="mx-auto h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
-                Drag & drop photos here, or{' '}
+                {text('Drag & drop photos here, or', 'Buruta na udondoshe picha hapa, au')}{' '}
                 <button
                   type="button"
                   onClick={() => imagesInputRef.current?.click()}
                   disabled={productImages.length >= maxPhotos}
                   className="text-primary hover:underline font-semibold disabled:opacity-50"
                 >
-                  browse files
+                  {text('browse files', 'vinjari faili')}
                 </button>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                Select multiple images at once — {productImages.length} / {maxPhotos} used
+                {text('Select multiple images at once', 'Chagua picha nyingi kwa pamoja')} — {productImages.length} / {maxPhotos} {text('used', 'zimetumika')}
               </p>
             </div>
             <input
@@ -492,9 +494,9 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       <div className="col-span-1 w-full">
         <SearchableDropdown
           id="regionId"
-          label="Region"
-          placeholder="Select a region"
-          searchPlaceholder="Search regions..."
+          label={text('Region', 'Mkoa')}
+          placeholder={text('Select a region', 'Chagua mkoa')}
+          searchPlaceholder={text('Search regions...', 'Tafuta mikoa...')}
           value={formData.regionId}
           options={regionOptions}
           search={regionSearch}
@@ -510,9 +512,9 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
       <div className="col-span-1 w-full">
         <SearchableDropdown
           id="districtId"
-          label="District"
-          placeholder={formData.regionId ? 'Select a district' : 'Select a region first'}
-          searchPlaceholder="Search districts..."
+          label={text('District', 'Wilaya')}
+          placeholder={formData.regionId ? text('Select a district', 'Chagua wilaya') : text('Select a region first', 'Chagua mkoa kwanza')}
+          searchPlaceholder={text('Search districts...', 'Tafuta wilaya...')}
           value={formData.districtId}
           options={districtOptions}
           search={districtSearch}
@@ -522,34 +524,34 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             setWardSearch('');
           }}
           disabled={!formData.regionId}
-          emptyMessage={formData.regionId ? 'No districts found' : 'Select a region first'}
+          emptyMessage={formData.regionId ? text('No districts found', 'Hakuna wilaya iliyopatikana') : text('Select a region first', 'Chagua mkoa kwanza')}
           required
         />
       </div>
       <div className="col-span-1 w-full">
         <SearchableDropdown
           id="wardId"
-          label="Ward"
-          placeholder={formData.districtId ? 'Select a ward' : 'Select a district first'}
-          searchPlaceholder="Search wards..."
+          label={text('Ward', 'Kata')}
+          placeholder={formData.districtId ? text('Select a ward', 'Chagua kata') : text('Select a district first', 'Chagua wilaya kwanza')}
+          searchPlaceholder={text('Search wards...', 'Tafuta kata...')}
           value={formData.wardId}
           options={wardOptions}
           search={wardSearch}
           onSearchChange={setWardSearch}
           onValueChange={(value) => setFormData((prev) => ({ ...prev, wardId: value }))}
           disabled={!formData.districtId}
-          emptyMessage={formData.districtId ? 'No wards found' : 'Select a district first'}
+          emptyMessage={formData.districtId ? text('No wards found', 'Hakuna kata iliyopatikana') : text('Select a district first', 'Chagua wilaya kwanza')}
           required
         />
       </div>
       <div className="col-span-1 md:col-span-2 xl:col-span-3">
-        <Label htmlFor="street">Street Address *</Label>
+        <Label htmlFor="street">{text('Street Address *', 'Anwani ya Mtaa *')}</Label>
         <Input
           id="street"
           name="street"
           value={formData.street}
           onChange={handleChange}
-          placeholder="Building, street, landmarks"
+          placeholder={text('Building, street, landmarks', 'Jengo, mtaa, alama za eneo')}
           className="h-11"
           required
         />
@@ -571,7 +573,7 @@ export default function BusinessCreateFormFields(props: BusinessCreateFormFields
             startIcon={<FiMapPin className="h-4 w-4" />}
             className="w-full"
           >
-            Detect my location
+            {text('Detect my location', 'Tambua eneo langu')}
           </Button>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label htmlFor="latitude">Latitude</Label><Input id="latitude" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="-6.8235" disabled={detectingLocation} /></div>

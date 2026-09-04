@@ -1052,24 +1052,24 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h4 className="text-xl font-medium text-gray-900 dark:text-white">
-            {isOwnerPortal ? 'My Businesses' : 'Business Management'}
+            {isOwnerPortal ? (locale === 'sw' ? 'Biashara Zangu' : 'My Businesses') : (locale === 'sw' ? 'Usimamizi wa Biashara' : 'Business Management')}
           </h4>
           {isOwnerPortal && (
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Manage your business listings
+              {locale === 'sw' ? 'Simamia orodha za biashara zako' : 'Manage your business listings'}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleRefresh}>
             <FiRefreshCw className="h-4 w-4" />
-            Refresh
+            {locale === 'sw' ? 'Onyesha upya' : 'Refresh'}
           </Button>
           {isOwnerPortal ? (
             <Link href="/business-create">
               <Button variant="primary" size="sm" className="flex items-center gap-1">
                 <FiPlus className="h-4 w-4" />
-                Add Business
+                {locale === 'sw' ? 'Ongeza Biashara' : 'Add Business'}
               </Button>
             </Link>
           ) : (

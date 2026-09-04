@@ -2,7 +2,7 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePathname } from 'next/navigation';
@@ -11,6 +11,7 @@ import { useLocale, useSetLocale } from '@/lib/useLocale';
 import RefreshButton from '@/components/landing/RefreshButton';
 import { brandColors } from '@/lib/brandColors';
 import { registerBusinessHref } from '@/lib/registerBusiness';
+import toast from '@/utils/toast';
 
 function LogoMark() {
   return (
@@ -43,6 +44,19 @@ export default function Navbar() {
   const messages = t(locale);
 
   const registerBusinessLink = registerBusinessHref(session);
+
+  const handleSignOut = async () => {
+    const result = await toast.confirm(
+      locale === 'sw' ? 'Unataka kutoka?' : 'Sign out?',
+      locale === 'sw'
+        ? 'Je, una uhakika unataka kutoka kwenye akaunti yako?'
+        : 'Are you sure you want to sign out of your account?',
+      'question',
+      locale === 'sw' ? 'Ndiyo, toka' : 'Sign out',
+      locale === 'sw' ? 'Ghairi' : 'Cancel',
+    );
+    if (result.isConfirmed) await signOut({ callbackUrl: '/' });
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -182,12 +196,13 @@ export default function Navbar() {
               <ThemeToggle theme={theme} setTheme={setTheme} />
 
               {session ? (
-                <Link
-                  href="/api/auth/signout"
+                <button
+                  type="button"
+                  onClick={handleSignOut}
                   className="rounded-full border border-white/35 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition"
                 >
                   {messages.nav.signOut}
-                </Link>
+                </button>
               ) : (
                 <Link
                   href="/signin"
@@ -275,9 +290,16 @@ export default function Navbar() {
                       {messages.nav.adminDashboard}
                     </MobileNavLink>
                   )}
-                  <MobileNavLink href="/api/auth/signout" onClick={() => setIsMenuOpen(false)}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      void handleSignOut();
+                    }}
+                    className="block w-full rounded-xl px-3 py-3 text-left text-sm font-semibold text-white hover:bg-white/10"
+                  >
                     {messages.nav.signOut}
-                  </MobileNavLink>
+                  </button>
                 </>
               )}
               {!session && (

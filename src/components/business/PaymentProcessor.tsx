@@ -4,6 +4,7 @@ import React from 'react';
 import Button from '@/components/ui/button/Button';
 import { FiInfo, FiMail } from 'react-icons/fi';
 import { brandColors } from '@/lib/brandColors';
+import { useLocale } from '@/lib/useLocale';
 
 interface PaymentProcessorProps {
   amount: number;
@@ -14,6 +15,7 @@ interface PaymentProcessorProps {
 const SUPPORT_EMAIL = 'programmerjames12@gmail.com';
 
 export default function PaymentProcessor({ amount, bundleName, onComplete }: PaymentProcessorProps) {
+  const sw = useLocale() === 'sw';
   const handleContinue = () => {
     onComplete(`MANUAL-PENDING-${Date.now()}`);
   };
@@ -28,16 +30,15 @@ export default function PaymentProcessor({ amount, bundleName, onComplete }: Pay
           />
           <div className="min-w-0 space-y-3">
             <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-              Manual payment for now
+              {sw ? 'Malipo ya moja kwa moja kwa sasa' : 'Manual payment for now'}
             </h3>
             <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-              Online payment is not connected yet. After you finish registration, please pay{' '}
-              <strong>Rafiki</strong> directly using the amount below. Our team will confirm your
-              payment and activate your listing.
+              {sw ? 'Malipo ya mtandaoni bado hayajaunganishwa. Baada ya kukamilisha usajili, lipa ' : 'Online payment is not connected yet. After you finish registration, please pay '}
+              <strong>Rafiki</strong>{sw ? ' moja kwa moja kwa kiasi kilicho hapa chini. Timu yetu itathibitisha malipo na kuwezesha orodha yako.' : ' directly using the amount below. Our team will confirm your payment and activate your listing.'}
             </p>
             {bundleName && (
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Selected plan: <strong className="text-gray-900 dark:text-white">{bundleName}</strong>
+                {sw ? 'Kifurushi kilichochaguliwa:' : 'Selected plan:'} <strong className="text-gray-900 dark:text-white">{bundleName}</strong>
               </p>
             )}
             <p
@@ -47,8 +48,8 @@ export default function PaymentProcessor({ amount, bundleName, onComplete }: Pay
               TZS {Number(amount).toLocaleString()}
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              You can complete the business form now and arrange payment with the company
-              afterwards. Press <strong>Continue</strong> to move to the next step.
+              {sw ? 'Unaweza kukamilisha fomu ya biashara sasa na kupanga malipo na kampuni baadaye. Bonyeza ' : 'You can complete the business form now and arrange payment with the company afterwards. Press '}
+              <strong>{sw ? 'Endelea' : 'Continue'}</strong>{sw ? ' kwenda hatua inayofuata.' : ' to move to the next step.'}
             </p>
           </div>
         </div>
@@ -56,7 +57,7 @@ export default function PaymentProcessor({ amount, bundleName, onComplete }: Pay
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 p-5">
         <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
-          Need help with payment?
+          {sw ? 'Unahitaji msaada kuhusu malipo?' : 'Need help with payment?'}
         </h4>
         <a
           href={`mailto:${SUPPORT_EMAIL}`}
@@ -69,7 +70,7 @@ export default function PaymentProcessor({ amount, bundleName, onComplete }: Pay
       </div>
 
       <Button variant="primary" onClick={handleContinue} className="w-full sm:w-auto sm:min-w-[200px]">
-        Continue
+        {sw ? 'Endelea' : 'Continue'}
       </Button>
     </div>
   );

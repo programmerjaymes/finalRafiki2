@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
@@ -14,6 +14,7 @@ import {
   FaShieldAlt as PrivacyIcon,
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
+import { useLocale } from "@/lib/useLocale";
 
 type NavItem = {
   icon: React.ReactNode;
@@ -23,30 +24,30 @@ type NavItem = {
 };
 
 // Business owner navigation items
-const navItems: NavItem[] = [
+const getNavItems = (sw: boolean): NavItem[] => [
   {
     icon: <GridIcon />,
-    name: "Dashboard",
+    name: sw ? "Dashibodi" : "Dashboard",
     path: "/business-dashboard",
   },
   {
     icon: <InstructionsIcon />,
-    name: "Instructions",
+    name: sw ? "Maelekezo" : "Instructions",
     path: "/business-instructions",
   },
   {
     icon: <CreateIcon />,
-    name: "Create Business",
+    name: sw ? "Sajili Biashara" : "Create Business",
     path: "/business-create",
   },
   {
     icon: <BusinessIcon />,
-    name: "My Businesses",
+    name: sw ? "Biashara Zangu" : "My Businesses",
     path: "/business-my-businesses",
   },
   {
     icon: <PrivacyIcon />,
-    name: "Privacy & data",
+    name: sw ? "Faragha na data" : "Privacy & data",
     path: "/account/privacy",
   },
 ];
@@ -54,6 +55,8 @@ const navItems: NavItem[] = [
 const BusinessOwnerSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const locale = useLocale();
+  const navItems = useMemo(() => getNavItems(locale === "sw"), [locale]);
 
   const renderMenuItems = (navItems: NavItem[]) => (
     <ul className="flex flex-col gap-4">
@@ -188,7 +191,7 @@ const BusinessOwnerSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname, isActive]);
+  }, [pathname, isActive, navItems]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -308,4 +311,4 @@ const BusinessOwnerSidebar: React.FC = () => {
   );
 };
 
-export default BusinessOwnerSidebar; 
+export default BusinessOwnerSidebar;

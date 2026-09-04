@@ -112,14 +112,20 @@ const toast = {
    * @param icon Icon to show
    * @returns Promise with result of the confirmation
    */
-  confirm: (title: string, text: string, icon: 'warning' | 'question' = 'question') => {
+  confirm: (
+    title: string,
+    text: string,
+    icon: 'warning' | 'question' = 'question',
+    confirmButtonText: string = 'Confirm',
+    cancelButtonText: string = 'Cancel',
+  ) => {
     return Swal.fire({
       title,
       text,
       icon,
       showCancelButton: true,
-      confirmButtonText: 'Confirm',
-      cancelButtonText: 'Cancel',
+      confirmButtonText,
+      cancelButtonText,
       reverseButtons: true,
       confirmButtonColor: icon === 'warning' ? '#f59e0b' : '#3b82f6', // Amber for warning, Blue for others
       cancelButtonColor: '#6b7280', // Gray
@@ -266,4 +272,4 @@ const toast = {
   }
 };
 
-export default toast; 
+export default toast;

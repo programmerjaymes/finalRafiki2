@@ -11,6 +11,7 @@ import BusinessCreateFormFields, {
 import toast from "@/utils/toast";
 import { useRouter } from "next/navigation";
 import type { Bundle, Category, Region, District, Ward } from "@prisma/client";
+import { useLocale } from "@/lib/useLocale";
 
 // Step interface to track progress
 interface Step {
@@ -20,33 +21,37 @@ interface Step {
 }
 
 // Steps in the business creation process
-const steps: Step[] = [
+const getSteps = (sw: boolean): Step[] => [
   {
     id: 1,
-    title: "Choose Bundle",
-    description: "Select a subscription plan"
+    title: sw ? "Chagua Kifurushi" : "Choose Bundle",
+    description: sw ? "Chagua mpango wa usajili" : "Select a subscription plan"
   },
   {
     id: 2,
-    title: "Payment",
-    description: "Manual payment info"
+    title: sw ? "Malipo" : "Payment",
+    description: sw ? "Taarifa za malipo" : "Manual payment info"
   },
   {
     id: 3,
-    title: "Business Information",
-    description: "Basic details about your business"
+    title: sw ? "Taarifa za Biashara" : "Business Information",
+    description: sw ? "Maelezo ya msingi ya biashara yako" : "Basic details about your business"
   },
   {
     id: 4,
-    title: "Location",
-    description: "Address and location information"
+    title: sw ? "Eneo" : "Location",
+    description: sw ? "Anwani na taarifa za eneo" : "Address and location information"
   }
 ];
 
-interface BusinessFormData extends BusinessCreateFormData {}
+type BusinessFormData = BusinessCreateFormData;
 
 export default function CreateBusinessPage() {
   const router = useRouter();
+  const locale = useLocale();
+  const sw = locale === 'sw';
+  const text = (en: string, swText: string) => sw ? swText : en;
+  const steps = getSteps(sw);
   const [currentStep, setCurrentStep] = useState(1);
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -316,7 +321,7 @@ export default function CreateBusinessPage() {
         throw new Error(error.error || error.message || 'Failed to create business');
       }
 
-      toast.success('Business created successfully!');
+      toast.success(text('Business created successfully!', 'Biashara imesajiliwa kwa mafanikio!'));
       router.push('/business-my-businesses');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create business';
@@ -329,21 +334,26 @@ export default function CreateBusinessPage() {
   const handleSubmit = async () => {
     try {
       if (!selectedBundle || !transactionId) {
-        toast.error('Please complete bundle selection and payment first');
+        toast.error(text('Please complete bundle selection and payment first', 'Tafadhali kamilisha uchaguzi wa kifurushi na malipo kwanza'));
         return;
       }
 
       const requiredFields = ['name', 'description', 'phone', 'email', 'categoryId', 'regionId', 'districtId', 'wardId', 'street'];
       const missingFields = requiredFields.filter((field) => !formData[field as keyof BusinessFormData]);
       if (missingFields.length > 0) {
-        toast.error('Please fill in all required fields');
+        toast.error(text('Please fill in all required fields', 'Tafadhali jaza sehemu zote zinazohitajika'));
         return;
       }
 
       const result = await toast.confirm(
-        'Create business?',
-        `You are about to submit "${formData.name}" for registration. Please confirm all details are correct — this cannot be undone from this screen.`,
+        text('Create business?', 'Sajili biashara?'),
+        text(
+          `You are about to submit "${formData.name}" for registration. Please confirm all details are correct — this cannot be undone from this screen.`,
+          `Unakaribia kuwasilisha "${formData.name}" kwa usajili. Thibitisha kuwa taarifa zote ni sahihi — huwezi kutengua hatua hii kwenye ukurasa huu.`,
+        ),
         'question',
+        text('Create business', 'Sajili biashara'),
+        text('Cancel', 'Ghairi'),
       );
 
       if (!result.isConfirmed) return;
@@ -386,8 +396,8 @@ export default function CreateBusinessPage() {
     <div className="flex flex-col flex-1 min-h-0 h-full">
       <PageBreadcrumb
         items={[
-          { label: 'Dashboard', path: '/business-dashboard' },
-          { label: 'Create Business' },
+          { label: text('Dashboard', 'Dashibodi'), path: '/business-dashboard' },
+          { label: text('Create Business', 'Sajili Biashara') },
         ]}
         className="mb-3 shrink-0 px-4 sm:px-6 lg:px-10"
       />
@@ -395,10 +405,10 @@ export default function CreateBusinessPage() {
       <Card className="flex flex-col flex-1 min-h-0 !p-0 rounded-none border-0 shadow-none bg-white dark:bg-gray-900 overflow-hidden">
         <div className="shrink-0 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
-            Create New Business
+            {text('Create New Business', 'Sajili Biashara Mpya')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Complete all steps to register your business
+            {text('Complete all steps to register your business', 'Kamilisha hatua zote ili kusajili biashara yako')}
           </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
@@ -434,7 +444,7 @@ export default function CreateBusinessPage() {
               variant="outline"
               onClick={() => setCurrentStep((prev) => prev - 1)}
             >
-              Previous
+              {text('Previous', 'Nyuma')}
             </Button>
           ) : (
             <span />
@@ -444,7 +454,7 @@ export default function CreateBusinessPage() {
               variant="primary"
               onClick={() => {
                 if (currentStep === 1 && !selectedBundle) {
-                  toast.error('Please select a bundle to continue');
+                  toast.error(text('Please select a bundle to continue', 'Tafadhali chagua kifurushi ili kuendelea'));
                   return;
                 }
                 if (currentStep === 2) {
@@ -458,7 +468,7 @@ export default function CreateBusinessPage() {
               }}
               className="ml-auto"
             >
-              {currentStep === 2 ? 'Continue' : 'Next'}
+              {currentStep === 2 ? text('Continue', 'Endelea') : text('Next', 'Mbele')}
             </Button>
           ) : (
             <Button
@@ -468,7 +478,7 @@ export default function CreateBusinessPage() {
               disabled={submitting}
               className="ml-auto"
             >
-              Create Business
+              {text('Create Business', 'Sajili Biashara')}
             </Button>
           )}
         </div>

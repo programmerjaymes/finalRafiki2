@@ -1,14 +1,16 @@
 "use client";
-import Image from "next/image";
-import Link from "next/link";
 import React, { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { useLocale } from "@/lib/useLocale";
+import toast from "@/utils/toast";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: session } = useSession();
+  const locale = useLocale();
+  const sw = locale === "sw";
 
   const displayName = session?.user?.name || session?.user?.email || "Account";
   const displayEmail = session?.user?.email || "";
@@ -21,6 +23,20 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
 
   function closeDropdown() {
     setIsOpen(false);
+  }
+
+  async function handleSignOut() {
+    closeDropdown();
+    const result = await toast.confirm(
+      sw ? "Unataka kutoka?" : "Sign out?",
+      sw
+        ? "Je, una uhakika unataka kutoka kwenye akaunti yako?"
+        : "Are you sure you want to sign out of your account?",
+      "question",
+      sw ? "Ndiyo, toka" : "Sign out",
+      sw ? "Ghairi" : "Cancel",
+    );
+    if (result.isConfirmed) await signOut({ callbackUrl: "/" });
   }
   return (
     <div className="relative">
@@ -174,10 +190,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         </ul>
         <button
           type="button"
-          onClick={() => {
-            closeDropdown();
-            signOut({ callbackUrl: "/signin" });
-          }}
+          onClick={() => void handleSignOut()}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg
@@ -195,7 +208,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
               fill=""
             />
           </svg>
-          Sign out
+          {sw ? "Toka" : "Sign out"}
         </button>
       </Dropdown>
     </div>
