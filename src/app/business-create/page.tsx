@@ -12,6 +12,7 @@ import toast from "@/utils/toast";
 import { useRouter } from "next/navigation";
 import type { Bundle, Category, Region, District, Ward } from "@prisma/client";
 import { useLocale } from "@/lib/useLocale";
+import { parseBundleAllowedFields } from "@/lib/bundleFields";
 
 // Step interface to track progress
 interface Step {
@@ -258,7 +259,7 @@ export default function CreateBusinessPage() {
 
   const buildSubmitPayload = () => {
     if (!selectedBundle) return null;
-    const allowed = new Set(JSON.parse(selectedBundle.allowedFields) as string[]);
+    const allowed = new Set(parseBundleAllowedFields(selectedBundle));
     const payload: Record<string, unknown> = {
       name: formData.name,
       description: formData.description,
@@ -380,6 +381,7 @@ export default function CreateBusinessPage() {
           <PaymentProcessor
             amount={selectedBundle.price}
             bundleName={selectedBundle.name}
+            bundleDuration={selectedBundle.duration}
             onComplete={handlePaymentComplete}
           />
         ) : null;

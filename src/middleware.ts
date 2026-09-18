@@ -35,6 +35,8 @@ export async function middleware(request: NextRequest) {
     isPublicBusinessDetails ||
     pathname.startsWith('/signin') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/privacy') ||
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/error-404') ||
     pathname.startsWith('/account/privacy');
@@ -64,6 +66,8 @@ export async function middleware(request: NextRequest) {
     const isPublicConsumerRoute =
       pathname.startsWith('/search') ||
       pathname.startsWith('/nearby') ||
+      pathname.startsWith('/terms') ||
+      pathname.startsWith('/privacy') ||
       isPublicBusinessDetails;
 
     if (
@@ -129,4 +133,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };
-

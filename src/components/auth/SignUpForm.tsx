@@ -6,45 +6,49 @@ import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import toast from "@/utils/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { isValidTzPhone } from "@/lib/phoneNumber";
 import TanzaniaPhoneInput from "@/components/form/input/TanzaniaPhoneInput";
+import { useLocale } from "@/lib/useLocale";
 
 // Define signup schema with validation
-const signupSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
+const createSignupSchema = (sw: boolean) => z.object({
+  name: z.string().min(2, sw ? "Jina lazima liwe na angalau herufi 2" : "Name must be at least 2 characters"),
   phone: z.string().optional().or(z.literal('')).refine(
     (val) => !val || isValidTzPhone(val),
-    { message: "Please enter a valid 9-digit phone number" },
+    { message: sw ? "Tafadhali weka namba sahihi ya simu yenye tarakimu 9" : "Please enter a valid 9-digit phone number" },
   ),
-  email: z.string().email("Please enter a valid email address").optional().or(z.literal('')),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email(sw ? "Tafadhali weka anuani sahihi ya barua pepe" : "Please enter a valid email address").optional().or(z.literal('')),
+  password: z.string().min(6, sw ? "Nenosiri lazima liwe na angalau herufi 6" : "Password must be at least 6 characters"),
   confirmPassword: z.string(),
   acceptTerms: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and privacy policy",
+    message: sw ? "Lazima ukubali masharti na sera ya faragha" : "You must accept the terms and privacy policy",
   }),
 }).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: sw ? "Manenosiri hayalingani" : "Passwords do not match",
   path: ["confirmPassword"],
 }).refine(data => data.email || data.phone, {
-  message: "Please provide either an email address or phone number",
+  message: sw ? "Tafadhali weka barua pepe au namba ya simu" : "Please provide either an email address or phone number",
   path: ["phone"],
 });
 
-type SignupFormValues = z.infer<typeof signupSchema>;
+type SignupFormValues = z.infer<ReturnType<typeof createSignupSchema>>;
 
 export default function SignUpForm() {
+  const sw = useLocale() === "sw";
+  const text = (english: string, swahili: string) => sw ? swahili : english;
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
+  const signupSchema = useMemo(() => createSignupSchema(sw), [sw]);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<SignupFormValues>({
+  const { handleSubmit, formState: { errors }, setValue, watch } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: "",
@@ -64,6 +68,19 @@ export default function SignUpForm() {
   };
 
   const onSubmit = async (values: SignupFormValues) => {
+    const confirmation = await toast.confirm(
+      text("Create your account?", "Fungua akaunti yako?"),
+      text(
+        `Please confirm that the details for ${values.name} are correct before creating the account.`,
+        `Tafadhali thibitisha kuwa taarifa za ${values.name} ni sahihi kabla ya kufungua akaunti.`,
+      ),
+      "question",
+      text("Yes, create account", "Ndiyo, fungua akaunti"),
+      text("Review details", "Kagua taarifa"),
+    );
+
+    if (!confirmation.isConfirmed) return;
+
     setIsLoading(true);
     
     try {
@@ -124,7 +141,7 @@ export default function SignUpForm() {
           className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           <ChevronLeftIcon />
-          Back to Home
+          {text("Back to Home", "Rudi Nyumbani")}
         </Link>
       </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
@@ -138,10 +155,13 @@ export default function SignUpForm() {
               </div>
             </div>
             <h1 className="mb-2 font-bold text-gray-800 text-2xl dark:text-white/90">
-              Join Rafiki Today
+              {text("Join Rafiki Today", "Jiunge na Rafiki Leo")}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-              Register your business and connect with customers across Tanzania
+              {text(
+                "Register your business and connect with customers across Tanzania",
+                "Sajili biashara yako na uunganishwe na wateja kote Tanzania",
+              )}
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800/40 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
@@ -149,10 +169,10 @@ export default function SignUpForm() {
               <div className="space-y-6">
                 <div>
                   <Label>
-                    Full Name <span className="text-error-500">*</span>
+                    {text("Full Name", "Jina Kamili")} <span className="text-error-500">*</span>
                   </Label>
                   <Input 
-                    placeholder="John Doe" 
+                    placeholder={text("John Doe", "Jina lako kamili")}
                     type="text" 
                     name="name"
                     onChange={(e) => setValue("name", e.target.value)}
@@ -163,7 +183,7 @@ export default function SignUpForm() {
                 
                 <div>
                   <Label>
-                    Phone Number <span className="text-error-500">*</span>
+                    {text("Phone Number", "Namba ya Simu")} <span className="text-error-500">*</span>
                   </Label>
                   <TanzaniaPhoneInput
                     name="phone"
@@ -176,7 +196,7 @@ export default function SignUpForm() {
 
                 <div>
                   <Label>
-                    Email <span className="text-gray-400 text-xs font-normal">(optional)</span>
+                    {text("Email", "Barua Pepe")} <span className="text-gray-400 text-xs font-normal">({text("optional", "si lazima")})</span>
                   </Label>
                   <Input 
                     placeholder="youremail@example.com" 
@@ -190,12 +210,12 @@ export default function SignUpForm() {
                 
                 <div>
                   <Label>
-                    Password <span className="text-error-500">*</span>
+                    {text("Password", "Nenosiri")} <span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Create a strong password"
+                      placeholder={text("Create a strong password", "Weka nenosiri imara")}
                       name="password"
                       onChange={(e) => setValue("password", e.target.value)}
                       error={!!errors.password}
@@ -216,12 +236,12 @@ export default function SignUpForm() {
                 
                 <div>
                   <Label>
-                    Confirm Password <span className="text-error-500">*</span>
+                    {text("Confirm Password", "Thibitisha Nenosiri")} <span className="text-error-500">*</span>
                   </Label>
                   <div className="relative">
                     <Input
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
+                      placeholder={text("Confirm your password", "Thibitisha nenosiri lako")}
                       name="confirmPassword"
                       onChange={(e) => setValue("confirmPassword", e.target.value)}
                       error={!!errors.confirmPassword}
@@ -243,13 +263,13 @@ export default function SignUpForm() {
                 <div className="flex items-center gap-3">
                   <Checkbox checked={!!acceptTerms} onChange={handleTermsChange} />
                   <span className="block font-normal text-gray-700 text-theme-sm dark:text-gray-400">
-                    I agree to Rafiki's{" "}
+                    {text("I agree to Rafiki's", "Ninakubali")} {" "}
                     <Link href="/terms" className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline">
-                      Terms of Service
+                      {text("Terms of Service", "Masharti ya Huduma ya Rafiki")}
                     </Link>{" "}
-                    and{" "}
+                    {text("and", "na")} {" "}
                     <Link href="/privacy" className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline">
-                      Privacy Policy
+                      {text("Privacy Policy", "Sera ya Faragha")}
                     </Link>
                   </span>
                 </div>
@@ -261,7 +281,7 @@ export default function SignUpForm() {
                   <Button 
                     className="w-full bg-brand-600 hover:bg-brand-700 text-white" 
                     size="sm" 
-                    onClick={() => handleSubmit(onSubmit)()}
+                    type="submit"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -270,9 +290,9 @@ export default function SignUpForm() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Creating Account...
+                        {text("Creating Account...", "Inafungua Akaunti...")}
                       </div>
-                    ) : "Create Account"}
+                    ) : text("Create Account", "Fungua Akaunti")}
                   </Button>
                 </div>
               </div>
@@ -280,7 +300,7 @@ export default function SignUpForm() {
 
             <div className="mt-6 text-center">
               <p className="text-sm font-normal text-gray-700 dark:text-gray-400">
-                Already have an account?{" "}
+                {text("Already have an account?", "Tayari una akaunti?")} {" "}
                 <button
                   onClick={handleNavigateToSignin}
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline focus:outline-none"
@@ -292,9 +312,9 @@ export default function SignUpForm() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Redirecting...
+                      {text("Redirecting...", "Inaelekeza...")}
                     </span>
-                  ) : "Sign In"}
+                  ) : text("Sign In", "Ingia")}
                 </button>
               </p>
             </div>

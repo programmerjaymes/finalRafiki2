@@ -5,6 +5,7 @@ import { Bundle } from '@prisma/client';
 import { FiCheck } from 'react-icons/fi';
 import { brandColors } from '@/lib/brandColors';
 import { useLocale } from '@/lib/useLocale';
+import { parseBundleAllowedFields } from '@/lib/bundleFields';
 
 interface BundleSelectionProps {
   bundles: Bundle[];
@@ -48,12 +49,7 @@ function formatFeature(feature: string): string {
 }
 
 function bundleFeatures(bundle: Bundle): string[] {
-  let raw: string[] = [];
-  try {
-    raw = JSON.parse(bundle.allowedFields);
-  } catch {
-    raw = [];
-  }
+  const raw = parseBundleAllowedFields(bundle);
 
   const display = raw
     .filter((f) => !['name', 'description', 'phone', 'whatsapp', 'email', 'regionId', 'districtId', 'wardId', 'street'].includes(f))
