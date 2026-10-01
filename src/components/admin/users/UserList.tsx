@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import toast from '@/utils/toast';
 import Pagination from '@/components/Pagination';
 import Loader from '@/components/common/Loader';
@@ -31,12 +32,26 @@ interface User {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT';
   emailVerified?: string | null;
   image?: string | null;
   createdAt: string;
   updatedAt: string;
+  businesses: { id: string; name: string }[];
+  businessRegistrations: {
+    step: number;
+    isCompleted: boolean;
+    updatedAt: string;
+  }[];
 }
+
+const registrationStepLabels: Record<number, string> = {
+  1: 'Choose Bundle',
+  2: 'Payment',
+  3: 'Business Information',
+  4: 'Location',
+};
 
 interface PaginatedUsers {
   users: User[];
@@ -251,6 +266,15 @@ export default function UserList() {
                       Email
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Businesses
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Registration
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Role
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -286,7 +310,30 @@ export default function UserList() {
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
-                        {user.email}
+                        {user.email || "—"}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        {user.phone || "—"}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        <Link
+                          href={`/businesses?ownerId=${user.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {user.businesses.length} {user.businesses.length === 1 ? "business" : "businesses"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        {user.businessRegistrations[0]?.isCompleted || user.businesses.length > 0 ? (
+                          <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
+                        ) : user.businessRegistrations[0] ? (
+                          <Badge className="bg-blue-500 hover:bg-blue-600">
+                            Step {user.businessRegistrations[0].step}: {registrationStepLabels[user.businessRegistrations[0].step] || 'In progress'}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-gray-500 hover:bg-gray-600">Not started</Badge>
+                        )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         {renderRoleBadge(user.role)}

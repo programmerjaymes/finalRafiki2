@@ -41,8 +41,9 @@ export async function GET(request: NextRequest) {
     // Add search filter if provided
     if (search && !emailExact && !phoneExact) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
       ]
     }
     
@@ -62,6 +63,17 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+          },
+        },
+        businessRegistrations: {
+          select: {
+            step: true,
+            isCompleted: true,
+            updatedAt: true,
+          },
+          take: 1,
+          orderBy: {
+            updatedAt: 'desc' as const,
           },
         },
         registeredBusinesses: {

@@ -1,7 +1,12 @@
 import React from 'react';
 import BusinessList from '@/components/admin/businessess/BusinessList';
 
-const BusinessesPage = () => {
+type BusinessesPageProps = {
+  searchParams: Promise<{ ownerId?: string }>;
+};
+
+const BusinessesPage = async ({ searchParams }: BusinessesPageProps) => {
+  const { ownerId } = await searchParams;
   return (
     <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
       <div className="mb-6 justify-between gap-4 sm:flex">
@@ -15,7 +20,7 @@ const BusinessesPage = () => {
         </div>
       </div>
 
-      <BusinessList />
+      <BusinessList ownerIdFilter={ownerId} />
     </div>
   );
 };

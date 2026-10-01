@@ -132,6 +132,7 @@ interface PaginationMeta {
 type BusinessListProps = {
   /** Owner portal: only the signed-in owner's businesses, no admin assign flow */
   variant?: 'admin' | 'owner';
+  ownerIdFilter?: string;
 };
 
 // Helper: convert File to base64
@@ -144,7 +145,7 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
+const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) => {
   const locale = useLocale();
   const messages = t(locale);
   const isOwnerPortal = variant === 'owner';
@@ -268,6 +269,8 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
       // Owner portal / business owners: only their businesses
       if ((userRole === 'BUSINESS_OWNER' || isOwnerPortal) && userId) {
         queryParams.append('ownerId', userId);
+      } else if (ownerIdFilter) {
+        queryParams.append('ownerId', ownerIdFilter);
       }
 
       // Add cache-busting timestamp and use keep-alive for faster loading
@@ -400,6 +403,7 @@ const BusinessList = ({ variant = 'admin' }: BusinessListProps) => {
     userRole,
     userId,
     isOwnerPortal,
+    ownerIdFilter,
   ]);
   
   // Update filtered districts when region changes
