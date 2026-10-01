@@ -14,6 +14,8 @@ import {
   FaMoneyBillWave as PaymentIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
+  FaListUl as AllBusinessesIcon,
+  FaHourglassHalf as PendingApprovalIcon,
   FaClipboardCheck as ApprovalLogIcon,
   FaMapMarkedAlt as LocationIcon,
   FaGlobeAfrica as RegionIcon,
@@ -53,9 +55,10 @@ const AppSidebar: React.FC = () => {
       icon: <BusinessIcon />,
       name: messages.admin.businesses,
       subItems: [
-        { name: messages.admin.allBusinesses, path: "/businesses", pro: false },
+        { name: messages.admin.allBusinesses, path: "/businesses", pro: false, icon: <AllBusinessesIcon /> },
         {
           name: messages.admin.pendingApprovals,
+          icon: <PendingApprovalIcon />,
           path: "/businesses/pending",
           pro: false,
         },

@@ -4,7 +4,6 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Dropdown } from "../ui/dropdown/Dropdown";
-import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Modal } from "../ui/modal";
 import toast from "@/utils/toast";
 
@@ -15,6 +14,17 @@ interface Business {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  whatsapp?: string | null;
+  coverImage?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
+  twitter?: string | null;
+  allowsOnlineBooking?: boolean;
+  allowsDelivery?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  bundleExpiresAt?: string | null;
+  images?: Array<{ id: string; imageData: string; sortOrder: number }>;
   logo?: string | null;
   street?: string | null;
   createdAt: string;
@@ -36,13 +46,19 @@ interface Business {
   ward?: {
     name: string;
   };
+  bundle?: {
+    name: string;
+    price: number;
+    duration: number;
+    maxImages?: number;
+  };
 }
 
 export default function NotificationDropdown() {
   const { data: session, status } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const [isOpen, setIsOpen] = useState(false);
-  const [notifying, setNotifying] = useState(true);
+  const [, setNotifying] = useState(true);
   const [unapprovedBusinesses, setUnapprovedBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -356,6 +372,40 @@ export default function NotificationDropdown() {
                 </div>
               )}
               
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Selected Bundle</h4>
+                <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+                  <p className="font-semibold text-brand-700 dark:text-brand-300">
+                    {selectedBusiness.bundle?.name || "No bundle selected"}
+                  </p>
+                  {selectedBusiness.bundle && (
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      TZS {selectedBusiness.bundle.price.toLocaleString()} · {selectedBusiness.bundle.duration} days
+                      {selectedBusiness.bundle.maxImages != null ? ` · Up to ${selectedBusiness.bundle.maxImages} images` : ""}
+                    </p>
+                  )}
+                  {selectedBusiness.bundleExpiresAt && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Expires {new Date(selectedBusiness.bundleExpiresAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Category</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedBusiness.category?.icon} {selectedBusiness.category?.name || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Submitted</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {new Date(selectedBusiness.createdAt).toLocaleString()}
+                </p>
+              </div>
+
               {selectedBusiness.phone && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Phone</h4>
@@ -363,6 +413,13 @@ export default function NotificationDropdown() {
                 </div>
               )}
               
+              {selectedBusiness.whatsapp && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{selectedBusiness.whatsapp}</p>
+                </div>
+              )}
+
               {selectedBusiness.email && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Email</h4>
@@ -388,6 +445,39 @@ export default function NotificationDropdown() {
                 </div>
               )}
             </div>
+              {selectedBusiness.latitude != null && selectedBusiness.longitude != null && (
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">GPS Coordinates</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedBusiness.latitude}, {selectedBusiness.longitude}
+                  </p>
+                </div>
+              )}
+
+              {(selectedBusiness.allowsOnlineBooking || selectedBusiness.allowsDelivery) && (
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Features</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBusiness.allowsOnlineBooking && (
+                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Online booking</span>
+                    )}
+                    {selectedBusiness.allowsDelivery && (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Delivery</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(selectedBusiness.facebook || selectedBusiness.instagram || selectedBusiness.twitter) && (
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Social Media</h4>
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    {selectedBusiness.facebook && <a href={selectedBusiness.facebook} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">Facebook</a>}
+                    {selectedBusiness.instagram && <a href={selectedBusiness.instagram} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">Instagram</a>}
+                    {selectedBusiness.twitter && <a href={selectedBusiness.twitter} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">Twitter / X</a>}
+                  </div>
+                </div>
+              )}
 
             {/* Action Buttons */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
