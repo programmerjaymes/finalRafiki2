@@ -63,33 +63,33 @@ export default function ConfirmDialog({
   // Color variants
   const variantClasses = {
     danger: {
-      icon: 'text-red-500 dark:text-red-400',
+      icon: 'bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400',
       confirm: 'bg-red-500 hover:bg-red-600 focus:ring-red-500 dark:bg-red-600 dark:hover:bg-red-700',
     },
     warning: {
-      icon: 'text-amber-500 dark:text-amber-400',
+      icon: 'bg-amber-50 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400',
       confirm: 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-500 dark:bg-amber-600 dark:hover:bg-amber-700',
     },
     info: {
-      icon: 'text-blue-500 dark:text-blue-400',
-      confirm: 'bg-blue-500 hover:bg-blue-600 focus:ring-blue-500 dark:bg-blue-600 dark:hover:bg-blue-700',
+      icon: 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400',
+      confirm: 'bg-brand-500 hover:bg-brand-600 focus:ring-brand-500 dark:bg-brand-500 dark:hover:bg-brand-600',
     },
   };
 
   return (
     <dialog
       ref={dialogRef}
-      className="rounded-lg shadow-xl p-0 backdrop:bg-gray-500/20 dark:backdrop:bg-gray-900/50 backdrop:backdrop-blur-sm w-full max-w-md"
+      className={`fixed inset-0 m-auto max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-2xl border p-0 shadow-2xl backdrop:bg-gray-950/45 backdrop:backdrop-blur-sm dark:bg-gray-900 ${variant === 'info' ? 'border-brand-200 bg-white dark:border-brand-500/30' : 'border-gray-200 bg-white dark:border-gray-700'}`}
       onClick={handleClick}
       onClose={handleClose}
     >
       <div className="p-6">
         <div className="flex items-start">
-          <div className={`flex-shrink-0 ${variantClasses[variant].icon}`}>
+          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${variantClasses[variant].icon}`}>
             <ExclamationTriangleIcon className="h-6 w-6" aria-hidden="true" />
           </div>
           <div className="ml-3 flex-1">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {title}
             </h3>
             <div className="mt-2">
@@ -110,7 +110,7 @@ export default function ConfirmDialog({
           </div>
         </div>
       </div>
-      <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 flex flex-row-reverse gap-2 rounded-b-lg">
+      <div className={`flex flex-row-reverse gap-2 border-t px-6 py-4 ${variant === 'info' ? 'border-brand-100 bg-brand-50/60 dark:border-brand-500/20 dark:bg-brand-500/5' : 'border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'}`}>
         <button
           type="button"
           className={`inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm ${variantClasses[variant].confirm}`}

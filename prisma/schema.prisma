@@ -24,6 +24,8 @@ model User {
   businessRegistrations BusinessRegistration[]
   approvalLogs          BusinessApprovalLog[]  @relation("ApprovalActor")
   auditTrails          AuditTrail[]           @relation("AuditActor")
+  smsReceivedMessages  SmsMessage[]           @relation("SmsRecipient")
+  smsSentMessages      SmsMessage[]           @relation("SmsSender")
   businesses            Business[]
   registeredBusinesses  Business[]             @relation("Registrar")
   payments              Payment[]
@@ -418,6 +420,28 @@ model business_images {
   @@index([businessId], map: "business_images_businessId_idx")
 }
 
+model SmsMessage {
+  id               String            @id @default(cuid())
+  recipientId      String?
+  sentById         String?
+  recipientName    String
+  phone            String
+  message          String            @db.Text
+  status           SmsDeliveryStatus
+  errorMessage     String?           @db.Text
+  gatewaySenderId  String?
+  creditsRemaining Int?
+  createdAt        DateTime          @default(now())
+  recipient        User?             @relation("SmsRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
+  sentBy           User?             @relation("SmsSender", fields: [sentById], references: [id], onDelete: SetNull)
+
+  @@index([status], map: "sms_messages_status_idx")
+  @@index([recipientId], map: "sms_messages_recipient_id_idx")
+  @@index([sentById], map: "sms_messages_sent_by_id_idx")
+  @@index([createdAt], map: "sms_messages_created_at_idx")
+  @@map("sms_messages")
+}
+
 model ApplicationLog {
   id         String   @id @default(cuid())
   level      String   @db.VarChar(20)
@@ -453,6 +477,11 @@ model AuditTrail {
   @@index([entityType, entityId], map: "audit_trail_entity_idx")
   @@index([createdAt], map: "audit_trail_created_at_idx")
   @@map("audit_trail")
+}
+
+enum SmsDeliveryStatus {
+  SENT
+  FAILED
 }
 
 enum UserRole {

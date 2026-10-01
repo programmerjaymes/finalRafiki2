@@ -59,6 +59,20 @@ export async function POST(request: Request) {
     results.push(...batchResults);
   }
 
+  await prisma.smsMessage.createMany({
+    data: results.map((result) => ({
+      recipientId: result.userId,
+      sentById: session.user.id,
+      recipientName: result.name,
+      phone: result.phone,
+      message: parsed.data.message,
+      status: result.success ? 'SENT' : 'FAILED',
+      errorMessage: result.error || null,
+      gatewaySenderId: result.senderIdUsed || null,
+      creditsRemaining: result.creditsRemaining ?? null,
+    })),
+  });
+
   await recordAudit({
     actorId: session.user.id,
     action: 'SMS_DISPATCH',

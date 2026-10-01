@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from '@/utils/toast';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import SmsHistory from './SmsHistory';
 
 type SmsUser = {
   id: string;
@@ -53,6 +54,7 @@ export default function SmsMessaging() {
   const [sending, setSending] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [lastResult, setLastResult] = useState<SendResult | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -123,6 +125,7 @@ export default function SmsMessaging() {
       if (!response.ok && !data.results) throw new Error(data.error || 'Failed to send SMS');
 
       setLastResult(data);
+      setHistoryVersion((value) => value + 1);
       if (data.sentCount > 0) {
         toast.success(`${data.sentCount} SMS message${data.sentCount === 1 ? '' : 's'} sent`);
       }
@@ -261,6 +264,8 @@ export default function SmsMessaging() {
           )}
         </section>
       </div>
+      <SmsHistory refreshKey={historyVersion} />
+
       <ConfirmDialog
         isOpen={showConfirm}
         title="Confirm SMS dispatch"
