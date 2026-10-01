@@ -56,6 +56,9 @@ const CATEGORIES: Array<{ value: Category; label: string }> = [
 const categoryLabel = (value: Category) => CATEGORIES.find((item) => item.value === value)?.label || value;
 const dateText = (value: string) => new Date(value).toLocaleDateString('en-TZ', { day: '2-digit', month: 'short', year: 'numeric' });
 const money = (amount: number, currency = 'TZS') => `${currency} ${amount.toLocaleString('en-TZ', { maximumFractionDigits: 2 })}`;
+const hasNoFixedPeriod = (item: Expense) =>
+  new Date(item.applicableFrom).getUTCFullYear() === 1900 &&
+  new Date(item.applicableTo).getUTCFullYear() === 9999;
 const groupedMoney = (items: Expense[]) => {
   const totals = items.reduce((result, item) => {
     result[item.currency] = (result[item.currency] || 0) + item.amount;
@@ -75,6 +78,7 @@ const emptyForm = {
   paidAt: '',
   applicableFrom: '',
   applicableTo: '',
+  hasNoTimeRange: false,
   notes: '',
 };
 
@@ -116,7 +120,14 @@ export default function AppExpenseRegister() {
     const paid = groupedMoney(expenses.filter((item) => item.status === 'PAID'));
     const outstanding = groupedMoney(expenses.filter((item) => item.status !== 'PAID'));
     const now = Date.now();
-    const active = expenses.filter((item) => new Date(item.applicableFrom).getTime() <= now && new Date(item.applicableTo).getTime() >= now).length;
+    const active = expenses.filter((item) =>
+      hasNoFixedPeriod(item) ||
+      (
+        Boolean(item.applicableFrom && item.applicableTo) &&
+        new Date(item.applicableFrom!).getTime() <= now &&
+        new Date(item.applicableTo!).getTime() >= now
+      ),
+    ).length;
     return { paid, outstanding, active, evidence: expenses.filter((item) => item.evidenceUrl).length };
   }, [expenses]);
 
@@ -134,7 +145,7 @@ export default function AppExpenseRegister() {
     setSaving(true);
     try {
       const body = new FormData();
-      Object.entries(form).forEach(([key, value]) => body.append(key, value));
+      Object.entries(form).forEach(([key, value]) => body.append(key, String(value)));
       body.append('evidence', evidence);
       const response = await fetch('/api/app-expenses', { method: 'POST', body });
       const data = await response.json();
@@ -188,7 +199,9 @@ export default function AppExpenseRegister() {
         item.vendor || '—',
         money(item.amount, item.currency),
         item.status,
-        `${dateText(item.applicableFrom)} - ${dateText(item.applicableTo)}`,
+        hasNoFixedPeriod(item)
+          ? 'No fixed period'
+          : `${dateText(item.applicableFrom)} - ${dateText(item.applicableTo)}`,
         item.paidAt ? dateText(item.paidAt) : '—',
         item.evidenceName || '—',
       ]),
@@ -256,7 +269,11 @@ export default function AppExpenseRegister() {
                   <tr key={item.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/30">
                     <td className="px-5 py-4"><p className="font-semibold text-gray-900 dark:text-white">{item.title}</p><p className="mt-1 text-xs text-gray-500">{categoryLabel(item.category)}{item.vendor ? ` · ${item.vendor}` : ''}</p>{item.reference && <p className="mt-1 text-xs text-gray-400">Ref: {item.reference}</p>}</td>
                     <td className="px-5 py-4 font-semibold text-gray-800 dark:text-gray-200">{money(item.amount, item.currency)}{item.paidAt && <p className="mt-1 text-xs font-normal text-gray-500">Paid {dateText(item.paidAt)}</p>}</td>
-                    <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">{dateText(item.applicableFrom)}<span className="mx-1 text-gray-400">→</span>{dateText(item.applicableTo)}</td>
+                    <td className="px-5 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      {hasNoFixedPeriod(item)
+                        ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">No fixed period</span>
+                        : <>{dateText(item.applicableFrom)}<span className="mx-1 text-gray-400">→</span>{dateText(item.applicableTo)}</>}
+                    </td>
                     <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.status === 'PAID' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : item.status === 'OVERDUE' ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'}`}>{item.status}</span></td>
                     <td className="px-5 py-4">{item.evidenceUrl ? <a href={item.evidenceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-[180px] items-center gap-2 text-sm font-semibold text-brand-600 hover:underline"><DocumentTextIcon className="h-5 w-5 shrink-0" /><span className="truncate">{item.evidenceName || 'View evidence'}</span></a> : <span className="text-sm text-gray-400">None</span>}</td>
                     <td className="px-5 py-4 text-right"><button onClick={() => void removeExpense(item)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" title="Delete expense"><TrashIcon className="h-5 w-5" /></button></td>
@@ -277,8 +294,26 @@ export default function AppExpenseRegister() {
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Vendor / provider</span><input value={form.vendor} onChange={(event) => setForm({ ...form, vendor: event.target.value })} placeholder="e.g. Vercel, Neon, Beem" className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Amount *</span><div className="mt-1 flex"><select value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })} className="w-24 rounded-l-xl border border-r-0 border-gray-300 bg-gray-50 px-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white"><option>TZS</option><option>USD</option></select><input required type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} className="h-11 min-w-0 flex-1 rounded-r-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></div></label>
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment status *</span><select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value as Status })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"><option value="PAID">Paid</option><option value="PENDING">Pending</option><option value="OVERDUE">Overdue</option></select></label>
-          <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable from *</span><input required type="date" value={form.applicableFrom} onChange={(event) => setForm({ ...form, applicableFrom: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
-          <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable to *</span><input required type="date" min={form.applicableFrom} value={form.applicableTo} onChange={(event) => setForm({ ...form, applicableTo: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
+          <label className="sm:col-span-2 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+            <input
+              type="checkbox"
+              checked={form.hasNoTimeRange}
+              onChange={(event) => setForm({
+                ...form,
+                hasNoTimeRange: event.target.checked,
+                applicableFrom: event.target.checked ? '' : form.applicableFrom,
+                applicableTo: event.target.checked ? '' : form.applicableTo,
+              })}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500"
+            />
+            <span><span className="block text-sm font-semibold text-gray-800 dark:text-white">No fixed time range</span><span className="mt-1 block text-xs text-gray-500">Use this for one-time payments or invoices that do not cover a specific period.</span></span>
+          </label>
+          {!form.hasNoTimeRange && (
+            <>
+              <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable from *</span><input required type="date" value={form.applicableFrom} onChange={(event) => setForm({ ...form, applicableFrom: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
+              <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable to *</span><input required type="date" min={form.applicableFrom} value={form.applicableTo} onChange={(event) => setForm({ ...form, applicableTo: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
+            </>
+          )}
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment date</span><input type="date" value={form.paidAt} onChange={(event) => setForm({ ...form, paidAt: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Invoice / transaction reference</span><input value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
           <label className="sm:col-span-2"><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes</span><textarea rows={3} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 bg-transparent p-4 text-sm dark:border-gray-700 dark:text-white" /></label>

@@ -59,8 +59,11 @@ export async function POST(request: Request) {
     const currency = String(data.get('currency') || 'TZS').trim().toUpperCase().slice(0, 3);
     const status = String(data.get('status') || 'PAID') as AppExpenseStatus;
     const amount = Number(data.get('amount'));
-    const applicableFrom = new Date(String(data.get('applicableFrom') || ''));
-    const applicableTo = new Date(String(data.get('applicableTo') || ''));
+    const hasNoTimeRange = String(data.get('hasNoTimeRange') || '') === 'true';
+    const applicableFromRaw = String(data.get('applicableFrom') || '');
+    const applicableToRaw = String(data.get('applicableTo') || '');
+    const applicableFrom = applicableFromRaw ? new Date(applicableFromRaw) : null;
+    const applicableTo = applicableToRaw ? new Date(applicableToRaw) : null;
     const paidAtRaw = String(data.get('paidAt') || '');
     const notes = String(data.get('notes') || '').trim().slice(0, 3000);
     const evidence = data.get('evidence');
@@ -77,7 +80,16 @@ export async function POST(request: Request) {
     if (!Object.values(AppExpenseStatus).includes(status)) {
       return NextResponse.json({ error: 'Select a valid payment status' }, { status: 400 });
     }
-    if (Number.isNaN(applicableFrom.getTime()) || Number.isNaN(applicableTo.getTime()) || applicableTo < applicableFrom) {
+    if (
+      !hasNoTimeRange &&
+      (
+        !applicableFrom ||
+        !applicableTo ||
+        Number.isNaN(applicableFrom.getTime()) ||
+        Number.isNaN(applicableTo.getTime()) ||
+        applicableTo < applicableFrom
+      )
+    ) {
       return NextResponse.json({ error: 'Enter a valid applicability date range' }, { status: 400 });
     }
     if (paidAtRaw && Number.isNaN(new Date(paidAtRaw).getTime())) {
@@ -98,8 +110,8 @@ export async function POST(request: Request) {
         currency: currency || 'TZS',
         status,
         paidAt: paidAtRaw ? new Date(paidAtRaw) : null,
-        applicableFrom,
-        applicableTo,
+        applicableFrom: hasNoTimeRange ? new Date('1900-01-01T00:00:00.000Z') : applicableFrom!,
+        applicableTo: hasNoTimeRange ? new Date('9999-12-31T23:59:59.999Z') : applicableTo!,
         notes: notes || null,
         evidenceUrl,
         evidenceName: evidence.name.slice(0, 255),
