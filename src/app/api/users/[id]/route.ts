@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { recordAudit } from '@/lib/activityLog';
 
 // GET: Fetch a specific user
 
@@ -152,6 +155,9 @@ export async function PUT(
       },
     });
     
+    const session = await getServerSession(authOptions);
+    await recordAudit({ actorId: session?.user.id, action: 'USER_UPDATED', entityType: 'User', entityId: id, description: `Updated user ${updatedUser.name}`, request });
+
     return NextResponse.json({ user: updatedUser });
   } catch (error: any) {
     console.error('Error updating user:', error);
@@ -188,6 +194,9 @@ export async function DELETE(
       where: { id },
     });
     
+    const session = await getServerSession(authOptions);
+    await recordAudit({ actorId: session?.user.id, action: 'USER_DELETED', entityType: 'User', entityId: id, description: `Deleted user ${existingUser.name}`, request });
+
     return new NextResponse(null, { status: 204 });
   } catch (error: any) {
     console.error('Error deleting user:', error);

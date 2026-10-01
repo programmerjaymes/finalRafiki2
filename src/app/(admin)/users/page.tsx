@@ -10,7 +10,7 @@ const UsersPage = async () => {
   const messages = t(locale);
 
   return (
-    <div>
+    <div className="min-w-0 max-w-full overflow-x-hidden">
       <PageBreadcrumb
         items={[
           { label: messages.admin.dashboard, path: '/dashboard' },

@@ -10,6 +10,7 @@ import {
   XCircleIcon,
 } from '@heroicons/react/24/outline';
 import toast from '@/utils/toast';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 type SmsUser = {
   id: string;
@@ -50,6 +51,7 @@ export default function SmsMessaging() {
   const [message, setMessage] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [sending, setSending] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [lastResult, setLastResult] = useState<SendResult | null>(null);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export default function SmsMessaging() {
 
   const segments = smsSegments(message);
   const estimatedCredits = segments * selectedIds.size;
+  const confirmMessage = `You are about to send this message to ${selectedIds.size} recipient${selectedIds.size === 1 ? '' : 's'}. Estimated usage is ${estimatedCredits} SMS credit${estimatedCredits === 1 ? '' : 's'}. This action cannot be recalled after dispatch.`;
   const allVisibleSelected = filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.has(user.id));
 
   const toggleUser = (id: string) => {
@@ -106,10 +109,7 @@ export default function SmsMessaging() {
 
   const dispatch = async () => {
     if (selectedIds.size === 0 || !message.trim()) return;
-    const confirmed = window.confirm(
-      `Send this message to ${selectedIds.size} recipient${selectedIds.size === 1 ? '' : 's'}? Estimated usage: ${estimatedCredits} SMS credit${estimatedCredits === 1 ? '' : 's'}.`,
-    );
-    if (!confirmed) return;
+    setShowConfirm(false);
 
     setSending(true);
     setLastResult(null);
@@ -232,7 +232,7 @@ export default function SmsMessaging() {
 
           <button
             type="button"
-            onClick={dispatch}
+            onClick={() => setShowConfirm(true)}
             disabled={sending || selectedIds.size === 0 || !message.trim()}
             className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -261,6 +261,16 @@ export default function SmsMessaging() {
           )}
         </section>
       </div>
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="Confirm SMS dispatch"
+        message={confirmMessage}
+        confirmText={selectedIds.size === 1 ? "Send SMS" : "Send Group SMS"}
+        cancelText="Review Message"
+        variant="info"
+        onClose={() => setShowConfirm(false)}
+        onConfirm={dispatch}
+      />
     </div>
   );
 }

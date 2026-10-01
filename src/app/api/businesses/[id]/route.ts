@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { recordAudit } from '@/lib/activityLog'
 import { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -202,6 +203,17 @@ export async function PUT(
 
       return updated;
     })
+
+    if (shouldLogApproval) {
+      await recordAudit({
+        actorId: session?.user.id,
+        action: 'BUSINESS_APPROVED',
+        entityType: 'Business',
+        entityId: id,
+        description: 'Approved business ' + updatedBusiness.name,
+        request,
+      });
+    }
 
     if (whatsappUpdate !== undefined) {
       await setBusinessWhatsapp(id, whatsappUpdate)

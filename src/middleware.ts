@@ -90,6 +90,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/categories') ||
     pathname.startsWith('/payments') ||
     pathname.startsWith('/sms') ||
+    pathname.startsWith('/system-logs') ||
     pathname.startsWith('/regions') ||
     pathname.startsWith('/districts') ||
     pathname.startsWith('/wards') ||

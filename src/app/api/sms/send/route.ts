@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendSms } from '@/lib/smsGateway';
+import { logApplicationError, recordAudit } from '@/lib/activityLog';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,26 @@ export async function POST(request: Request) {
       }),
     );
     results.push(...batchResults);
+  }
+
+  await recordAudit({
+    actorId: session.user.id,
+    action: 'SMS_DISPATCH',
+    entityType: 'User',
+    description: `SMS dispatch requested for ${uniqueIds.length} users`,
+    metadata: { requestedCount: uniqueIds.length, recipientCount: recipients.length },
+    request,
+  });
+
+  for (const failure of results.filter((result) => !result.success)) {
+    await logApplicationError({
+      level: 'ERROR',
+      message: failure.error || 'SMS gateway dispatch failed',
+      route: '/api/sms/send',
+      method: 'POST',
+      statusCode: 502,
+      metadata: { userId: failure.userId },
+    });
   }
 
   const sentCount = results.filter((result) => result.success).length;

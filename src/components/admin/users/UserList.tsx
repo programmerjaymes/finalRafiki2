@@ -221,7 +221,7 @@ export default function UserList() {
   };
 
   return (
-    <div className="w-full">
+    <div className="min-w-0 max-w-full">
       <div className="mb-7 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Total users", value: analytics.totalUsers, description: "All registered accounts", icon: UserGroupIcon, iconClass: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400", accent: "from-blue-500 to-cyan-400" },
@@ -250,7 +250,7 @@ export default function UserList() {
         })}
       </div>
 
-      <Card className="mb-8 overflow-hidden border-gray-200 shadow-sm dark:border-gray-800">
+      <Card className="mb-8 min-w-0 max-w-full overflow-hidden border-gray-200 shadow-sm dark:border-gray-800">
         <CardHeader className="border-b border-gray-100 bg-white px-5 py-5 dark:border-gray-800 dark:bg-gray-900">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div><CardTitle className="text-xl text-gray-900 dark:text-white">User directory</CardTitle><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Search, filter and manage platform access</p></div>
@@ -354,9 +354,9 @@ export default function UserList() {
               <p>No users found</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
+            <div className="max-h-[60vh] max-w-full overflow-auto overscroll-contain">
+              <table className="w-full min-w-[1180px]">
+                <thead className="sticky top-0 z-10">
                   <tr className="border-b border-gray-100 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/70">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Name
@@ -475,7 +475,7 @@ export default function UserList() {
       </Card>
       
       {!isLoading && users.length > 0 && (
-        <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row">
+        <div className="max-w-full overflow-x-auto flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Showing <span className="font-medium">{users.length}</span> of{' '}
             <span className="font-medium">{total}</span> users

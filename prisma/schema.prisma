@@ -23,6 +23,7 @@ model User {
   accounts              Account[]
   businessRegistrations BusinessRegistration[]
   approvalLogs          BusinessApprovalLog[]  @relation("ApprovalActor")
+  auditTrails          AuditTrail[]           @relation("AuditActor")
   businesses            Business[]
   registeredBusinesses  Business[]             @relation("Registrar")
   payments              Payment[]
@@ -415,6 +416,43 @@ model business_images {
   createdAt  DateTime @default(now())
 
   @@index([businessId], map: "business_images_businessId_idx")
+}
+
+model ApplicationLog {
+  id         String   @id @default(cuid())
+  level      String   @db.VarChar(20)
+  message    String   @db.Text
+  route      String?
+  method     String?  @db.VarChar(10)
+  statusCode Int?
+  stack      String?  @db.Text
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([level], map: "application_logs_level_idx")
+  @@index([statusCode], map: "application_logs_status_code_idx")
+  @@index([createdAt], map: "application_logs_created_at_idx")
+  @@map("application_logs")
+}
+
+model AuditTrail {
+  id          String   @id @default(cuid())
+  actorId     String?
+  action      String   @db.VarChar(100)
+  entityType  String   @db.VarChar(100)
+  entityId    String?
+  description String?  @db.Text
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+  actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId], map: "audit_trail_actor_id_idx")
+  @@index([action], map: "audit_trail_action_idx")
+  @@index([entityType, entityId], map: "audit_trail_entity_idx")
+  @@index([createdAt], map: "audit_trail_created_at_idx")
+  @@map("audit_trail")
 }
 
 enum UserRole {

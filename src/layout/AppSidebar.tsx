@@ -13,6 +13,7 @@ import {
 import { 
   FaMoneyBillWave as PaymentIcon,
   FaSms as SmsIcon,
+  FaBug as SystemLogsIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
   FaListUl as AllBusinessesIcon,
@@ -94,6 +95,11 @@ const AppSidebar: React.FC = () => {
       icon: <SmsIcon />,
       name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging',
       path: "/sms",
+    },
+    {
+      icon: <SystemLogsIcon />,
+      name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs',
+      path: "/system-logs",
     },
     {
       icon: <UserCircleIcon />,

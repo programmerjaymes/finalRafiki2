@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { recordAudit } from '@/lib/activityLog'
 
 // GET: Fetch users with filtering and pagination
 
@@ -221,6 +224,9 @@ export async function POST(request: NextRequest) {
       },
     })
     
+    const session = await getServerSession(authOptions)
+    await recordAudit({ actorId: session?.user.id, action: 'USER_CREATED', entityType: 'User', entityId: user.id, description: `Created user ${user.name}`, request })
+
     return NextResponse.json({ user }, { status: 201 })
   } catch (error: any) {
     console.error('Error creating user:', error)
