@@ -1,10 +1,19 @@
 import { prisma } from '@/lib/prisma';
 import { sendSms } from '@/lib/smsGateway';
 import { logApplicationError, recordAudit } from '@/lib/activityLog';
+import {
+  buildBusinessDecisionMessage,
+  type BusinessDecisionLanguage,
+} from '@/lib/businessDecisionMessage';
 
 type Decision = 'APPROVED' | 'DISAPPROVED';
 
-export async function notifyBusinessDecision(businessId: string, decision: Decision, sentById: string) {
+export async function notifyBusinessDecision(
+  businessId: string,
+  decision: Decision,
+  sentById: string,
+  language: BusinessDecisionLanguage = 'sw',
+) {
   try {
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -24,9 +33,16 @@ export async function notifyBusinessDecision(businessId: string, decision: Decis
       return;
     }
 
-    const message = decision === 'APPROVED'
-      ? `Hongera ${business.owner.name}! Biashara yako "${business.name}" imeidhinishwa na Rafiki. Unatumia kifurushi ${business.bundle.name} cha siku ${business.bundle.duration}. Utahitajika kulipia kifurushi kingine baada ya siku ${business.bundle.duration}.`
-      : 'Samahani ' + business.owner.name + ', biashara yako "' + business.name + '" haijaidhinishwa. Sababu: ' + (business.deactivationReason || 'Haijatajwa') + '. Tafadhali wasiliana na Rafiki kwa simu 0736333111 au WhatsApp 0799100500 kwa msaada zaidi.';
+    const message = buildBusinessDecisionMessage({
+      decision,
+      language,
+      ownerName: business.owner.name,
+      businessName: business.name,
+      bundleName: business.bundle.name,
+      bundleDuration: business.bundle.duration,
+      disapprovalReason:
+        business.deactivationReason || (language === 'sw' ? 'Haijatajwa' : 'Not specified'),
+    });
 
     const result = await sendSms(phone, message);
     await prisma.smsMessage.create({

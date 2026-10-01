@@ -13,6 +13,10 @@ import {
 } from "react-icons/fi";
 import toast from "@/utils/toast";
 import { toImageSrc } from "@/lib/imageSrc";
+import {
+  buildBusinessDecisionMessage,
+  type BusinessDecisionLanguage,
+} from "@/lib/businessDecisionMessage";
 
 interface BusinessImage {
   id: string;
@@ -122,6 +126,7 @@ function PendingBusinessCard({
   const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'DISAPPROVED' | null>(null);
   const [notifyOwner, setNotifyOwner] = useState(true);
   const [disapprovalReason, setDisapprovalReason] = useState("");
+  const [messageLanguage, setMessageLanguage] = useState<BusinessDecisionLanguage>("sw");
   const ownerPhoto = toImageSrc(business.owner?.image);
   const logoSrc = toImageSrc(business.logo);
   const coverSrc = toImageSrc(business.coverImage);
@@ -143,12 +148,23 @@ function PendingBusinessCard({
   const openDecision = (decision: 'APPROVED' | 'DISAPPROVED') => {
     setNotifyOwner(true);
     setDisapprovalReason("");
+    setMessageLanguage("sw");
     setPendingDecision(decision);
   };
 
-  const decisionMessage = pendingDecision === 'APPROVED'
-    ? 'Hongera ' + (business.owner?.name || 'mteja') + '! Biashara yako "' + business.name + '" imeidhinishwa na Rafiki. Unatumia kifurushi ' + (business.bundle?.name || 'ulichochagua') + ' cha siku ' + (business.bundle?.duration || 0) + '. Utahitajika kulipia kifurushi kingine baada ya siku ' + (business.bundle?.duration || 0) + '.'
-    : 'Samahani ' + (business.owner?.name || 'mteja') + ', biashara yako "' + business.name + '" haijaidhinishwa. Sababu: ' + (disapprovalReason.trim() || '[andika sababu ya kutokuidhinisha]') + '. Tafadhali wasiliana na Rafiki kwa simu 0736333111 au WhatsApp 0799100500 kwa msaada zaidi.';
+  const decisionMessage = buildBusinessDecisionMessage({
+    decision: pendingDecision || 'DISAPPROVED',
+    language: messageLanguage,
+    ownerName: business.owner?.name || (messageLanguage === 'sw' ? 'mteja' : 'customer'),
+    businessName: business.name,
+    bundleName: business.bundle?.name || (messageLanguage === 'sw' ? 'ulichochagua' : 'selected'),
+    bundleDuration: business.bundle?.duration || 0,
+    disapprovalReason:
+      disapprovalReason.trim() ||
+      (messageLanguage === 'sw'
+        ? '[andika sababu ya kutokuidhinisha]'
+        : '[enter the reason for disapproval]'),
+  });
 
   const submitDecision = async () => {
     if (!pendingDecision) return;
@@ -161,8 +177,8 @@ function PendingBusinessCard({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(approved
-          ? { isApproved: true, isVerified: true, approvalDecision: 'APPROVED', notifyOwner }
-          : { isApproved: false, isVerified: false, approvalDecision: 'DISAPPROVED', deactivationReason: disapprovalReason.trim(), notifyOwner }),
+          ? { isApproved: true, isVerified: true, approvalDecision: 'APPROVED', notifyOwner, notificationLanguage: messageLanguage }
+          : { isApproved: false, isVerified: false, approvalDecision: 'DISAPPROVED', deactivationReason: disapprovalReason.trim(), notifyOwner, notificationLanguage: messageLanguage }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || `Failed to ${approved ? 'approve' : 'disapprove'} business`);
@@ -412,6 +428,36 @@ function PendingBusinessCard({
               </div>
             </div>
             <div className="space-y-4 p-6">
+              <fieldset>
+                <legend className="text-sm font-medium text-gray-900 dark:text-white">
+                  SMS language
+                </legend>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {([
+                    ['sw', 'Kiswahili'],
+                    ['en', 'English'],
+                  ] as const).map(([value, label]) => (
+                    <label
+                      key={value}
+                      className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold transition ${
+                        messageLanguage === value
+                          ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300'
+                          : 'border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`message-language-${business.id}`}
+                        value={value}
+                        checked={messageLanguage === value}
+                        onChange={() => setMessageLanguage(value)}
+                        className="sr-only"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               {pendingDecision === 'DISAPPROVED' && (
                 <label className="block">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">

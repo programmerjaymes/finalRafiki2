@@ -154,6 +154,7 @@ export async function PUT(
     const shouldLogApproval = body.isApproved === true && !businessExists.isApproved;
     const shouldLogDisapproval = body.approvalDecision === 'DISAPPROVED' && body.isApproved === false && !businessExists.isApproved;
     const disapprovalReason = typeof body.deactivationReason === 'string' ? body.deactivationReason.trim().slice(0, 300) : '';
+    const notificationLanguage = body.notificationLanguage === 'en' ? 'en' : 'sw';
     if (shouldLogDisapproval && !disapprovalReason) return NextResponse.json({ error: 'Disapproval reason is required' }, { status: 400 });
     
     // Build update data - only include fields that are present
@@ -212,11 +213,11 @@ export async function PUT(
 
     if (shouldLogApproval) {
       await recordAudit({ actorId: session?.user.id, action: 'BUSINESS_APPROVED', entityType: 'Business', entityId: id, description: 'Approved business ' + updatedBusiness.name, metadata: { notifyOwner: body.notifyOwner !== false }, request });
-      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'APPROVED', session!.user.id));
+      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'APPROVED', session!.user.id, notificationLanguage));
     }
     if (shouldLogDisapproval) {
       await recordAudit({ actorId: session?.user.id, action: 'BUSINESS_DISAPPROVED', entityType: 'Business', entityId: id, description: 'Disapproved business ' + updatedBusiness.name + '. Reason: ' + disapprovalReason, metadata: { notifyOwner: body.notifyOwner !== false, reason: disapprovalReason }, request });
-      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'DISAPPROVED', session!.user.id));
+      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'DISAPPROVED', session!.user.id, notificationLanguage));
     }
 
     if (whatsappUpdate !== undefined) {
