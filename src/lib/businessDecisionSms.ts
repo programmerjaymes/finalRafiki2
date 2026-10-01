@@ -14,6 +14,7 @@ export async function notifyBusinessDecision(businessId: string, decision: Decis
         phone: true,
         owner: { select: { id: true, name: true, phone: true } },
         bundle: { select: { name: true, duration: true } },
+        deactivationReason: true,
       },
     });
     if (!business) return;
@@ -25,7 +26,7 @@ export async function notifyBusinessDecision(businessId: string, decision: Decis
 
     const message = decision === 'APPROVED'
       ? `Hongera ${business.owner.name}! Biashara yako "${business.name}" imeidhinishwa na Rafiki. Unatumia kifurushi ${business.bundle.name} cha siku ${business.bundle.duration}. Utahitajika kulipia kifurushi kingine baada ya siku ${business.bundle.duration}.`
-      : `Samahani ${business.owner.name}, biashara yako "${business.name}" haijaidhinishwa. Tafadhali wasiliana na Rafiki kwa simu 0736333111 au WhatsApp 0799100500 kwa msaada zaidi.`;
+      : 'Samahani ' + business.owner.name + ', biashara yako "' + business.name + '" haijaidhinishwa. Sababu: ' + (business.deactivationReason || 'Haijatajwa') + '. Tafadhali wasiliana na Rafiki kwa simu 0736333111 au WhatsApp 0799100500 kwa msaada zaidi.';
 
     const result = await sendSms(phone, message);
     await prisma.smsMessage.create({

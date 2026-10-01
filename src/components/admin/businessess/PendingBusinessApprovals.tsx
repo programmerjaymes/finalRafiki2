@@ -121,6 +121,7 @@ function PendingBusinessCard({
   const [disapproving, setDisapproving] = useState(false);
   const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'DISAPPROVED' | null>(null);
   const [notifyOwner, setNotifyOwner] = useState(true);
+  const [disapprovalReason, setDisapprovalReason] = useState("");
   const ownerPhoto = toImageSrc(business.owner?.image);
   const logoSrc = toImageSrc(business.logo);
   const coverSrc = toImageSrc(business.coverImage);
@@ -141,12 +142,18 @@ function PendingBusinessCard({
 
   const openDecision = (decision: 'APPROVED' | 'DISAPPROVED') => {
     setNotifyOwner(true);
+    setDisapprovalReason("");
     setPendingDecision(decision);
   };
+
+  const decisionMessage = pendingDecision === 'APPROVED'
+    ? 'Hongera ' + (business.owner?.name || 'mteja') + '! Biashara yako "' + business.name + '" imeidhinishwa na Rafiki. Unatumia kifurushi ' + (business.bundle?.name || 'ulichochagua') + ' cha siku ' + (business.bundle?.duration || 0) + '. Utahitajika kulipia kifurushi kingine baada ya siku ' + (business.bundle?.duration || 0) + '.'
+    : 'Samahani ' + (business.owner?.name || 'mteja') + ', biashara yako "' + business.name + '" haijaidhinishwa. Sababu: ' + (disapprovalReason.trim() || '[andika sababu ya kutokuidhinisha]') + '. Tafadhali wasiliana na Rafiki kwa simu 0736333111 au WhatsApp 0799100500 kwa msaada zaidi.';
 
   const submitDecision = async () => {
     if (!pendingDecision) return;
     const approved = pendingDecision === 'APPROVED';
+    if (!approved && !disapprovalReason.trim()) { toast.error('Enter a reason for disapproval'); return; }
     try {
       if (approved) setApproving(true);
       else setDisapproving(true);
@@ -155,7 +162,7 @@ function PendingBusinessCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(approved
           ? { isApproved: true, isVerified: true, approvalDecision: 'APPROVED', notifyOwner }
-          : { isApproved: false, isVerified: false, approvalDecision: 'DISAPPROVED', deactivationReason: 'Disapproved by administrator', notifyOwner }),
+          : { isApproved: false, isVerified: false, approvalDecision: 'DISAPPROVED', deactivationReason: disapprovalReason.trim(), notifyOwner }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || `Failed to ${approved ? 'approve' : 'disapprove'} business`);
