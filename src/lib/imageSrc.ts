@@ -3,7 +3,7 @@ export function toImageSrc(src: string | null | undefined): string | null {
   if (!src) return null;
   if (
     src.startsWith('data:') ||
-    src.startsWith('/') ||
+    (src.startsWith('/') && !src.startsWith('/9j/')) ||
     src.startsWith('http')
   ) {
     return src;

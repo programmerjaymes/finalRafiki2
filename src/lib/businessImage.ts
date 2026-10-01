@@ -4,7 +4,13 @@ export function resolveBusinessImageSrc(image: string | null | undefined): strin
   const value = image.trim();
   if (!value) return null;
   if (value.startsWith('data:')) return value;
-  if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) {
+  // Raw JPEG base64 commonly starts with /9j/.  Do not mistake that for an
+  // application-relative URL simply because its first character is a slash.
+  if (
+    (value.startsWith('/') && !value.startsWith('/9j/')) ||
+    value.startsWith('http://') ||
+    value.startsWith('https://')
+  ) {
     return value;
   }
   return `data:image/jpeg;base64,${value}`;

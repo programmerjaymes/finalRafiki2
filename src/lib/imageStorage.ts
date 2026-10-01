@@ -20,7 +20,8 @@ export function isStoredPath(value: string): boolean {
   return (
     value.startsWith('http://') ||
     value.startsWith('https://') ||
-    value.startsWith('/')
+    // /9j/ is the standard beginning of raw JPEG base64, not a URL path.
+    (value.startsWith('/') && !value.startsWith('/9j/'))
   );
 }
 
