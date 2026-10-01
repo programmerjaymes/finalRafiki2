@@ -34,6 +34,7 @@ model User {
   searchQueries                 SearchQuery[]
   sessions                      Session[]
   privacyRequests               PrivacyRequest[]
+  appExpenses                   AppExpense[]
 
   @@map("users")
 }
@@ -74,6 +75,52 @@ model SystemSetting {
   updatedAt                       DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+enum AppExpenseCategory {
+  DEPLOYMENT
+  DATABASE
+  HOSTING
+  DOMAIN
+  SMS
+  SOFTWARE
+  MAINTENANCE
+  MARKETING
+  OTHER
+}
+
+enum AppExpenseStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+model AppExpense {
+  id               String             @id @default(cuid())
+  title            String
+  category         AppExpenseCategory
+  vendor           String?
+  reference        String?
+  amount           Float
+  currency         String             @default("TZS")
+  status           AppExpenseStatus   @default(PAID)
+  paidAt           DateTime?
+  applicableFrom   DateTime
+  applicableTo     DateTime
+  notes            String?            @db.Text
+  evidenceUrl      String?
+  evidenceName     String?
+  evidenceMimeType String?
+  createdById      String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  createdBy        User               @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([status])
+  @@index([applicableFrom, applicableTo])
+  @@index([createdById])
+  @@map("app_expenses")
 }
 
 model Business {
