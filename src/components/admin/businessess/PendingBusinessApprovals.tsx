@@ -401,7 +401,7 @@ function PendingBusinessCard({
     </article>
       {pendingDecision && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-gray-950/50 p-4 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby={`decision-title-${business.id}`} className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+          <div role="dialog" aria-modal="true" aria-labelledby={`decision-title-${business.id}`} className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
             <div className="flex items-start gap-4 border-b border-gray-100 p-6 dark:border-gray-800">
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${pendingDecision === 'APPROVED' ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'}`}>
                 {pendingDecision === 'APPROVED' ? <FiCheck className="h-6 w-6" /> : <FiX className="h-6 w-6" />}
@@ -412,6 +412,32 @@ function PendingBusinessCard({
               </div>
             </div>
             <div className="space-y-4 p-6">
+              {pendingDecision === 'DISAPPROVED' && (
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Reason for disapproval <span className="text-red-500">*</span>
+                  </span>
+                  <textarea
+                    value={disapprovalReason}
+                    onChange={(event) => setDisapprovalReason(event.target.value.slice(0, 300))}
+                    rows={3}
+                    required
+                    placeholder="Explain why this business was not approved..."
+                    className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-transparent p-3 text-sm text-gray-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/10 dark:border-gray-700 dark:text-white"
+                  />
+                  <span className="mt-1 block text-right text-xs text-gray-400">
+                    {disapprovalReason.length}/300
+                  </span>
+                </label>
+              )}
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  SMS message preview
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
+                  {decisionMessage}
+                </p>
+              </div>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
                 <input type="checkbox" checked={notifyOwner} onChange={(event) => setNotifyOwner(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
                 <span>
@@ -423,7 +449,7 @@ function PendingBusinessCard({
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-100 bg-gray-50 px-6 py-4 dark:border-gray-800 dark:bg-gray-800/50">
               <button type="button" onClick={() => setPendingDecision(null)} disabled={approving || disapproving} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Cancel</button>
-              <button type="button" onClick={() => void submitDecision()} disabled={approving || disapproving} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${pendingDecision === 'APPROVED' ? 'bg-brand-500 hover:bg-brand-600' : 'bg-red-600 hover:bg-red-700'}`}>{approving || disapproving ? 'Saving…' : pendingDecision === 'APPROVED' ? 'Approve' : 'Disapprove'}</button>
+              <button type="button" onClick={() => void submitDecision()} disabled={approving || disapproving || (pendingDecision === 'DISAPPROVED' && !disapprovalReason.trim())} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${pendingDecision === 'APPROVED' ? 'bg-brand-500 hover:bg-brand-600' : 'bg-red-600 hover:bg-red-700'}`}>{approving || disapproving ? 'Saving…' : pendingDecision === 'APPROVED' ? 'Approve' : 'Disapprove'}</button>
             </div>
           </div>
         </div>
