@@ -60,6 +60,12 @@ interface PaginatedUsers {
     page: number;
     limit: number;
     totalPages: number;
+    analytics: {
+      totalUsers: number;
+      usersWithBusinesses: number;
+      businessOwners: number;
+      registrationsInProgress: number;
+    };
   }
 }
 
@@ -74,6 +80,14 @@ export default function UserList() {
   const [total, setTotal] = useState(0);
   const [limit] = useState(10);
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [businessFilter, setBusinessFilter] = useState<string | null>(null);
+  const [registrationFilter, setRegistrationFilter] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState({
+    totalUsers: 0,
+    usersWithBusinesses: 0,
+    businessOwners: 0,
+    registrationsInProgress: 0,
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   
@@ -98,6 +112,14 @@ export default function UserList() {
         url.searchParams.append('role', roleFilter);
       }
 
+      if (businessFilter) {
+        url.searchParams.append('businessStatus', businessFilter);
+      }
+
+      if (registrationFilter) {
+        url.searchParams.append('registrationStatus', registrationFilter);
+      }
+
       const response = await fetch(url.toString());
       
       if (!response.ok) {
@@ -108,6 +130,7 @@ export default function UserList() {
       setUsers(data.users);
       setTotalPages(data.meta.totalPages);
       setTotal(data.meta.total);
+      setAnalytics(data.meta.analytics);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
@@ -119,7 +142,7 @@ export default function UserList() {
 
   useEffect(() => {
     fetchUsers();
-  }, [page, limit, searchQuery, roleFilter]);
+  }, [page, limit, searchQuery, roleFilter, businessFilter, registrationFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,11 +218,27 @@ export default function UserList() {
 
   return (
     <div className="w-full">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'Total users', value: analytics.totalUsers, tone: 'text-blue-600 dark:text-blue-400' },
+          { label: 'Users with businesses', value: analytics.usersWithBusinesses, tone: 'text-green-600 dark:text-green-400' },
+          { label: 'Business owners', value: analytics.businessOwners, tone: 'text-purple-600 dark:text-purple-400' },
+          { label: 'Registrations in progress', value: analytics.registrationsInProgress, tone: 'text-amber-600 dark:text-amber-400' },
+        ].map((metric) => (
+          <Card key={metric.label}>
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{metric.label}</p>
+              <p className={`mt-2 text-3xl font-bold ${metric.tone}`}>{metric.value.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card className="mb-8">
         <CardHeader className="bg-gray-50 dark:bg-gray-700">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <CardTitle className="text-xl">Users</CardTitle>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <form onSubmit={handleSearch} className="flex">
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -215,7 +254,10 @@ export default function UserList() {
               
               <Select
                 value={roleFilter || 'all'}
-                onValueChange={(value) => setRoleFilter(value === 'all' ? null : value)}
+                onValueChange={(value) => {
+                  setRoleFilter(value === 'all' ? null : value);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Filter by role" />
@@ -227,6 +269,47 @@ export default function UserList() {
                     <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
                     <SelectItem value="BUSINESS_REGISTRAR">Business Registrar</SelectItem>
                     <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={businessFilter || 'all'}
+                onValueChange={(value) => {
+                  setBusinessFilter(value === 'all' ? null : value);
+                  if (value !== 'all') setRegistrationFilter(null);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[190px]">
+                  <SelectValue placeholder="Business status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All Business Statuses</SelectItem>
+                    <SelectItem value="with_business">With Businesses</SelectItem>
+                    <SelectItem value="without_business">Without Businesses</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={registrationFilter || 'all'}
+                onValueChange={(value) => {
+                  setRegistrationFilter(value === 'all' ? null : value);
+                  if (value !== 'all') setBusinessFilter(null);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[190px]">
+                  <SelectValue placeholder="Registration step" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All Registrations</SelectItem>
+                    <SelectItem value="not_started">Not Started</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

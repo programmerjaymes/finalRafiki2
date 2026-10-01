@@ -15,6 +15,7 @@ import toast from '@/utils/toast';
 import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 import { useSession } from 'next-auth/react';
+import { resolveBusinessImageSrc } from '@/lib/businessImage';
 
 interface BusinessImage {
   id: string;
@@ -977,9 +978,8 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
           
           if (!isLoaded || hasError) return null;
           
-          const displaySrc = imgData.startsWith('data:') || imgData.startsWith('/') || imgData.startsWith('http')
-            ? imgData
-            : `data:image/jpeg;base64,${imgData}`;
+          const displaySrc = resolveBusinessImageSrc(imgData);
+          if (!displaySrc) return null;
           
           return (
             <img
@@ -1682,7 +1682,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                       <div className="flex flex-wrap gap-2 mt-2 mb-2">
                         {existingImages.map((img, i) => (
                           <div key={img.id} className="relative h-20 w-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                            <img src={img.imageData.startsWith('data:') || img.imageData.startsWith('/') || img.imageData.startsWith('http') ? img.imageData : `data:image/jpeg;base64,${img.imageData}`} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                            <img src={resolveBusinessImageSrc(img.imageData) || ''} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
                             <button type="button" onClick={() => setExistingImages(prev => prev.filter(x => x.id !== img.id))}
                               className="absolute top-0.5 right-0.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600">
                               <FiX className="h-3 w-3" />
@@ -1753,7 +1753,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
             <div className="flex items-start gap-4 mb-6">
               <div className="h-16 w-16 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {currentBusiness.logo ? (
-                  <img src={currentBusiness.logo.startsWith('data:') || currentBusiness.logo.startsWith('/') || currentBusiness.logo.startsWith('http') ? currentBusiness.logo : `data:image/jpeg;base64,${currentBusiness.logo}`} alt={currentBusiness.name} className="h-full w-full object-cover" />
+                  <img src={resolveBusinessImageSrc(currentBusiness.logo) || ''} alt={currentBusiness.name} className="h-full w-full object-cover" />
                 ) : (
                   <span className="text-2xl font-bold text-gray-400">{currentBusiness.name.charAt(0)}</span>
                 )}
@@ -1792,7 +1792,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {currentBusiness.images.map((img, i) => (
                     <div key={img.id || i} className="h-24 w-24 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-700">
-                      <img src={img.imageData.startsWith('data:') || img.imageData.startsWith('/') || img.imageData.startsWith('http') ? img.imageData : `data:image/jpeg;base64,${img.imageData}`} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                      <img src={resolveBusinessImageSrc(img.imageData) || ''} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
                     </div>
                   ))}
                 </div>

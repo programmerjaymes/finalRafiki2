@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
     const role = searchParams.get('role') || ''
+    const businessStatus = searchParams.get('businessStatus') || ''
+    const registrationStatus = searchParams.get('registrationStatus') || ''
     const emailExact = searchParams.get('email')
     const phoneExact = searchParams.get('phone')
     
@@ -36,6 +38,30 @@ export async function GET(request: NextRequest) {
 
     if (phoneExact) {
       where.phone = phoneExact
+    }
+
+    if (businessStatus === 'with_business') {
+      where.businesses = { some: {} }
+    } else if (businessStatus === 'without_business') {
+      where.businesses = { none: {} }
+    }
+
+    if (registrationStatus === 'not_started') {
+      where.businesses = { none: {} }
+      where.businessRegistrations = { none: {} }
+    } else if (registrationStatus === 'in_progress') {
+      where.businesses = { none: {} }
+      where.businessRegistrations = { some: { isCompleted: false } }
+    } else if (registrationStatus === 'completed') {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { businesses: { some: {} } },
+            { businessRegistrations: { some: { isCompleted: true } } },
+          ],
+        },
+      ]
     }
 
     // Add search filter if provided
@@ -101,9 +127,18 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    const [users, total] = await Promise.all([
+    const [users, total, totalUsers, usersWithBusinesses, businessOwners, registrationsInProgress] = await Promise.all([
       prisma.user.findMany(userQuery),
       prisma.user.count({ where }),
+      prisma.user.count(),
+      prisma.user.count({ where: { businesses: { some: {} } } }),
+      prisma.user.count({ where: { role: 'BUSINESS_OWNER' } }),
+      prisma.user.count({
+        where: {
+          businesses: { none: {} },
+          businessRegistrations: { some: { isCompleted: false } },
+        },
+      }),
     ])
     const totalPages = Math.ceil(total / limit)
     
@@ -114,6 +149,12 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages,
+        analytics: {
+          totalUsers,
+          usersWithBusinesses,
+          businessOwners,
+          registrationsInProgress,
+        },
       },
     })
   } catch (error: any) {
