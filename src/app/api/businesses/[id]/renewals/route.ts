@@ -79,8 +79,9 @@ export async function POST(
     if (!business) {
       return NextResponse.json({ error: 'Business not found' }, { status: 404 });
     }
-    if (business.ownerId !== session.user.id) {
-      return NextResponse.json({ error: 'Only the business owner can request renewal' }, { status: 403 });
+    const adminRequest = canAdminister(session.user.role);
+    if (business.ownerId !== session.user.id && !adminRequest) {
+      return NextResponse.json({ error: 'Only the business owner or an administrator can request renewal' }, { status: 403 });
     }
     if (!newBundle) {
       return NextResponse.json({ error: 'Selected bundle does not exist' }, { status: 400 });
@@ -91,7 +92,7 @@ export async function POST(
     if (business.renewalRequests.length > 0) {
       return NextResponse.json({ error: 'A renewal request is already awaiting approval' }, { status: 409 });
     }
-    if (newBundle.price > 0 && !paymentReference) {
+    if (!adminRequest && newBundle.price > 0 && !paymentReference) {
       return NextResponse.json({ error: 'Payment reference is required for this bundle' }, { status: 400 });
     }
 
@@ -120,7 +121,7 @@ export async function POST(
         },
       });
 
-      if (newBundle.price > 0) {
+      if (!adminRequest && newBundle.price > 0) {
         await tx.payment.create({
           data: {
             amount: newBundle.price,

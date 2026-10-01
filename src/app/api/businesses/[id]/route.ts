@@ -151,7 +151,9 @@ export async function PUT(
     if (isApprovalChange && !canApprove) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-    const shouldLogApproval = body.isApproved === true && !businessExists.isApproved;
+    const isDeactivation = body.adminStatusAction === 'DEACTIVATED' && body.isApproved === false;
+    const isActivation = body.adminStatusAction === 'ACTIVATED' && body.isApproved === true;
+    const shouldLogApproval = body.isApproved === true && !businessExists.isApproved && !isActivation;
     const shouldLogDisapproval = body.approvalDecision === 'DISAPPROVED' && body.isApproved === false && !businessExists.isApproved;
     const disapprovalReason = typeof body.deactivationReason === 'string' ? body.deactivationReason.trim().slice(0, 300) : '';
     const notificationLanguage = body.notificationLanguage === 'en' ? 'en' : 'sw';
@@ -181,6 +183,8 @@ export async function PUT(
     if (body.isApproved !== undefined) updateData.isApproved = body.isApproved
     if (shouldLogApproval) updateData.deactivationReason = null
     if (shouldLogDisapproval) updateData.deactivationReason = disapprovalReason
+    if (isDeactivation) updateData.deactivationReason = disapprovalReason || 'Deactivated by administrator'
+    if (isActivation) updateData.deactivationReason = null
     if (body.bundleId !== undefined) updateData.bundleId = body.bundleId
     if (body.categoryId !== undefined) updateData.categoryId = body.categoryId
     if (body.categoryId2 !== undefined) updateData.categoryId2 = body.categoryId2 || null
@@ -218,6 +222,17 @@ export async function PUT(
     if (shouldLogDisapproval) {
       await recordAudit({ actorId: session?.user.id, action: 'BUSINESS_DISAPPROVED', entityType: 'Business', entityId: id, description: 'Disapproved business ' + updatedBusiness.name + '. Reason: ' + disapprovalReason, metadata: { notifyOwner: body.notifyOwner !== false, reason: disapprovalReason }, request });
       if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'DISAPPROVED', session!.user.id, notificationLanguage));
+    }
+    if (isDeactivation || isActivation) {
+      await recordAudit({
+        actorId: session?.user.id,
+        action: isActivation ? 'BUSINESS_ACTIVATED' : 'BUSINESS_DEACTIVATED',
+        entityType: 'Business',
+        entityId: id,
+        description: `${isActivation ? 'Activated' : 'Deactivated'} business ${updatedBusiness.name}`,
+        metadata: { reason: isDeactivation ? (disapprovalReason || 'Deactivated by administrator') : null },
+        request,
+      });
     }
 
     if (whatsappUpdate !== undefined) {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser, FiRefreshCw } from 'react-icons/fi';
+import { FiEdit, FiPlus, FiSearch, FiChevronLeft, FiChevronRight, FiUpload, FiX, FiImage, FiMapPin, FiPhone, FiMail, FiGlobe, FiUser, FiRefreshCw, FiMoreVertical, FiCheckCircle, FiPower, FiClock } from 'react-icons/fi';
 import { RiDeleteBin6Line } from 'react-icons/ri';
 import { Modal } from '@/components/ui/modal';
 import { useModal } from '@/hooks/useModal';
@@ -17,6 +17,10 @@ import { useLocale } from '@/lib/useLocale';
 import { useSession } from 'next-auth/react';
 import { resolveBusinessImageSrc } from '@/lib/businessImage';
 import PaymentProcessor from '@/components/business/PaymentProcessor';
+import {
+  buildBusinessDecisionMessage,
+  type BusinessDecisionLanguage,
+} from '@/lib/businessDecisionMessage';
 
 interface BusinessImage {
   id: string;
@@ -41,6 +45,7 @@ interface Business {
   allowsDelivery: boolean;
   isVerified: boolean;
   isApproved: boolean;
+  deactivationReason: string | null;
   bundleId: string;
   bundleExpiresAt: string;
   categoryId: string;
@@ -233,6 +238,15 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
   const [historyBusiness, setHistoryBusiness] = useState<Business | null>(null);
   const [bundleHistory, setBundleHistory] = useState<BundleHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [approvalDecision, setApprovalDecision] = useState<{
+    business: Business;
+    decision: 'APPROVED' | 'DISAPPROVED';
+  } | null>(null);
+  const [approvalReason, setApprovalReason] = useState('');
+  const [approvalLanguage, setApprovalLanguage] = useState<BusinessDecisionLanguage>('sw');
+  const [approvalNotifyOwner, setApprovalNotifyOwner] = useState(true);
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: 1,
     limit: 9,
@@ -840,7 +854,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
     if (!renewalBusiness || !renewalBundleId) return;
     const selectedBundle = bundles.find((bundle) => bundle.id === renewalBundleId);
     if (!selectedBundle) return;
-    if (selectedBundle.price > 0 && !renewalPaymentReference) {
+    if (isOwnerPortal && selectedBundle.price > 0 && !renewalPaymentReference) {
       toast.error(locale === 'sw' ? 'Kamilisha hatua ya malipo kwanza' : 'Complete the payment step first');
       return;
     }
@@ -913,6 +927,139 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
       toast.error(error instanceof Error ? error.message : 'Failed to load bundle history');
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const updateBusinessStatus = async (
+    business: Business,
+    action: 'APPROVE' | 'DISAPPROVE' | 'ACTIVATE' | 'DEACTIVATE',
+  ) => {
+    setOpenActionMenuId(null);
+    let reason = '';
+    let payload: Record<string, unknown>;
+
+    if (action === 'DISAPPROVE') {
+      reason = window.prompt('Enter the reason for disapproving this business:')?.trim() || '';
+      if (!reason) return;
+      payload = {
+        isApproved: false,
+        isVerified: false,
+        approvalDecision: 'DISAPPROVED',
+        deactivationReason: reason,
+        notifyOwner: true,
+        notificationLanguage: locale === 'sw' ? 'sw' : 'en',
+      };
+    } else if (action === 'APPROVE') {
+      const confirmation = await toast.confirm(
+        'Approve business?',
+        `Approve "${business.name}" and notify the owner?`,
+        'question',
+        'Approve',
+        'Cancel',
+      );
+      if (!confirmation.isConfirmed) return;
+      payload = {
+        isApproved: true,
+        isVerified: true,
+        approvalDecision: 'APPROVED',
+        notifyOwner: true,
+        notificationLanguage: locale === 'sw' ? 'sw' : 'en',
+      };
+    } else {
+      const activating = action === 'ACTIVATE';
+      const confirmation = await toast.confirm(
+        activating ? 'Activate business?' : 'Deactivate business?',
+        activating
+          ? `Make "${business.name}" active and publicly visible again?`
+          : `Deactivate "${business.name}" and remove it from public listings?`,
+        activating ? 'question' : 'warning',
+        activating ? 'Activate' : 'Deactivate',
+        'Cancel',
+      );
+      if (!confirmation.isConfirmed) return;
+      payload = {
+        isApproved: activating,
+        isVerified: activating,
+        adminStatusAction: activating ? 'ACTIVATED' : 'DEACTIVATED',
+        deactivationReason: activating ? null : 'Deactivated by administrator',
+        notifyOwner: false,
+      };
+    }
+
+    try {
+      const response = await fetch(`/api/businesses/${business.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to update business');
+      toast.success(
+        action === 'APPROVE'
+          ? 'Business approved'
+          : action === 'DISAPPROVE'
+            ? 'Business disapproved'
+            : action === 'ACTIVATE'
+              ? 'Business activated'
+              : 'Business deactivated',
+      );
+      await fetchBusinesses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update business');
+    }
+  };
+
+  const openApprovalDecision = (
+    business: Business,
+    decision: 'APPROVED' | 'DISAPPROVED',
+  ) => {
+    setOpenActionMenuId(null);
+    setApprovalReason('');
+    setApprovalLanguage(locale === 'sw' ? 'sw' : 'en');
+    setApprovalNotifyOwner(true);
+    setApprovalDecision({ business, decision });
+  };
+
+  const submitApprovalDecision = async () => {
+    if (!approvalDecision) return;
+    const approved = approvalDecision.decision === 'APPROVED';
+    if (!approved && !approvalReason.trim()) {
+      toast.error('Enter a reason for disapproval');
+      return;
+    }
+    setApprovalSubmitting(true);
+    try {
+      const response = await fetch(`/api/businesses/${approvalDecision.business.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          approved
+            ? {
+                isApproved: true,
+                isVerified: true,
+                approvalDecision: 'APPROVED',
+                notifyOwner: approvalNotifyOwner,
+                notificationLanguage: approvalLanguage,
+              }
+            : {
+                isApproved: false,
+                isVerified: false,
+                approvalDecision: 'DISAPPROVED',
+                deactivationReason: approvalReason.trim(),
+                notifyOwner: approvalNotifyOwner,
+                notificationLanguage: approvalLanguage,
+              },
+        ),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to save decision');
+      toast.success(approved ? 'Business approved' : 'Business disapproved');
+      setApprovalDecision(null);
+      await fetchBusinesses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save decision');
+    } finally {
+      setApprovalSubmitting(false);
     }
   };
   
@@ -1403,8 +1550,14 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                         ✓ Verified
                       </span>
                     )}
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow ${business.isApproved ? 'bg-primary text-white' : 'bg-secondary text-gray-800'}`}>
-                      {business.isApproved ? 'Approved' : 'Pending'}
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow ${business.isApproved ? 'bg-primary text-white' : business.deactivationReason ? 'bg-red-600 text-white' : 'bg-secondary text-gray-800'}`}>
+                      {business.isApproved
+                        ? 'Approved'
+                        : business.renewalRequests?.length
+                          ? 'Renewal pending'
+                          : business.deactivationReason
+                            ? 'Deactivated'
+                            : 'Pending'}
                     </span>
                   </div>
 
@@ -1424,8 +1577,65 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                 </div>
 
                 {/* ── Body ── */}
-                <div className="px-3 pt-2 pb-1 flex-1">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-primary bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">
+                <div className="relative px-3 pt-2 pb-1 flex-1">
+                  <div className="absolute right-2 top-2 z-30">
+                    <button
+                      type="button"
+                      aria-label={locale === 'sw' ? 'Vitendo vya biashara' : 'Business actions'}
+                      aria-expanded={openActionMenuId === business.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setOpenActionMenuId((current) => current === business.id ? null : business.id);
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      <FiMoreVertical className="h-4 w-4" />
+                    </button>
+                    {openActionMenuId === business.id && (
+                      <div
+                        className="absolute right-0 mt-1 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-900"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <button type="button" onClick={() => { setOpenActionMenuId(null); void handleEdit(business); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800">
+                          <FiEdit className="h-4 w-4" /> {locale === 'sw' ? 'Hariri' : 'Edit'}
+                        </button>
+                        <button type="button" onClick={() => { setOpenActionMenuId(null); void openBundleHistory(business); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800">
+                          <FiClock className="h-4 w-4" /> {locale === 'sw' ? 'Historia ya vifurushi' : 'Bundle history'}
+                        </button>
+
+                        {!isOwnerPortal && !business.renewalRequests?.length && (
+                          business.isApproved ? (
+                            <button type="button" onClick={() => void updateBusinessStatus(business, 'DEACTIVATE')} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/10">
+                              <FiPower className="h-4 w-4" /> Deactivate
+                            </button>
+                          ) : business.deactivationReason ? (
+                            <button type="button" onClick={() => void updateBusinessStatus(business, 'ACTIVATE')} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-green-700 hover:bg-green-50 dark:text-green-300 dark:hover:bg-green-500/10">
+                              <FiPower className="h-4 w-4" /> Activate
+                            </button>
+                          ) : (
+                            <>
+                              <button type="button" onClick={() => openApprovalDecision(business, 'APPROVED')} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-green-700 hover:bg-green-50 dark:text-green-300 dark:hover:bg-green-500/10">
+                                <FiCheckCircle className="h-4 w-4" /> Approve
+                              </button>
+                              <button type="button" onClick={() => openApprovalDecision(business, 'DISAPPROVED')} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10">
+                                <FiX className="h-4 w-4" /> Disapprove
+                              </button>
+                            </>
+                          )
+                        )}
+
+                        {new Date(business.bundleExpiresAt).getTime() <= Date.now() && !business.renewalRequests?.length && (
+                          <button type="button" onClick={() => { setOpenActionMenuId(null); openRenewal(business); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10">
+                            <FiRefreshCw className="h-4 w-4" /> {locale === 'sw' ? 'Huisha kifurushi' : 'Renew bundle'}
+                          </button>
+                        )}
+                        <button type="button" onClick={() => { setOpenActionMenuId(null); void handleDelete(business); }} className="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 dark:border-gray-800 dark:text-red-300 dark:hover:bg-red-500/10">
+                          <RiDeleteBin6Line className="h-4 w-4" /> {locale === 'sw' ? 'Futa' : 'Delete'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <span className="inline-flex max-w-[calc(100%-2.5rem)] items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-primary dark:bg-red-900/20">
                     {business.category?.icon} {business.category?.name || 'Uncategorized'}
                   </span>
 
@@ -1601,6 +1811,77 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
       )}
 
       <Modal
+        isOpen={Boolean(approvalDecision)}
+        onClose={() => {
+          if (!approvalSubmitting) setApprovalDecision(null);
+        }}
+        className="max-h-[90vh] max-w-[620px] overflow-y-auto p-6"
+      >
+        {approvalDecision && (() => {
+          const approved = approvalDecision.decision === 'APPROVED';
+          const business = approvalDecision.business;
+          const preview = buildBusinessDecisionMessage({
+            decision: approvalDecision.decision,
+            language: approvalLanguage,
+            ownerName: business.owner?.name || (approvalLanguage === 'sw' ? 'mteja' : 'customer'),
+            businessName: business.name,
+            bundleName: business.bundle?.name || (approvalLanguage === 'sw' ? 'ulichochagua' : 'selected'),
+            bundleDuration: business.bundle?.duration || 0,
+            disapprovalReason:
+              approvalReason.trim() ||
+              (approvalLanguage === 'sw'
+                ? '[andika sababu ya kutokuidhinisha]'
+                : '[enter the reason for disapproval]'),
+          });
+          return (
+            <>
+              <h4 className="pr-12 text-xl font-semibold text-gray-900 dark:text-white">
+                {approved ? 'Approve business?' : 'Disapprove business?'}
+              </h4>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{business.name}</p>
+
+              <fieldset className="mt-5">
+                <legend className="text-sm font-medium text-gray-900 dark:text-white">SMS language</legend>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {([['sw', 'Kiswahili'], ['en', 'English']] as const).map(([value, label]) => (
+                    <label key={value} className={`cursor-pointer rounded-xl border px-4 py-3 text-center text-sm font-semibold ${approvalLanguage === value ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-300' : 'border-gray-200 text-gray-600 dark:border-gray-700 dark:text-gray-300'}`}>
+                      <input type="radio" name="card-approval-language" value={value} checked={approvalLanguage === value} onChange={() => setApprovalLanguage(value)} className="sr-only" />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {!approved && (
+                <label className="mt-4 block">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Reason for disapproval *</span>
+                  <textarea value={approvalReason} onChange={(event) => setApprovalReason(event.target.value.slice(0, 300))} rows={3} className="mt-2 w-full rounded-xl border border-gray-300 bg-transparent p-3 text-sm dark:border-gray-700 dark:text-white" />
+                  <span className="mt-1 block text-right text-xs text-gray-400">{approvalReason.length}/300</span>
+                </label>
+              )}
+
+              <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/60">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">SMS message preview</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">{preview}</p>
+              </div>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <input type="checkbox" checked={approvalNotifyOwner} onChange={(event) => setApprovalNotifyOwner(event.target.checked)} className="mt-0.5 h-4 w-4 rounded" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Notify the business owner by SMS</span>
+              </label>
+
+              <div className="mt-5 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setApprovalDecision(null)} disabled={approvalSubmitting}>Cancel</Button>
+                <button type="button" onClick={() => void submitApprovalDecision()} disabled={approvalSubmitting || (!approved && !approvalReason.trim())} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${approved ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                  {approvalSubmitting ? 'Saving…' : approved ? 'Approve' : 'Disapprove'}
+                </button>
+              </div>
+            </>
+          );
+        })()}
+      </Modal>
+
+      <Modal
         isOpen={Boolean(renewalBusiness)}
         onClose={closeRenewal}
         className="max-h-[90vh] max-w-[760px] overflow-y-auto p-6"
@@ -1632,7 +1913,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
         {(() => {
           const selected = bundles.find((bundle) => bundle.id === renewalBundleId);
           if (!selected) return null;
-          if (selected.price > 0 && !renewalPaymentReference) {
+          if (isOwnerPortal && selected.price > 0 && !renewalPaymentReference) {
             return (
               <div className="mt-6">
                 <PaymentProcessor
