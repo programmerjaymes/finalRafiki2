@@ -14,6 +14,10 @@ import {
   PencilIcon,
   TrashIcon,
   PlusIcon,
+  UserGroupIcon,
+  BuildingOffice2Icon,
+  BriefcaseIcon,
+  ArrowPathRoundedSquareIcon,
 } from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 import {
@@ -218,26 +222,38 @@ export default function UserList() {
 
   return (
     <div className="w-full">
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-7 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: 'Total users', value: analytics.totalUsers, tone: 'text-blue-600 dark:text-blue-400' },
-          { label: 'Users with businesses', value: analytics.usersWithBusinesses, tone: 'text-green-600 dark:text-green-400' },
-          { label: 'Business owners', value: analytics.businessOwners, tone: 'text-purple-600 dark:text-purple-400' },
-          { label: 'Registrations in progress', value: analytics.registrationsInProgress, tone: 'text-amber-600 dark:text-amber-400' },
-        ].map((metric) => (
-          <Card key={metric.label}>
-            <CardContent className="p-5">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{metric.label}</p>
-              <p className={`mt-2 text-3xl font-bold ${metric.tone}`}>{metric.value.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-        ))}
+          { label: "Total users", value: analytics.totalUsers, description: "All registered accounts", icon: UserGroupIcon, iconClass: "bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400", accent: "from-blue-500 to-cyan-400" },
+          { label: "Users with businesses", value: analytics.usersWithBusinesses, description: "Users managing a listing", icon: BuildingOffice2Icon, iconClass: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400", accent: "from-emerald-500 to-teal-400" },
+          { label: "Business owners", value: analytics.businessOwners, description: "Registered owner accounts", icon: BriefcaseIcon, iconClass: "bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400", accent: "from-violet-500 to-fuchsia-400" },
+          { label: "Registrations in progress", value: analytics.registrationsInProgress, description: "Profiles awaiting completion", icon: ArrowPathRoundedSquareIcon, iconClass: "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400", accent: "from-amber-500 to-orange-400" },
+        ].map((metric) => {
+          const MetricIcon = metric.icon;
+          return (
+            <Card key={metric.label} className="group relative overflow-hidden border-gray-200 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800">
+              <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${metric.accent}`} />
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{metric.label}</p>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{metric.value.toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{metric.description}</p>
+                  </div>
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${metric.iconClass}`}>
+                    <MetricIcon className="h-6 w-6" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      <Card className="mb-8">
-        <CardHeader className="bg-gray-50 dark:bg-gray-700">
+      <Card className="mb-8 overflow-hidden border-gray-200 shadow-sm dark:border-gray-800">
+        <CardHeader className="border-b border-gray-100 bg-white px-5 py-5 dark:border-gray-800 dark:bg-gray-900">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <CardTitle className="text-xl">Users</CardTitle>
+            <div><CardTitle className="text-xl text-gray-900 dark:text-white">User directory</CardTitle><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Search, filter and manage platform access</p></div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <form onSubmit={handleSearch} className="flex">
                 <div className="relative">
@@ -341,7 +357,7 @@ export default function UserList() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-800">
+                  <tr className="border-b border-gray-100 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/70">
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Name
                     </th>
@@ -373,7 +389,7 @@ export default function UserList() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onClick={() => handleViewDetails(user.id)}>
+                    <tr key={user.id} className="cursor-pointer transition-colors hover:bg-brand-50/40 dark:hover:bg-brand-500/5" onClick={() => handleViewDetails(user.id)}>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {user.image ? (
@@ -459,7 +475,7 @@ export default function UserList() {
       </Card>
       
       {!isLoading && users.length > 0 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Showing <span className="font-medium">{users.length}</span> of{' '}
             <span className="font-medium">{total}</span> users

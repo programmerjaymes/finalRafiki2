@@ -23,6 +23,7 @@ export default function UserModal({ isOpen, onClose, userId }: UserModalProps) {
       size="lg"
     >
       <UserForm 
+        key={userId || "new-user"}
         userId={userId} 
         onBack={onClose} 
         onSuccess={handleFormSubmitSuccess}

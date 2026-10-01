@@ -12,6 +12,7 @@ import {
 } from "../icons/index";
 import { 
   FaMoneyBillWave as PaymentIcon,
+  FaSms as SmsIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
   FaListUl as AllBusinessesIcon,
@@ -88,6 +89,11 @@ const AppSidebar: React.FC = () => {
       icon: <PaymentIcon />,
       name: messages.admin.payments,
       path: "/payments",
+    },
+    {
+      icon: <SmsIcon />,
+      name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging',
+      path: "/sms",
     },
     {
       icon: <UserCircleIcon />,

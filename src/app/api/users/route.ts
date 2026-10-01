@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         email: body.email,
+        phone: body.phone?.trim() || null,
         role: body.role,
         hashedPassword,
       },
@@ -211,6 +212,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true, 
         email: true,
+        phone: true,
         role: true,
         emailVerified: true,
         image: true, 

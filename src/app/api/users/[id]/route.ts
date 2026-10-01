@@ -79,7 +79,7 @@ export async function PUT(
     const body = await request.json();
     
     // Validate that at least one field to update is provided
-    if (!body.name && !body.email && !body.role && !body.password) {
+    if (!body.name && !body.email && body.phone === undefined && !body.role && !body.password) {
       return NextResponse.json(
         { error: 'No update data provided' },
         { status: 400 }
@@ -111,12 +111,21 @@ export async function PUT(
         );
       }
     }
+    const normalizedPhone = body.phone?.trim() || null;
+    if (normalizedPhone && normalizedPhone !== existingUser.phone) {
+      const userWithPhone = await prisma.user.findUnique({ where: { phone: normalizedPhone } });
+      if (userWithPhone && userWithPhone.id !== id) {
+        return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
+      }
+    }
+
     
     // Prepare update data
     const updateData: any = {};
     
     if (body.name) updateData.name = body.name;
     if (body.email) updateData.email = body.email;
+    if (body.phone !== undefined) updateData.phone = normalizedPhone;
     if (body.role) updateData.role = body.role;
     
     // Hash password if provided
@@ -134,6 +143,7 @@ export async function PUT(
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         emailVerified: true,
         image: true,

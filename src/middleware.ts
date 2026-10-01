@@ -89,6 +89,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/bundles') ||
     pathname.startsWith('/categories') ||
     pathname.startsWith('/payments') ||
+    pathname.startsWith('/sms') ||
     pathname.startsWith('/regions') ||
     pathname.startsWith('/districts') ||
     pathname.startsWith('/wards') ||

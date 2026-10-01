@@ -30,18 +30,13 @@ import Loader from '@/components/common/Loader';
 const userSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
+  phone: z.string().trim().optional(),
   role: z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT']),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  password: z.preprocess(
+    (value) => value === '' ? undefined : value,
+    z.string().min(6, 'Password must be at least 6 characters').optional(),
+  ),
   confirmPassword: z.string().optional(),
-}).refine(data => {
-  // If password is provided, confirm password must match
-  if (data.password && data.password !== data.confirmPassword) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -50,6 +45,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT';
   createdAt: string;
   updatedAt: string;
@@ -72,6 +68,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
     defaultValues: {
       name: '',
       email: '',
+      phone: '',
       role: 'BUSINESS_OWNER',
       password: '',
       confirmPassword: '',
@@ -84,7 +81,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
       const fetchUser = async () => {
         setIsFetching(true);
         try {
-          const response = await fetch(`/api/users/${userId}`);
+          const response = await fetch(`/api/users/${userId}`, { cache: "no-store" });
           if (!response.ok) {
             throw new Error(`Failed to fetch user: ${response.statusText}`);
           }
@@ -95,6 +92,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
           form.reset({
             name: user.name,
             email: user.email,
+            phone: user.phone || '',
             role: user.role,
             password: '',
             confirmPassword: '',
@@ -112,6 +110,16 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
   }, [userId, form]);
 
   const onSubmit = async (values: UserFormValues) => {
+    if (!isEditing && !values.password) {
+      form.setError('password', { message: 'Password is required' });
+      return;
+    }
+
+    if (!isEditing && values.password !== values.confirmPassword) {
+      form.setError('confirmPassword', { message: "Passwords don't match" });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -228,6 +236,26 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="tel"
+                      placeholder="Enter phone number"
+                      {...field}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             
             <FormField
               control={form.control}
@@ -245,7 +273,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent portalled={false}>
+                    <SelectContent portalled={false} className="z-[100] max-h-64">
                       <SelectItem value="ADMIN">Admin</SelectItem>
                       <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
                       <SelectItem value="BUSINESS_REGISTRAR">Business Registrar</SelectItem>
@@ -266,6 +294,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                   <FormControl>
                     <Input 
                       type="password"
+                      className="[&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                       placeholder={isEditing ? 'Enter new password (optional)' : 'Enter password'} 
                       {...field} 
                       disabled={isLoading}
@@ -276,6 +305,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
               )}
             />
             
+            {!isEditing && (
             <FormField
               control={form.control}
               name="confirmPassword"
@@ -285,6 +315,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                   <FormControl>
                     <Input 
                       type="password"
+                      className="[&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                       placeholder="Confirm password" 
                       {...field} 
                       disabled={isLoading}
@@ -294,6 +325,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                 </FormItem>
               )}
             />
+            )}
           </Form>
         </CardContent>
         
