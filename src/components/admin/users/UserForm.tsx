@@ -237,7 +237,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                   <FormLabel>Role</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
-                    defaultValue={field.value}
+                    value={field.value}
                     disabled={isLoading}
                   >
                     <FormControl>
@@ -245,7 +245,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent portalled={false}>
                       <SelectItem value="ADMIN">Admin</SelectItem>
                       <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
                       <SelectItem value="BUSINESS_REGISTRAR">Business Registrar</SelectItem>

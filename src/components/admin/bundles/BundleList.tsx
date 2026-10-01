@@ -28,6 +28,9 @@ interface Bundle {
   updatedAt: string;
 }
 
+const formatTsh = (amount: number) =>
+  'TSh ' + amount.toLocaleString('en-TZ', { maximumFractionDigits: 0 });
+
 const BundleList = () => {
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +215,7 @@ const BundleList = () => {
         <div class="text-center">
           <p class="mb-4">You are about to delete:</p>
           <p class="text-lg font-semibold mb-1">${currentBundle.name}</p>
-          <p class="text-primary-500 font-bold mb-2">$${currentBundle.price.toFixed(2)} / ${currentBundle.duration} days</p>
+          <p class="text-primary-500 font-bold mb-2">${formatTsh(currentBundle.price)} / ${currentBundle.duration} days</p>
           ${currentBundle.description ? 
             `<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${currentBundle.description}</p>` : 
             ''
@@ -335,7 +338,7 @@ const BundleList = () => {
               
               <h3 className="text-xl font-semibold text-black dark:text-white mb-2">{bundle.name}</h3>
               <div className="text-2xl font-bold text-primary-500 mb-4">
-                ${bundle.price.toFixed(2)}
+                {formatTsh(bundle.price)}
                 <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">/ {bundle.duration} days</span>
               </div>
               
@@ -413,15 +416,15 @@ const BundleList = () => {
             </div>
             
             <div className="col-span-1">
-              <Label>Price</Label>
+              <Label>Price (TSh)</Label>
               <Input 
                 type="number" 
                 name="price" 
-                placeholder="0.00" 
+                placeholder="0"
                 defaultValue={formData.price}
                 onChange={handleChange}
                 min="0"
-                step={0.01}
+                step={1}
               />
             </div>
             
@@ -545,15 +548,15 @@ const BundleList = () => {
             </div>
             
             <div className="col-span-1">
-              <Label>Price</Label>
+              <Label>Price (TSh)</Label>
               <Input 
                 type="number" 
                 name="price" 
-                placeholder="0.00" 
+                placeholder="0"
                 defaultValue={formData.price}
                 onChange={handleChange}
                 min="0"
-                step={0.01}
+                step={1}
               />
             </div>
             
