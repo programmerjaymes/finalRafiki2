@@ -13,12 +13,14 @@ import toast from '@/utils/toast';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import SmsHistory from './SmsHistory';
 
-type SmsUser = {
+type SmsRecipient = {
   id: string;
   name: string;
-  email: string;
-  phone: string | null;
-  role: string;
+  email: string | null;
+  phone: string;
+  type: 'USER' | 'BUSINESS';
+  label: string;
+  ownerName?: string;
 };
 
 type SendResult = {
@@ -27,7 +29,7 @@ type SendResult = {
   failedCount: number;
   skippedCount: number;
   creditsRemaining?: number;
-  results: Array<{ userId: string; name: string; phone: string; success: boolean; error?: string }>;
+  results: Array<{ recipientKey: string; name: string; phone: string; success: boolean; error?: string }>;
 };
 
 const roleLabels: Record<string, string> = {
@@ -46,9 +48,10 @@ function smsSegments(message: string) {
 }
 
 export default function SmsMessaging() {
-  const [users, setUsers] = useState<SmsUser[]>([]);
+  const [recipients, setRecipients] = useState<SmsRecipient[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
+  const [recipientType, setRecipientType] = useState<'ALL' | 'USER' | 'BUSINESS'>('ALL');
   const [message, setMessage] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [sending, setSending] = useState(false);
@@ -59,12 +62,12 @@ export default function SmsMessaging() {
 
   useEffect(() => {
     let active = true;
-    const loadUsers = async () => {
+    const loadRecipients = async () => {
       try {
-        const response = await fetch('/api/users?page=1&limit=500', { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to load users');
+        const response = await fetch('/api/sms/send', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load recipients');
         const data = await response.json();
-        if (active) setUsers((data.users || []).filter((user: SmsUser) => Boolean(user.phone?.trim())));
+        if (active) setRecipients(data.recipients || []);
       } catch (error) {
         console.error(error);
         toast.error('Failed to load SMS recipients');
@@ -72,23 +75,38 @@ export default function SmsMessaging() {
         if (active) setLoadingUsers(false);
       }
     };
-    loadUsers();
+    loadRecipients();
     return () => { active = false; };
   }, []);
 
-  const filteredUsers = useMemo(() => {
+  const filteredRecipients = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return users;
-    return users.filter((user) =>
-      [user.name, user.email, user.phone, roleLabels[user.role] || user.role]
-        .some((value) => value?.toLowerCase().includes(term)),
-    );
-  }, [search, users]);
+    return recipients.filter((recipient) => {
+      if (recipientType !== 'ALL' && recipient.type !== recipientType) return false;
+      if (!term) return true;
+      return [recipient.name, recipient.email, recipient.phone, recipient.label, recipient.ownerName]
+        .some((value) => value?.toLowerCase().includes(term));
+    });
+  }, [recipientType, search, recipients]);
+
+  const recipientCounts = useMemo(() => ({
+    ALL: recipients.length,
+    USER: recipients.filter((recipient) => recipient.type === 'USER').length,
+    BUSINESS: recipients.filter((recipient) => recipient.type === 'BUSINESS').length,
+  }), [recipients]);
 
   const segments = smsSegments(message);
-  const estimatedCredits = segments * selectedIds.size;
-  const confirmMessage = `You are about to send this message to ${selectedIds.size} recipient${selectedIds.size === 1 ? '' : 's'}. Estimated usage is ${estimatedCredits} SMS credit${estimatedCredits === 1 ? '' : 's'}. This action cannot be recalled after dispatch.`;
-  const allVisibleSelected = filteredUsers.length > 0 && filteredUsers.every((user) => selectedIds.has(user.id));
+  const uniqueSelectedPhones = new Set(
+    recipients
+      .filter((recipient) => selectedIds.has(recipient.id))
+      .map((recipient) => {
+        const digits = recipient.phone.replace(/\D/g, '');
+        return digits.startsWith('0') ? `255${digits.slice(1)}` : digits;
+      }),
+  ).size;
+  const estimatedCredits = segments * uniqueSelectedPhones;
+  const confirmMessage = `You are about to send this message to ${uniqueSelectedPhones} unique phone number${uniqueSelectedPhones === 1 ? '' : 's'}. Estimated usage is ${estimatedCredits} SMS credit${estimatedCredits === 1 ? '' : 's'}. Duplicate user and business numbers will receive only one message. This action cannot be recalled after dispatch.`;
+  const allVisibleSelected = filteredRecipients.length > 0 && filteredRecipients.every((recipient) => selectedIds.has(recipient.id));
 
   const toggleUser = (id: string) => {
     setSelectedIds((current) => {
@@ -102,9 +120,9 @@ export default function SmsMessaging() {
   const toggleVisible = () => {
     setSelectedIds((current) => {
       const next = new Set(current);
-      filteredUsers.forEach((user) => {
-        if (allVisibleSelected) next.delete(user.id);
-        else next.add(user.id);
+      filteredRecipients.forEach((recipient) => {
+        if (allVisibleSelected) next.delete(recipient.id);
+        else next.add(recipient.id);
       });
       return next;
     });
@@ -120,7 +138,7 @@ export default function SmsMessaging() {
       const response = await fetch('/api/sms/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: [...selectedIds], message: message.trim() }),
+        body: JSON.stringify({ recipientIds: [...selectedIds], message: message.trim() }),
       });
       const data = await response.json();
       if (!response.ok && !data.results) throw new Error(data.error || 'Failed to send SMS');
@@ -153,7 +171,7 @@ export default function SmsMessaging() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="font-bold text-gray-900 dark:text-white">Choose recipients</h2>
-                <p className="mt-1 text-sm text-gray-500">{selectedIds.size} of {users.length} users selected</p>
+                <p className="mt-1 text-sm text-gray-500">{selectedIds.size} of {recipients.length} recipients selected</p>
               </div>
               <UserGroupIcon className="h-7 w-7 text-brand-500" />
             </div>
@@ -162,9 +180,29 @@ export default function SmsMessaging() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search name, email or phone..."
+                placeholder="Search person, business, email or phone..."
                 className="h-11 w-full rounded-lg border border-gray-300 bg-transparent pl-11 pr-4 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 dark:border-gray-700 dark:text-white"
               />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter recipients">
+              {([
+                ['ALL', 'All'],
+                ['USER', 'Users'],
+                ['BUSINESS', 'Businesses'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRecipientType(value)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    recipientType === value
+                      ? 'border-brand-500 bg-brand-500 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {label} ({recipientCounts[value]})
+                </button>
+              ))}
             </div>
           </div>
 
@@ -173,27 +211,31 @@ export default function SmsMessaging() {
               <input type="checkbox" checked={allVisibleSelected} onChange={toggleVisible} className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
               Select all visible
             </label>
-            <span className="text-xs text-gray-500">Only users with phone numbers</span>
+            <span className="text-xs text-gray-500">Users and businesses with phone numbers</span>
           </div>
 
           <div className="max-h-[520px] overflow-y-auto">
             {loadingUsers ? (
               <div className="flex h-48 items-center justify-center text-sm text-gray-500">Loading recipients...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="flex h-48 items-center justify-center text-sm text-gray-500">No eligible users found.</div>
-            ) : filteredUsers.map((user) => (
-              <label key={user.id} className="flex cursor-pointer items-center gap-4 border-b border-gray-100 px-5 py-4 transition hover:bg-brand-50/40 dark:border-gray-800 dark:hover:bg-brand-500/5">
-                <input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => toggleUser(user.id)} className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
+            ) : filteredRecipients.length === 0 ? (
+              <div className="flex h-48 items-center justify-center text-sm text-gray-500">No eligible recipients found.</div>
+            ) : filteredRecipients.map((recipient) => (
+              <label key={recipient.id} className="flex cursor-pointer items-center gap-4 border-b border-gray-100 px-5 py-4 transition hover:bg-brand-50/40 dark:border-gray-800 dark:hover:bg-brand-500/5">
+                <input type="checkbox" checked={selectedIds.has(recipient.id)} onChange={() => toggleUser(recipient.id)} className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
-                  {user.name.charAt(0).toUpperCase()}
+                  {recipient.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
-                  <p className="truncate text-xs text-gray-500">{user.email}</p>
+                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{recipient.name}</p>
+                  <p className="truncate text-xs text-gray-500">
+                    {recipient.type === 'BUSINESS'
+                      ? `Business${recipient.ownerName ? ` · Owner: ${recipient.ownerName}` : ''}`
+                      : recipient.email}
+                  </p>
                 </div>
                 <div className="hidden text-right sm:block">
-                  <p className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"><PhoneIcon className="h-4 w-4" />{user.phone}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{roleLabels[user.role] || user.role}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300"><PhoneIcon className="h-4 w-4" />{recipient.phone}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">{roleLabels[recipient.label] || recipient.label}</p>
                 </div>
               </label>
             ))}
@@ -248,7 +290,7 @@ export default function SmsMessaging() {
               </div>
               {lastResult.results.some((result) => !result.success) && (
                 <div className="mt-3 max-h-28 overflow-y-auto border-t border-gray-100 pt-3 text-xs text-red-600 dark:border-gray-800">
-                  {lastResult.results.filter((result) => !result.success).map((result) => <p key={result.userId}>{result.name}: {result.error || 'Failed'}</p>)}
+                  {lastResult.results.filter((result) => !result.success).map((result) => <p key={result.recipientKey}>{result.name}: {result.error || 'Failed'}</p>)}
                 </div>
               )}
             </div>

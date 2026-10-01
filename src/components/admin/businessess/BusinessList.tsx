@@ -1699,36 +1699,6 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                   </div>
                 )}
 
-                {/* ── Footer: Edit & Delete ── */}
-                <div className="flex items-stretch border-t border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden">
-                  {isOwnerPortal && new Date(business.bundleExpiresAt).getTime() <= Date.now() && !business.renewalRequests?.length && (
-                    <>
-                      <button
-                        onClick={(event) => { event.stopPropagation(); openRenewal(business); }}
-                        className="flex-1 bg-amber-500 px-3 py-2.5 text-xs font-semibold text-gray-950 transition-colors hover:bg-amber-400"
-                      >
-                        {locale === 'sw' ? 'Huisha' : 'Renew'}
-                      </button>
-                      <div className="w-px bg-amber-600" />
-                    </>
-                  )}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleEdit(business); }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors"
-                  >
-                    <FiEdit className="h-4 w-4" />
-                    Edit
-                  </button>
-                  <div className="w-px bg-primary-dark" />
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(business); }}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-secondary hover:bg-secondary-dark text-gray-900 text-xs font-semibold transition-colors"
-                    title="Delete"
-                  >
-                    <RiDeleteBin6Line className="h-4 w-4" />
-                    Delete
-                  </button>
-                </div>
               </div>
             ))}
           </div>
