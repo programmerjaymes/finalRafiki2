@@ -22,12 +22,12 @@ function requiredEnv(name: string) {
 }
 
 export async function sendSms(phone: string, message: string): Promise<SmsSendResult> {
-  const baseUrl = requiredEnv('SMS_GATEWAY_URL').replace(/\/$/, '');
-  const apiKey = requiredEnv('SMS_GATEWAY_API_KEY');
-  const businessId = requiredEnv('SMS_GATEWAY_BUSINESS_ID');
-  const senderId = process.env.SMS_SENDER_ID?.trim() || undefined;
 
   try {
+    const baseUrl = requiredEnv('SMS_GATEWAY_URL').replace(/\/$/, '');
+    const apiKey = requiredEnv('SMS_GATEWAY_API_KEY');
+    const businessId = requiredEnv('SMS_GATEWAY_BUSINESS_ID');
+    const senderId = process.env.SMS_SENDER_ID?.trim() || undefined;
     const response = await fetch(`${baseUrl}/api/v1/sms/send`, {
       method: 'POST',
       headers: {

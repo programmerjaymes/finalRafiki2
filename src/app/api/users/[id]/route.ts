@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { recordAudit } from '@/lib/activityLog';
+import { logApplicationError, recordAudit } from '@/lib/activityLog';
 
 // GET: Fetch a specific user
 
@@ -108,6 +108,7 @@ export async function PUT(
       });
       
       if (userWithEmail && userWithEmail.id !== id) {
+        await logApplicationError({ level: 'WARN', message: 'User update rejected: email already in use', route: `/api/users/${id}`, method: 'PUT', statusCode: 409, metadata: { userId: id } });
         return NextResponse.json(
           { error: 'Email already in use' },
           { status: 409 }
@@ -118,6 +119,7 @@ export async function PUT(
     if (normalizedPhone && normalizedPhone !== existingUser.phone) {
       const userWithPhone = await prisma.user.findUnique({ where: { phone: normalizedPhone } });
       if (userWithPhone && userWithPhone.id !== id) {
+        await logApplicationError({ level: 'WARN', message: 'User update rejected: phone number already in use', route: `/api/users/${id}`, method: 'PUT', statusCode: 409, metadata: { userId: id } });
         return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
       }
     }
@@ -161,6 +163,7 @@ export async function PUT(
     return NextResponse.json({ user: updatedUser });
   } catch (error: any) {
     console.error('Error updating user:', error);
+    await logApplicationError({ level: 'ERROR', message: error instanceof Error ? error.message : 'Failed to update user', route: request.nextUrl.pathname, method: 'PUT', statusCode: 500, stack: error instanceof Error ? error.stack : undefined });
     
     return NextResponse.json(
       { error: 'Failed to update user', details: error.message },

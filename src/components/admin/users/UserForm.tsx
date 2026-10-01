@@ -82,9 +82,10 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
         setIsFetching(true);
         try {
           const response = await fetch(`/api/users/${userId}`, { cache: "no-store" });
-          if (!response.ok) {
-            throw new Error(`Failed to fetch user: ${response.statusText}`);
-          }
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        throw new Error(problem.error || problem.details || `Failed to ${isEditing ? 'update' : 'create'} user`);
+      }
           
           const data = await response.json();
           const user = data.user as User;
@@ -144,7 +145,8 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} user: ${response.statusText}`);
+        const problem = await response.json().catch(() => ({}));
+        throw new Error(problem.error || problem.details || `Failed to ${isEditing ? 'update' : 'create'} user`);
       }
       
       const data = await response.json();

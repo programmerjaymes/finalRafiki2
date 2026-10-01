@@ -21,6 +21,7 @@ export async function POST(request: Request) {
 
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
+    await logApplicationError({ level: 'WARN', message: 'SMS dispatch rejected: invalid request payload', route: '/api/sms/send', method: 'POST', statusCode: 400 });
     return NextResponse.json(
       { error: 'Select at least one recipient and enter a message of up to 1,000 characters.' },
       { status: 400 },
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
   );
 
   if (recipients.length === 0) {
+    await logApplicationError({ level: 'WARN', message: 'SMS dispatch rejected: selected users have no phone numbers', route: '/api/sms/send', method: 'POST', statusCode: 400, metadata: { userIds: uniqueIds } });
     return NextResponse.json({ error: 'None of the selected users has a phone number.' }, { status: 400 });
   }
 
