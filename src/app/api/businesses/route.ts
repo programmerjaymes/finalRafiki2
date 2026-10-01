@@ -150,10 +150,12 @@ export async function GET(request: Request) {
     const ownerId = url.searchParams.get('ownerId') || undefined;
     const lean = url.searchParams.get('lean') === 'true';
     const approvalQueue = url.searchParams.get('approvalQueue');
+    const expiryStatus = url.searchParams.get('expiryStatus');
+    const adminView = url.searchParams.get('adminView') === 'true';
 
     const skip = (page - 1) * limit;
 
-    if (!search && !categoryId && !regionId && !districtId && !wardId && isApproved === null && isVerified === null && !url.searchParams.get('ownerId')) {
+    if (!search && !categoryId && !regionId && !districtId && !wardId && isApproved === null && isVerified === null && !url.searchParams.get('ownerId') && !expiryStatus && !adminView) {
       const locale = getLocaleFromRequest(request);
       const payload = await fetchPublicBusinessList(page, limit, locale);
       return NextResponse.json(payload, {
@@ -179,6 +181,18 @@ export async function GET(request: Request) {
       where.isVerified = false;
     }
     if (approvalQueue === 'pending') where.deactivationReason = null;
+
+    // A bundle starts on the business registration date. bundleExpiresAt is
+    // persisted at creation as createdAt + the selected bundle's duration.
+    const now = new Date();
+    const nearExpiryCutoff = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    if (expiryStatus === 'near') {
+      where.bundleExpiresAt = { gte: now, lte: nearExpiryCutoff };
+    } else if (expiryStatus === 'expired') {
+      where.bundleExpiresAt = { lt: now };
+    } else if (expiryStatus === 'active') {
+      where.bundleExpiresAt = { gte: now };
+    }
     
     if (search) {
       const textSearch = businessTextSearchWhere(search);
@@ -218,6 +232,10 @@ export async function GET(request: Request) {
 
     const session = await getServerSession(authOptions);
     const role = session?.user?.role;
+
+    if (adminView && role !== 'ADMIN' && role !== 'BUSINESS_REGISTRAR') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Pending-approval lists are admin-only (used by notification bell)
     if (isApproved !== null || isVerified !== null) {
@@ -283,6 +301,17 @@ export async function GET(request: Request) {
             name: true,
             price: true,
             duration: true,
+          },
+        },
+        renewalRequests: {
+          where: { status: 'PENDING' as const },
+          orderBy: { requestedAt: 'desc' as const },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            requestedAt: true,
+            newBundle: { select: { id: true, name: true, price: true, duration: true } },
           },
         },
       },
@@ -688,6 +717,21 @@ export async function POST(request: Request) {
         },
       });
 
+      if (createdBiz) {
+        await prisma.businessBundleHistory.create({
+          data: {
+            businessId: createdBiz.id,
+            bundleId: bundle.id,
+            bundleName: bundle.name,
+            bundlePrice: bundle.price,
+            bundleDuration: bundle.duration,
+            startedAt: createdBiz.createdAt,
+            expiresAt: createdBiz.bundleExpiresAt,
+            source: 'INITIAL',
+          },
+        });
+      }
+
       if (normalizedWhatsapp) {
         await setBusinessWhatsapp(id, normalizedWhatsapp);
       }
@@ -724,6 +768,19 @@ export async function POST(request: Request) {
           }
         }
       }
+    });
+
+    await prisma.businessBundleHistory.create({
+      data: {
+        businessId: business.id,
+        bundleId: bundle.id,
+        bundleName: bundle.name,
+        bundlePrice: bundle.price,
+        bundleDuration: bundle.duration,
+        startedAt: business.createdAt,
+        expiresAt: business.bundleExpiresAt,
+        source: 'INITIAL',
+      },
     });
 
     if (isAdmin) {

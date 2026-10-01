@@ -16,6 +16,7 @@ import { t } from '@/lib/i18n';
 import { useLocale } from '@/lib/useLocale';
 import { useSession } from 'next-auth/react';
 import { resolveBusinessImageSrc } from '@/lib/businessImage';
+import PaymentProcessor from '@/components/business/PaymentProcessor';
 
 interface BusinessImage {
   id: string;
@@ -83,6 +84,12 @@ interface Business {
     duration: number;
     maxImages: number;
   };
+  renewalRequests?: Array<{
+    id: string;
+    status: 'PENDING';
+    requestedAt: string;
+    newBundle: { id: string; name: string; price: number; duration: number };
+  }>;
 }
 
 interface Category {
@@ -112,7 +119,18 @@ interface Bundle {
   id: string;
   name: string;
   price: number;
+  duration: number;
   maxImages: number;
+}
+
+interface BundleHistoryItem {
+  id: string;
+  bundleName: string;
+  bundlePrice: number;
+  bundleDuration: number;
+  startedAt: string;
+  expiresAt: string;
+  source: 'INITIAL' | 'RENEWAL';
 }
 
 interface User {
@@ -135,6 +153,43 @@ type BusinessListProps = {
   variant?: 'admin' | 'owner';
   ownerIdFilter?: string;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function getExpiryDisplay(expiresAt: string, locale: string) {
+  const daysLeft = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / DAY_MS);
+  const sw = locale === 'sw';
+
+  if (daysLeft < 0) {
+    const elapsed = Math.abs(daysLeft);
+    return {
+      label: sw
+        ? `Iliisha siku ${elapsed} zilizopita`
+        : `Expired ${elapsed} day${elapsed === 1 ? '' : 's'} ago`,
+      className: 'bg-red-600 text-white',
+    };
+  }
+  if (daysLeft === 0) {
+    return {
+      label: sw ? 'Inaisha leo' : 'Expires today',
+      className: 'bg-red-600 text-white',
+    };
+  }
+  if (daysLeft <= 30) {
+    return {
+      label: sw
+        ? `Siku ${daysLeft} zimebaki`
+        : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`,
+      className: 'bg-amber-500 text-gray-950',
+    };
+  }
+  return {
+    label: sw
+      ? `Siku ${daysLeft} zimebaki`
+      : `${daysLeft} days left`,
+    className: 'bg-emerald-600 text-white',
+  };
+}
 
 // Helper: convert File to base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -170,6 +225,14 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
   const [filterRegionId, setFilterRegionId] = useState('');
   const [filterDistrictId, setFilterDistrictId] = useState('');
   const [filterWardId, setFilterWardId] = useState('');
+  const [expiryStatus, setExpiryStatus] = useState('');
+  const [renewalBusiness, setRenewalBusiness] = useState<Business | null>(null);
+  const [renewalBundleId, setRenewalBundleId] = useState('');
+  const [renewalPaymentReference, setRenewalPaymentReference] = useState('');
+  const [renewalSubmitting, setRenewalSubmitting] = useState(false);
+  const [historyBusiness, setHistoryBusiness] = useState<Business | null>(null);
+  const [bundleHistory, setBundleHistory] = useState<BundleHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     page: 1,
     limit: 9,
@@ -266,12 +329,18 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
       if (filterWardId) {
         queryParams.append('ward', filterWardId);
       }
+      if (expiryStatus) {
+        queryParams.append('expiryStatus', expiryStatus);
+      }
 
       // Owner portal / business owners: only their businesses
       if ((userRole === 'BUSINESS_OWNER' || isOwnerPortal) && userId) {
         queryParams.append('ownerId', userId);
       } else if (ownerIdFilter) {
         queryParams.append('ownerId', ownerIdFilter);
+      }
+      if (!isOwnerPortal) {
+        queryParams.append('adminView', 'true');
       }
 
       // Add cache-busting timestamp and use keep-alive for faster loading
@@ -401,6 +470,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
     filterRegionId,
     filterDistrictId,
     filterWardId,
+    expiryStatus,
     userRole,
     userId,
     isOwnerPortal,
@@ -750,6 +820,99 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
     } catch (err) {
       console.error('Error during delete:', err);
       toast.error('Failed to delete business');
+    }
+  };
+
+  const openRenewal = (business: Business) => {
+    setRenewalBusiness(business);
+    setRenewalBundleId('');
+    setRenewalPaymentReference('');
+  };
+
+  const closeRenewal = () => {
+    if (renewalSubmitting) return;
+    setRenewalBusiness(null);
+    setRenewalBundleId('');
+    setRenewalPaymentReference('');
+  };
+
+  const submitRenewal = async () => {
+    if (!renewalBusiness || !renewalBundleId) return;
+    const selectedBundle = bundles.find((bundle) => bundle.id === renewalBundleId);
+    if (!selectedBundle) return;
+    if (selectedBundle.price > 0 && !renewalPaymentReference) {
+      toast.error(locale === 'sw' ? 'Kamilisha hatua ya malipo kwanza' : 'Complete the payment step first');
+      return;
+    }
+
+    setRenewalSubmitting(true);
+    try {
+      const response = await fetch(`/api/businesses/${renewalBusiness.id}/renewals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bundleId: selectedBundle.id,
+          paymentReference: renewalPaymentReference || null,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to request renewal');
+      toast.success(locale === 'sw' ? 'Ombi la kuhuisha limetumwa kwa msimamizi' : 'Renewal request sent for admin approval');
+      setRenewalBusiness(null);
+      await fetchBusinesses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to request renewal');
+    } finally {
+      setRenewalSubmitting(false);
+    }
+  };
+
+  const decideRenewal = async (business: Business, decision: 'APPROVED' | 'REJECTED') => {
+    const renewal = business.renewalRequests?.[0];
+    if (!renewal) return;
+    let rejectionReason = '';
+    if (decision === 'REJECTED') {
+      rejectionReason = window.prompt('Enter the reason for rejecting this renewal:')?.trim() || '';
+      if (!rejectionReason) return;
+    } else {
+      const result = await toast.confirm(
+        'Approve renewal?',
+        `Assign ${renewal.newBundle.name} to "${business.name}" for ${renewal.newBundle.duration} days?`,
+        'question',
+        'Approve renewal',
+        'Cancel',
+      );
+      if (!result.isConfirmed) return;
+    }
+
+    try {
+      const response = await fetch(`/api/business-renewals/${renewal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision, rejectionReason }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to update renewal');
+      toast.success(decision === 'APPROVED' ? 'Renewal approved' : 'Renewal rejected');
+      await fetchBusinesses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update renewal');
+    }
+  };
+
+  const openBundleHistory = async (business: Business) => {
+    setHistoryBusiness(business);
+    setHistoryLoading(true);
+    setBundleHistory([]);
+    try {
+      const response = await fetch(`/api/businesses/${business.id}/renewals`, { cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to load bundle history');
+      setBundleHistory(data.history || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load bundle history');
+    } finally {
+      setHistoryLoading(false);
     }
   };
   
@@ -1106,7 +1269,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
             </div>
           </form>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="min-w-0">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {messages.admin.categories}
@@ -1184,6 +1347,25 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                 ))}
               </select>
             </div>
+
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                {locale === 'sw' ? 'Muda wa kifurushi' : 'Bundle expiry'}
+              </label>
+              <select
+                className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                value={expiryStatus}
+                onChange={(event) => {
+                  setExpiryStatus(event.target.value);
+                  setPaginationMeta((prev) => ({ ...prev, page: 1 }));
+                }}
+              >
+                <option value="">{locale === 'sw' ? 'Zote' : 'All expiry dates'}</option>
+                <option value="near">{locale === 'sw' ? 'Zinaisha ndani ya siku 30' : 'Expiring within 30 days'}</option>
+                <option value="expired">{locale === 'sw' ? 'Zilizoisha' : 'Expired'}</option>
+                <option value="active">{locale === 'sw' ? 'Bado zinaendelea' : 'Active'}</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -1226,6 +1408,15 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                     </span>
                   </div>
 
+                  {business.bundleExpiresAt && (() => {
+                    const expiry = getExpiryDisplay(business.bundleExpiresAt, locale);
+                    return (
+                      <span className={`absolute left-2 top-2 z-10 rounded-full px-2 py-1 text-[10px] font-bold shadow ${expiry.className}`}>
+                        {expiry.label}
+                      </span>
+                    );
+                  })()}
+
                   {/* Name overlay */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent px-3 py-2 z-10">
                     <p className="text-sm font-bold text-white leading-snug line-clamp-1">{business.name}</p>
@@ -1259,10 +1450,58 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-0.5">({business.numReviews || 0})</span>
                     <span className="ml-auto text-[10px] text-gray-400">{business.bundle?.name}</span>
                   </div>
+                  {business.bundleExpiresAt && (
+                    <p className="mt-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      {locale === 'sw' ? 'Mwisho wa kifurushi' : 'Bundle expires'}:{' '}
+                      {new Date(business.bundleExpiresAt).toLocaleDateString(locale === 'sw' ? 'sw-TZ' : 'en-TZ')}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void openBundleHistory(business);
+                    }}
+                    className="mt-2 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {locale === 'sw' ? 'Historia ya vifurushi' : 'Bundle history'}
+                  </button>
                 </div>
+
+                {business.renewalRequests?.[0] && (
+                  <div className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-xs dark:border-amber-800/50 dark:bg-amber-950/30">
+                    <p className="font-semibold text-amber-800 dark:text-amber-300">
+                      {locale === 'sw' ? 'Ombi la kuhuisha linasubiri' : 'Renewal awaiting approval'}
+                    </p>
+                    <p className="mt-0.5 text-amber-700 dark:text-amber-400">
+                      {business.renewalRequests[0].newBundle.name} · {business.renewalRequests[0].newBundle.duration} {locale === 'sw' ? 'siku' : 'days'}
+                    </p>
+                    {!isOwnerPortal && (
+                      <div className="mt-2 flex gap-2">
+                        <button type="button" onClick={(event) => { event.stopPropagation(); void decideRenewal(business, 'APPROVED'); }} className="rounded-md bg-green-600 px-2.5 py-1.5 font-semibold text-white hover:bg-green-700">
+                          Approve renewal
+                        </button>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); void decideRenewal(business, 'REJECTED'); }} className="rounded-md bg-red-600 px-2.5 py-1.5 font-semibold text-white hover:bg-red-700">
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── Footer: Edit & Delete ── */}
                 <div className="flex items-stretch border-t border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden">
+                  {isOwnerPortal && new Date(business.bundleExpiresAt).getTime() <= Date.now() && !business.renewalRequests?.length && (
+                    <>
+                      <button
+                        onClick={(event) => { event.stopPropagation(); openRenewal(business); }}
+                        className="flex-1 bg-amber-500 px-3 py-2.5 text-xs font-semibold text-gray-950 transition-colors hover:bg-amber-400"
+                      >
+                        {locale === 'sw' ? 'Huisha' : 'Renew'}
+                      </button>
+                      <div className="w-px bg-amber-600" />
+                    </>
+                  )}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleEdit(business); }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors"
@@ -1360,6 +1599,100 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
           )}
         </>
       )}
+
+      <Modal
+        isOpen={Boolean(renewalBusiness)}
+        onClose={closeRenewal}
+        className="max-h-[90vh] max-w-[760px] overflow-y-auto p-6"
+      >
+        <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {locale === 'sw' ? 'Huisha kifurushi cha biashara' : 'Renew business bundle'}
+        </h4>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {renewalBusiness?.name} — {locale === 'sw' ? 'chagua kifurushi kipya. Kitaanza baada ya idhini ya msimamizi.' : 'select a new bundle. It starts after admin approval.'}
+        </p>
+        <div className="mt-5">
+          <Label>{locale === 'sw' ? 'Kifurushi kipya' : 'New bundle'}</Label>
+          <select
+            value={renewalBundleId}
+            onChange={(event) => {
+              setRenewalBundleId(event.target.value);
+              setRenewalPaymentReference('');
+            }}
+            className="mt-1 h-11 w-full rounded-lg border border-gray-300 px-4 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+          >
+            <option value="">{locale === 'sw' ? 'Chagua kifurushi' : 'Select a bundle'}</option>
+            {bundles.map((bundle) => (
+              <option key={bundle.id} value={bundle.id}>
+                {bundle.name} — TZS {bundle.price.toLocaleString()} / {bundle.duration} {locale === 'sw' ? 'siku' : 'days'}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(() => {
+          const selected = bundles.find((bundle) => bundle.id === renewalBundleId);
+          if (!selected) return null;
+          if (selected.price > 0 && !renewalPaymentReference) {
+            return (
+              <div className="mt-6">
+                <PaymentProcessor
+                  amount={selected.price}
+                  bundleName={selected.name}
+                  bundleDuration={selected.duration}
+                  onComplete={setRenewalPaymentReference}
+                />
+              </div>
+            );
+          }
+          return (
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="outline" onClick={closeRenewal} disabled={renewalSubmitting}>
+                {locale === 'sw' ? 'Ghairi' : 'Cancel'}
+              </Button>
+              <Button variant="primary" onClick={() => void submitRenewal()} disabled={renewalSubmitting}>
+                {renewalSubmitting
+                  ? (locale === 'sw' ? 'Inatuma…' : 'Submitting…')
+                  : (locale === 'sw' ? 'Tuma ombi la kuhuisha' : 'Submit renewal request')}
+              </Button>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(historyBusiness)}
+        onClose={() => setHistoryBusiness(null)}
+        className="max-h-[90vh] max-w-[680px] overflow-y-auto p-6"
+      >
+        <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {locale === 'sw' ? 'Historia ya vifurushi' : 'Bundle history'}
+        </h4>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{historyBusiness?.name}</p>
+        {historyLoading ? (
+          <p className="py-8 text-center text-sm text-gray-500">{locale === 'sw' ? 'Inapakia…' : 'Loading…'}</p>
+        ) : bundleHistory.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-500">{locale === 'sw' ? 'Hakuna historia bado.' : 'No bundle history yet.'}</p>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {bundleHistory.map((item) => (
+              <div key={item.id} className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">{item.bundleName}</p>
+                    <p className="text-xs text-gray-500">TZS {item.bundlePrice.toLocaleString()} · {item.bundleDuration} {locale === 'sw' ? 'siku' : 'days'}</p>
+                  </div>
+                  <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                    {item.source === 'RENEWAL' ? (locale === 'sw' ? 'Imehuishwa' : 'Renewal') : (locale === 'sw' ? 'Ya kwanza' : 'Initial')}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(item.startedAt).toLocaleDateString(locale === 'sw' ? 'sw-TZ' : 'en-TZ')} — {new Date(item.expiresAt).toLocaleDateString(locale === 'sw' ? 'sw-TZ' : 'en-TZ')}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
       
       {/* ═══ Shared Form Fields Component ═══ */}
       {(isAddModalOpen || isEditModalOpen) && (!isOwnerPortal || isEditModalOpen) && (

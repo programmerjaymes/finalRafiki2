@@ -9,31 +9,31 @@ datasource db {
 }
 
 model User {
-  id                    String                 @id @default(cuid())
-  name                  String
-  email                 String?                @unique
-  hashedPassword        String?
-  emailVerified         DateTime?
-  image                 String?
-  role                  UserRole               @default(BUSINESS_OWNER)
-  createdAt             DateTime               @default(now()) @map("created_at")
-  updatedAt             DateTime               @updatedAt @map("updated_at")
-  phone                 String?                @unique
-  activeSessionToken    String?                @unique
-  receivesApprovalNotifications Boolean @default(false)
-  accounts              Account[]
-  businessRegistrations BusinessRegistration[]
-  approvalLogs          BusinessApprovalLog[]  @relation("ApprovalActor")
-  auditTrails          AuditTrail[]           @relation("AuditActor")
-  smsReceivedMessages  SmsMessage[]           @relation("SmsRecipient")
-  smsSentMessages      SmsMessage[]           @relation("SmsSender")
-  businesses            Business[]
-  registeredBusinesses  Business[]             @relation("Registrar")
-  payments              Payment[]
-  reviews               Review[]
-  searchQueries         SearchQuery[]
-  sessions              Session[]
-  privacyRequests       PrivacyRequest[]
+  id                            String                 @id @default(cuid())
+  name                          String
+  email                         String?                @unique
+  hashedPassword                String?
+  emailVerified                 DateTime?
+  image                         String?
+  role                          UserRole               @default(BUSINESS_OWNER)
+  createdAt                     DateTime               @default(now()) @map("created_at")
+  updatedAt                     DateTime               @updatedAt @map("updated_at")
+  phone                         String?                @unique
+  activeSessionToken            String?                @unique
+  receivesApprovalNotifications Boolean                @default(false)
+  accounts                      Account[]
+  businessRegistrations         BusinessRegistration[]
+  approvalLogs                  BusinessApprovalLog[]  @relation("ApprovalActor")
+  auditTrails                   AuditTrail[]           @relation("AuditActor")
+  smsReceivedMessages           SmsMessage[]           @relation("SmsRecipient")
+  smsSentMessages               SmsMessage[]           @relation("SmsSender")
+  businesses                    Business[]
+  registeredBusinesses          Business[]             @relation("Registrar")
+  payments                      Payment[]
+  reviews                       Review[]
+  searchQueries                 SearchQuery[]
+  sessions                      Session[]
+  privacyRequests               PrivacyRequest[]
 
   @@map("users")
 }
@@ -77,22 +77,22 @@ model SystemSetting {
 }
 
 model Business {
-  id                  String                 @id @default(cuid())
+  id                  String                   @id @default(cuid())
   name                String
-  description         String?                @db.Text
+  description         String?                  @db.Text
   phone               String?
   whatsapp            String?
   email               String?
   website             String?
-  logo                String?                @db.Text
+  logo                String?                  @db.Text
   coverImage          String?
   facebook            String?
   instagram           String?
   twitter             String?
-  allowsOnlineBooking Boolean                @default(false)
-  allowsDelivery      Boolean                @default(false)
-  isVerified          Boolean                @default(false)
-  isApproved          Boolean                @default(false)
+  allowsOnlineBooking Boolean                  @default(false)
+  allowsDelivery      Boolean                  @default(false)
+  isVerified          Boolean                  @default(false)
+  isApproved          Boolean                  @default(false)
   bundleId            String
   bundleExpiresAt     DateTime
   categoryId          String
@@ -102,29 +102,31 @@ model Business {
   districtId          BigInt?
   wardId              BigInt?
   street              String?
-  avgRating           Float                  @default(0)
-  numReviews          Int                    @default(0)
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  avgRating           Float                    @default(0)
+  numReviews          Int                      @default(0)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
   ownerId             String
   registrarId         String?
-  viewCount           Int                    @default(0)
-  clickCount          Int                    @default(0)
-  inquiryCount        Int                    @default(0)
-  categoryId2         String?                @db.VarChar(255)
-  deactivationReason  String?                @db.Text
-  bundle              Bundle                 @relation(fields: [bundleId], references: [id])
-  category            Category               @relation("PrimaryCategory", fields: [categoryId], references: [id])
-  district            District?              @relation(fields: [districtId], references: [id])
-  owner               User                   @relation(fields: [ownerId], references: [id])
-  region              Region?                @relation(fields: [regionId], references: [id])
-  registrar           User?                  @relation("Registrar", fields: [registrarId], references: [id])
-  ward                Ward?                  @relation(fields: [wardId], references: [id])
+  viewCount           Int                      @default(0)
+  clickCount          Int                      @default(0)
+  inquiryCount        Int                      @default(0)
+  categoryId2         String?                  @db.VarChar(255)
+  deactivationReason  String?                  @db.Text
+  bundle              Bundle                   @relation(fields: [bundleId], references: [id])
+  category            Category                 @relation("PrimaryCategory", fields: [categoryId], references: [id])
+  district            District?                @relation(fields: [districtId], references: [id])
+  owner               User                     @relation(fields: [ownerId], references: [id])
+  region              Region?                  @relation(fields: [regionId], references: [id])
+  registrar           User?                    @relation("Registrar", fields: [registrarId], references: [id])
+  ward                Ward?                    @relation(fields: [wardId], references: [id])
   categories          CategoryOnBusiness[]
   payments            Payment[]
   approvalLogs        BusinessApprovalLog[]
   reviews             Review[]
   searchResults       SearchResultBusiness[]
+  bundleHistory       BusinessBundleHistory[]
+  renewalRequests     BusinessRenewalRequest[]
 
   @@index([bundleId], map: "businesses_bundleId_idx")
   @@index([categoryId], map: "businesses_categoryId_idx")
@@ -170,24 +172,77 @@ model BusinessRegistration {
 }
 
 model Bundle {
-  id                    String                 @id @default(cuid())
-  name                  String                 @unique
+  id                    String                   @id @default(cuid())
+  name                  String                   @unique
   price                 Float
   duration              Int
-  description           String?                @db.Text
-  allowedFields         String                 @db.Text
-  maxImages             Int                    @default(1)
-  allowsVideo           Boolean                @default(false)
-  allowsAnalytics       Boolean                @default(false)
-  advancedAnalytics     Boolean                @default(false)
-  featured              Boolean                @default(false)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  allowedFormFields     String?                @db.Text
+  description           String?                  @db.Text
+  allowedFields         String                   @db.Text
+  maxImages             Int                      @default(1)
+  allowsVideo           Boolean                  @default(false)
+  allowsAnalytics       Boolean                  @default(false)
+  advancedAnalytics     Boolean                  @default(false)
+  featured              Boolean                  @default(false)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  allowedFormFields     String?                  @db.Text
   businessRegistrations BusinessRegistration[]
   businesses            Business[]
+  renewalRequests       BusinessRenewalRequest[]
 
   @@map("bundles")
+}
+
+enum BusinessRenewalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BusinessBundleHistorySource {
+  INITIAL
+  RENEWAL
+}
+
+model BusinessBundleHistory {
+  id               String                      @id @default(cuid())
+  businessId       String
+  bundleId         String
+  bundleName       String
+  bundlePrice      Float
+  bundleDuration   Int
+  startedAt        DateTime
+  expiresAt        DateTime
+  source           BusinessBundleHistorySource @default(INITIAL)
+  renewalRequestId String?                     @unique
+  createdAt        DateTime                    @default(now())
+  business         Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, startedAt])
+  @@map("business_bundle_history")
+}
+
+model BusinessRenewalRequest {
+  id                 String                @id @default(cuid())
+  businessId         String
+  previousBundleId   String
+  previousBundleName String
+  previousStartedAt  DateTime
+  previousExpiresAt  DateTime
+  newBundleId        String
+  requestedById      String
+  paymentReference   String?
+  status             BusinessRenewalStatus @default(PENDING)
+  rejectionReason    String?               @db.Text
+  decidedById        String?
+  requestedAt        DateTime              @default(now())
+  decidedAt          DateTime?
+  business           Business              @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  newBundle          Bundle                @relation(fields: [newBundleId], references: [id])
+
+  @@index([businessId, status])
+  @@index([status, requestedAt])
+  @@map("business_renewal_requests")
 }
 
 model Payment {
