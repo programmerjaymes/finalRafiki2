@@ -14,6 +14,7 @@ import { saveProductImages, saveLogoImage, saveProductImage } from '@/lib/imageS
 import { normalizeWhatsapp } from '@/lib/phoneNumber';
 import { setBusinessWhatsapp } from '@/lib/businessWhatsapp';
 import { businessTextSearchWhere } from '@/lib/businessSearch';
+import { notifyApprovalAdministrator } from '@/lib/approvalSmsNotification';
 
 export const dynamic = 'force-dynamic';
 
@@ -701,6 +702,7 @@ export async function POST(request: Request) {
             }
           : createdBiz;
 
+      if (!isAdmin && createdBiz) after(() => notifyApprovalAdministrator(createdBiz));
       revalidateTag('businesses');
       return NextResponse.json(jsonSafe(bizOut), {
         status: 201,
@@ -760,6 +762,7 @@ export async function POST(request: Request) {
       });
     }
 
+    if (!isAdmin) after(() => notifyApprovalAdministrator(business));
     revalidateTag('businesses');
     return NextResponse.json(jsonSafe(business), { status: 201 });
   } catch (err) {

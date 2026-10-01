@@ -64,6 +64,7 @@ export default function NotificationDropdown() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [approving, setApproving] = useState(false);
+  const [canReceiveApprovals, setCanReceiveApprovals] = useState(false);
 
   // Fetch unapproved or unverified businesses (admin only)
   useEffect(() => {
@@ -72,6 +73,10 @@ export default function NotificationDropdown() {
     const fetchUnapprovedBusinesses = async () => {
       try {
         setLoading(true);
+        const preferenceResponse = await fetch('/api/users/me/approval-notifications', { cache: 'no-store' });
+        const preference = await preferenceResponse.json();
+        if (!preferenceResponse.ok || !preference.enabled) { setCanReceiveApprovals(false); setUnapprovedBusinesses([]); return; }
+        setCanReceiveApprovals(true);
         const response = await fetch('/api/businesses?isApproved=false&isVerified=false&limit=20');
         if (response.ok) {
           const data = await response.json();
@@ -89,7 +94,7 @@ export default function NotificationDropdown() {
     fetchUnapprovedBusinesses();
   }, [status, isAdmin]);
 
-  if (!isAdmin) return null;
+  if (!isAdmin || !canReceiveApprovals) return null;
 
   function toggleDropdown() {
     setIsOpen(!isOpen);

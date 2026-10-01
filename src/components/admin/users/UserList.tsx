@@ -8,6 +8,7 @@ import Pagination from '@/components/Pagination';
 import Loader from '@/components/common/Loader';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import UserModal from './UserModal';
+import ResetPasswordDialog from './ResetPasswordDialog';
 import { Badge } from '@/components/ui/badge';
 import {
   MagnifyingGlassIcon,
@@ -18,6 +19,8 @@ import {
   BuildingOffice2Icon,
   BriefcaseIcon,
   ArrowPathRoundedSquareIcon,
+  BellIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 import {
@@ -42,6 +45,7 @@ interface User {
   image?: string | null;
   createdAt: string;
   updatedAt: string;
+  receivesApprovalNotifications: boolean;
   businesses: { id: string; name: string }[];
   businessRegistrations: {
     step: number;
@@ -94,10 +98,11 @@ export default function UserList() {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  
+
   // Modal state
   const [showUserModal, setShowUserModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<string | null>(null);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -107,11 +112,11 @@ export default function UserList() {
       const url = new URL('/api/users', window.location.origin);
       url.searchParams.append('page', page.toString());
       url.searchParams.append('limit', limit.toString());
-      
+
       if (searchQuery) {
         url.searchParams.append('search', searchQuery);
       }
-      
+
       if (roleFilter) {
         url.searchParams.append('role', roleFilter);
       }
@@ -125,11 +130,11 @@ export default function UserList() {
       }
 
       const response = await fetch(url.toString());
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.statusText}`);
       }
-      
+
       const data: PaginatedUsers = await response.json();
       setUsers(data.users);
       setTotalPages(data.meta.totalPages);
@@ -169,18 +174,30 @@ export default function UserList() {
     setShowDeleteConfirm(true);
   };
 
+  const toggleApprovalNotifications = async (event: React.MouseEvent, user: User) => {
+    event.stopPropagation();
+    try {
+      const enabled = !user.receivesApprovalNotifications;
+      const response = await fetch(`/api/users/${user.id}/approval-notifications`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to update notification administrator');
+      setUsers((current) => current.map((item) => ({ ...item, receivesApprovalNotifications: enabled ? item.id === user.id : item.id === user.id ? false : item.receivesApprovalNotifications })));
+      toast.success(enabled ? `${user.name} will receive approval notifications` : `${user.name} will no longer receive approval notifications`);
+    } catch (toggleError) { toast.error(toggleError instanceof Error ? toggleError.message : 'Unable to update notification administrator'); }
+  };
+
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    
+
     try {
       const response = await fetch(`/api/users/${userToDelete}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to delete user: ${response.statusText}`);
       }
-      
+
       // Remove the user from the list
       setUsers(prevUsers => prevUsers.filter(user => user.id !== userToDelete));
       toast.success('User deleted successfully');
@@ -267,7 +284,7 @@ export default function UserList() {
                   />
                 </div>
               </form>
-              
+
               <Select
                 value={roleFilter || 'all'}
                 onValueChange={(value) => {
@@ -330,8 +347,8 @@ export default function UserList() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                className="flex items-center gap-2" 
+              <Button
+                className="flex items-center gap-2"
                 onClick={handleCreateUser}
               >
                 <PlusIcon className="h-4 w-4" />
@@ -449,6 +466,8 @@ export default function UserList() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
                         <div className="flex justify-end space-x-2">
+                          {user.role === 'ADMIN' && <button onClick={(event) => toggleApprovalNotifications(event, user)} className={`rounded p-1 ${user.receivesApprovalNotifications ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title={user.receivesApprovalNotifications ? 'Disable approval notifications' : 'Receive business approval notifications'}><BellIcon className="h-5 w-5" /></button>}
+                          <button onClick={(event) => { event.stopPropagation(); setUserToReset(user); }} className="rounded p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30" title="Reset password"><KeyIcon className="h-5 w-5" /></button>
                           <button
                             onClick={(e) => handleEdit(e, user.id)}
                             className="p-1 rounded text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30"
@@ -473,7 +492,7 @@ export default function UserList() {
           )}
         </CardContent>
       </Card>
-      
+
       {!isLoading && users.length > 0 && (
         <div className="max-w-full overflow-x-auto flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row">
           <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -498,12 +517,13 @@ export default function UserList() {
         cancelText="Cancel"
         variant="danger"
       />
-      
+
       <UserModal
         isOpen={showUserModal}
         onClose={handleModalClose}
         userId={userToEdit || undefined}
       />
+      <ResetPasswordDialog isOpen={Boolean(userToReset)} user={userToReset} onClose={() => setUserToReset(null)} />
     </div>
   );
-} 
+}

@@ -14,6 +14,7 @@ import {
   FaMoneyBillWave as PaymentIcon,
   FaSms as SmsIcon,
   FaBug as SystemLogsIcon,
+  FaCog as SettingsIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
   FaListUl as AllBusinessesIcon,
@@ -92,19 +93,14 @@ const AppSidebar: React.FC = () => {
       path: "/payments",
     },
     {
-      icon: <SmsIcon />,
-      name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging',
-      path: "/sms",
-    },
-    {
-      icon: <SystemLogsIcon />,
-      name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs',
-      path: "/system-logs",
-    },
-    {
       icon: <UserCircleIcon />,
-      name: messages.admin.users,
-      path: "/users",
+      name: locale === 'sw' ? 'Utawala' : 'Administration',
+      subItems: [
+        { name: messages.admin.users, path: "/users", pro: false, icon: <UserCircleIcon /> },
+        { name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging', path: "/sms", pro: false, icon: <SmsIcon /> },
+        { name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs', path: "/system-logs", pro: false, icon: <SystemLogsIcon /> },
+        { name: locale === 'sw' ? 'Mipangilio' : 'Settings', path: "/settings", pro: false, icon: <SettingsIcon /> },
+      ],
     },
   ];
 

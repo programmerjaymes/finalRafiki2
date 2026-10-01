@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logApplicationError, recordAudit } from '@/lib/activityLog';
+import bcrypt from 'bcryptjs';
 
 // GET: Fetch a specific user
 
@@ -24,6 +25,7 @@ export async function GET(
         email: true,
         phone: true,
         role: true,
+        receivesApprovalNotifications: true,
         emailVerified: true,
         image: true,
         createdAt: true,
@@ -135,9 +137,7 @@ export async function PUT(
     
     // Hash password if provided
     if (body.password) {
-      // In a real app, you would use bcrypt to hash passwords
-      // For example: updateData.hashedPassword = await bcrypt.hash(body.password, 10);
-      updateData.hashedPassword = body.password; // This is just a placeholder
+      updateData.hashedPassword = await bcrypt.hash(body.password, 12);
     }
     
     // Update user
@@ -150,6 +150,7 @@ export async function PUT(
         email: true,
         phone: true,
         role: true,
+        receivesApprovalNotifications: true,
         emailVerified: true,
         image: true,
         createdAt: true,

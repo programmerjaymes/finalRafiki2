@@ -20,6 +20,7 @@ model User {
   updatedAt             DateTime               @updatedAt @map("updated_at")
   phone                 String?                @unique
   activeSessionToken    String?                @unique
+  receivesApprovalNotifications Boolean @default(false)
   accounts              Account[]
   businessRegistrations BusinessRegistration[]
   approvalLogs          BusinessApprovalLog[]  @relation("ApprovalActor")
@@ -64,6 +65,15 @@ model PrivacyRequest {
   @@index([userId], map: "privacy_requests_userId_idx")
   @@index([status], map: "privacy_requests_status_idx")
   @@map("privacy_requests")
+}
+
+model SystemSetting {
+  id                              String   @id @default("global")
+  approvalSmsNotificationsEnabled Boolean  @default(true)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
+
+  @@map("system_settings")
 }
 
 model Business {
