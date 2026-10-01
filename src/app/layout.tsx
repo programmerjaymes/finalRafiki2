@@ -1,4 +1,3 @@
-import { Outfit } from 'next/font/google';
 import './globals.css';
 import '../styles/colors.module.css';
 import '../styles/colors.css';
@@ -8,9 +7,6 @@ import 'animate.css';
 import { SidebarProvider } from '@/context/SidebarContext';
 import Providers from './providers';
 
-const outfit = Outfit({
-  subsets: ["latin"],
-});
 
 export default function RootLayout({
   children,
@@ -19,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="light">
-      <body className={`${outfit.className} bg-white text-gray-900 dark:bg-gray-900`}>
+      <body className="bg-white text-gray-900 dark:bg-gray-900">
         <Providers>
           <SidebarProvider>{children}</SidebarProvider>
         </Providers>

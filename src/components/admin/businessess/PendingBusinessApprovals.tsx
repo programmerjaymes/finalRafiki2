@@ -9,6 +9,7 @@ import {
   FiPhone,
   FiRefreshCw,
   FiUser,
+  FiX,
 } from "react-icons/fi";
 import toast from "@/utils/toast";
 import { toImageSrc } from "@/lib/imageSrc";
@@ -95,7 +96,7 @@ function PhotoGrid({
         {images.map((src, i) => (
           <div
             key={`${altPrefix}-${i}`}
-            className="h-28 w-28 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex-shrink-0"
+            className="h-20 w-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex-shrink-0"
           >
             <img
               src={src}
@@ -117,6 +118,9 @@ function PendingBusinessCard({
   onApproved: (id: string) => void;
 }) {
   const [approving, setApproving] = useState(false);
+  const [disapproving, setDisapproving] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'DISAPPROVED' | null>(null);
+  const [notifyOwner, setNotifyOwner] = useState(true);
   const ownerPhoto = toImageSrc(business.owner?.image);
   const logoSrc = toImageSrc(business.logo);
   const coverSrc = toImageSrc(business.coverImage);
@@ -134,34 +138,43 @@ function PendingBusinessCard({
     .filter(Boolean)
     .join(", ");
 
-  const handleApprove = async () => {
+
+  const openDecision = (decision: 'APPROVED' | 'DISAPPROVED') => {
+    setNotifyOwner(true);
+    setPendingDecision(decision);
+  };
+
+  const submitDecision = async () => {
+    if (!pendingDecision) return;
+    const approved = pendingDecision === 'APPROVED';
     try {
-      setApproving(true);
+      if (approved) setApproving(true);
+      else setDisapproving(true);
       const response = await fetch(`/api/businesses/${business.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isApproved: true, isVerified: true }),
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(approved
+          ? { isApproved: true, isVerified: true, approvalDecision: 'APPROVED', notifyOwner }
+          : { isApproved: false, isVerified: false, approvalDecision: 'DISAPPROVED', deactivationReason: 'Disapproved by administrator', notifyOwner }),
       });
-
-      if (!response.ok) {
-        toast.error("Failed to approve business");
-        return;
-      }
-
-      toast.success(`${business.name} approved`);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Failed to ${approved ? 'approve' : 'disapprove'} business`);
+      toast.success(`${business.name} ${approved ? 'approved' : 'disapproved'}`);
+      setPendingDecision(null);
       onApproved(business.id);
     } catch (error) {
-      console.error("Error approving business:", error);
-      toast.error("Failed to approve business");
+      toast.error(error instanceof Error ? error.message : `Failed to ${approved ? 'approve' : 'disapprove'} business`);
     } finally {
       setApproving(false);
+      setDisapproving(false);
     }
   };
 
   return (
+    <>
     <article className="rounded-xl border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark overflow-hidden">
       {coverSrc && (
-        <div className="relative h-40 w-full bg-gray-100 dark:bg-gray-800">
+        <div className="relative h-28 w-full bg-gray-100 dark:bg-gray-800">
           <img
             src={coverSrc}
             alt={`${business.name} cover`}
@@ -170,10 +183,10 @@ function PendingBusinessCard({
         </div>
       )}
 
-      <div className="p-5 sm:p-6 space-y-6">
+      <div className="space-y-4 p-4">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
-            <div className="h-16 w-16 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600">
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-600">
               {logoSrc ? (
                 <img
                   src={logoSrc}
@@ -204,33 +217,23 @@ function PendingBusinessCard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleApprove}
-            disabled={approving}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          >
-            {approving ? (
-              <>
-                <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Approving...
-              </>
-            ) : (
-              <>
-                <FiCheck className="h-4 w-4" />
-                Approve
-              </>
-            )}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" onClick={() => openDecision('DISAPPROVED')} disabled={approving || disapproving} className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/40 dark:bg-gray-900 dark:text-red-400 dark:hover:bg-red-500/10">
+              {disapproving ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-red-200 border-t-red-600" />Disapproving...</> : <><FiX className="h-4 w-4" />Disapprove</>}
+            </button>
+            <button type="button" onClick={() => openDecision('APPROVED')} disabled={approving || disapproving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50">
+              {approving ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Approving...</> : <><FiCheck className="h-4 w-4" />Approve</>}
+            </button>
+          </div>
         </div>
 
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
           <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
             <FiUser className="h-4 w-4" />
             Person requesting approval
           </h4>
           <div className="flex items-center gap-4">
-            <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-brand-200 dark:border-brand-800 flex-shrink-0 bg-brand-50 dark:bg-brand-900/20">
+            <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-brand-200 dark:border-brand-800 flex-shrink-0 bg-brand-50 dark:bg-brand-900/20">
               {ownerPhoto ? (
                 <img
                   src={ownerPhoto}
@@ -239,7 +242,7 @@ function PendingBusinessCard({
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center">
-                  <span className="text-2xl font-bold text-brand-600 dark:text-brand-400">
+                  <span className="text-lg font-bold text-brand-600 dark:text-brand-400">
                     {business.owner?.name?.charAt(0)?.toUpperCase() || "?"}
                   </span>
                 </div>
@@ -262,7 +265,7 @@ function PendingBusinessCard({
           </DetailField>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <DetailField label="Bundle">
             {business.bundle?.name || "N/A"}
             {business.bundle && (
@@ -389,6 +392,36 @@ function PendingBusinessCard({
         />
       </div>
     </article>
+      {pendingDecision && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-gray-950/50 p-4 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby={`decision-title-${business.id}`} className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex items-start gap-4 border-b border-gray-100 p-6 dark:border-gray-800">
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${pendingDecision === 'APPROVED' ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'}`}>
+                {pendingDecision === 'APPROVED' ? <FiCheck className="h-6 w-6" /> : <FiX className="h-6 w-6" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 id={`decision-title-${business.id}`} className="text-lg font-semibold text-gray-900 dark:text-white">{pendingDecision === 'APPROVED' ? 'Approve business?' : 'Disapprove business?'}</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Confirm your decision for <span className="font-semibold text-gray-700 dark:text-gray-200">{business.name}</span>.</p>
+              </div>
+            </div>
+            <div className="space-y-4 p-6">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <input type="checkbox" checked={notifyOwner} onChange={(event) => setNotifyOwner(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" />
+                <span>
+                  <span className="block text-sm font-medium text-gray-900 dark:text-white">Notify the business owner by SMS</span>
+                  <span className="mt-1 block text-xs leading-5 text-gray-500 dark:text-gray-400">{pendingDecision === 'APPROVED' ? 'Send the approval, bundle name, and bundle duration.' : 'Send the disapproval notice and Rafiki contact numbers.'}</span>
+                </span>
+              </label>
+              {!notifyOwner && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">The decision will be saved without sending an SMS.</p>}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 bg-gray-50 px-6 py-4 dark:border-gray-800 dark:bg-gray-800/50">
+              <button type="button" onClick={() => setPendingDecision(null)} disabled={approving || disapproving} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">Cancel</button>
+              <button type="button" onClick={() => void submitDecision()} disabled={approving || disapproving} className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 ${pendingDecision === 'APPROVED' ? 'bg-brand-500 hover:bg-brand-600' : 'bg-red-600 hover:bg-red-700'}`}>{approving || disapproving ? 'Saving…' : pendingDecision === 'APPROVED' ? 'Approve' : 'Disapprove'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -403,7 +436,7 @@ export default function PendingBusinessApprovals() {
       else setLoading(true);
 
       const response = await fetch(
-        "/api/businesses?isApproved=false&limit=50&_=" + Date.now(),
+        "/api/businesses?isApproved=false&approvalQueue=pending&limit=50&_=" + Date.now(),
         { cache: "no-store" }
       );
 

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { recordAudit } from '@/lib/activityLog'
@@ -13,6 +13,7 @@ import {
 import { saveProductImages, saveLogoImage, isStoredPath, deleteStoredImage } from '@/lib/imageStorage'
 import { normalizeWhatsapp } from '@/lib/phoneNumber'
 import { setBusinessWhatsapp } from '@/lib/businessWhatsapp'
+import { notifyBusinessDecision } from '@/lib/businessDecisionSms'
 
 export const dynamic = 'force-dynamic';
 
@@ -151,6 +152,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const shouldLogApproval = body.isApproved === true && !businessExists.isApproved;
+    const shouldLogDisapproval = body.approvalDecision === 'DISAPPROVED' && body.isApproved === false && !businessExists.isApproved;
     
     // Build update data - only include fields that are present
     const updateData: Prisma.BusinessUncheckedUpdateInput = {}
@@ -174,6 +176,8 @@ export async function PUT(
     if (body.allowsDelivery !== undefined) updateData.allowsDelivery = body.allowsDelivery
     if (body.isVerified !== undefined) updateData.isVerified = body.isVerified
     if (body.isApproved !== undefined) updateData.isApproved = body.isApproved
+    if (shouldLogApproval) updateData.deactivationReason = null
+    if (shouldLogDisapproval) updateData.deactivationReason = body.deactivationReason || 'Disapproved by administrator'
     if (body.bundleId !== undefined) updateData.bundleId = body.bundleId
     if (body.categoryId !== undefined) updateData.categoryId = body.categoryId
     if (body.categoryId2 !== undefined) updateData.categoryId2 = body.categoryId2 || null
@@ -205,14 +209,12 @@ export async function PUT(
     })
 
     if (shouldLogApproval) {
-      await recordAudit({
-        actorId: session?.user.id,
-        action: 'BUSINESS_APPROVED',
-        entityType: 'Business',
-        entityId: id,
-        description: 'Approved business ' + updatedBusiness.name,
-        request,
-      });
+      await recordAudit({ actorId: session?.user.id, action: 'BUSINESS_APPROVED', entityType: 'Business', entityId: id, description: 'Approved business ' + updatedBusiness.name, metadata: { notifyOwner: body.notifyOwner !== false }, request });
+      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'APPROVED', session!.user.id));
+    }
+    if (shouldLogDisapproval) {
+      await recordAudit({ actorId: session?.user.id, action: 'BUSINESS_DISAPPROVED', entityType: 'Business', entityId: id, description: 'Disapproved business ' + updatedBusiness.name, metadata: { notifyOwner: body.notifyOwner !== false }, request });
+      if (body.notifyOwner !== false) after(() => notifyBusinessDecision(id, 'DISAPPROVED', session!.user.id));
     }
 
     if (whatsappUpdate !== undefined) {

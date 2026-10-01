@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { recordAudit } from '@/lib/activityLog';
 
 // POST: Handle user login
 
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await recordAudit({ actorId: user.id, action: 'USER_LOGIN', entityType: 'Session', entityId: user.id, description: 'User logged in through the application API: ' + user.name, metadata: { role: user.role, provider: 'mobile-api' }, request });
 
     // Remove hashedPassword from response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

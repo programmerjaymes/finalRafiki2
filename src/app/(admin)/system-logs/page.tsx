@@ -1,6 +1,7 @@
 import PageBreadcrumb from '@/components/PageBreadcrumb';
 import { prisma } from '@/lib/prisma';
 import ClearLogsButton from '@/components/admin/logs/ClearLogsButton';
+import AuditTrailDataTable from '@/components/admin/logs/AuditTrailDataTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,17 +46,7 @@ export default async function SystemLogsPage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-800"><h2 className="font-bold text-gray-900 dark:text-white">Audit Trail</h2><p className="text-sm text-gray-500">Who performed each administrative action and when</p></div>
-          <div className="max-h-[55vh] overflow-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="sticky top-0 z-10 bg-gray-50 text-left text-xs uppercase text-gray-500 dark:bg-gray-800"><tr><th className="px-4 py-3">Time</th><th className="px-4 py-3">Actor</th><th className="px-4 py-3">Action</th><th className="px-4 py-3">Entity</th><th className="px-4 py-3">Description</th><th className="px-4 py-3">IP</th></tr></thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {audits.length ? audits.map((audit) => <tr key={audit.id}><td className="whitespace-nowrap px-4 py-3 text-gray-500">{date(audit.createdAt)}</td><td className="px-4 py-3"><p className="font-medium text-gray-800 dark:text-gray-200">{audit.actor?.name || 'System'}</p><p className="text-xs text-gray-500">{audit.actor?.email}</p></td><td className="px-4 py-3"><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-500/10">{audit.action}</span></td><td className="px-4 py-3">{audit.entityType}{audit.entityId && <p className="font-mono text-xs text-gray-400">{audit.entityId}</p>}</td><td className="max-w-md px-4 py-3 text-gray-600 dark:text-gray-300">{audit.description || '—'}</td><td className="px-4 py-3 text-xs text-gray-500">{audit.ipAddress || '—'}</td></tr>) : <tr><td colSpan={6} className="px-5 py-12 text-center text-gray-500">No audit activity recorded.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <AuditTrailDataTable audits={audits.map((audit) => ({ ...audit, createdAt: audit.createdAt.toISOString() }))} />
       </div>
     </div>
   );

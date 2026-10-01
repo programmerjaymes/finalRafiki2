@@ -93,50 +93,13 @@ async function getDashboardData() {
     ? ((lastMonthBusinesses - previousMonthBusinesses) / previousMonthBusinesses) * 100 
     : 0;
 
-  // Get total payments
-  const payments = await prisma.payment.aggregate({
-    _sum: {
-      amount: true
-    },
-    where: {
-      paymentStatus: 'COMPLETED'
-    }
+  // Businesses registered today in Tanzania (UTC+3, no daylight-saving changes)
+  const nowInTanzania = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  const startOfTodayUtc = new Date(Date.UTC(nowInTanzania.getUTCFullYear(), nowInTanzania.getUTCMonth(), nowInTanzania.getUTCDate()) - 3 * 60 * 60 * 1000);
+  const startOfTomorrowUtc = new Date(startOfTodayUtc.getTime() + 24 * 60 * 60 * 1000);
+  const businessesRegisteredToday = await prisma.business.count({
+    where: { createdAt: { gte: startOfTodayUtc, lt: startOfTomorrowUtc } },
   });
-  
-  const totalPayments = payments._sum.amount || 0;
-  
-  // Get payment growth
-  const lastMonthPayments = await prisma.payment.aggregate({
-    _sum: {
-      amount: true
-    },
-    where: {
-      paymentStatus: 'COMPLETED',
-      createdAt: {
-        gte: lastMonthDate
-      }
-    }
-  });
-
-  const previousMonthPayments = await prisma.payment.aggregate({
-    _sum: {
-      amount: true
-    },
-    where: {
-      paymentStatus: 'COMPLETED',
-      createdAt: {
-        gte: previousMonthDate,
-        lt: lastMonthDate
-      }
-    }
-  });
-
-  const lastMonthPaymentsTotal = lastMonthPayments._sum.amount || 0;
-  const previousMonthPaymentsTotal = previousMonthPayments._sum.amount || 0;
-
-  const paymentGrowthPercent = previousMonthPaymentsTotal > 0 
-    ? ((lastMonthPaymentsTotal - previousMonthPaymentsTotal) / previousMonthPaymentsTotal) * 100 
-    : 0;
 
   // Get active bundles
   const activeBundlesCount = await prisma.business.count({
@@ -310,8 +273,7 @@ async function getDashboardData() {
     userGrowthPercent,
     businessCount,
     businessGrowthPercent,
-    totalPayments,
-    paymentGrowthPercent,
+    businessesRegisteredToday,
     activeBundlesCount,
     bundleGrowthPercent,
     topCategories,
@@ -326,6 +288,7 @@ async function getDashboardData() {
 const DashboardMetrics = async () => {
   const data = await getDashboardData();
   const messages = await getMessages();
+  const locale = (await cookies()).get('rafiki_locale')?.value === 'sw' ? 'sw' : 'en';
   
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -367,21 +330,19 @@ const DashboardMetrics = async () => {
         </div>
       </Card>
 
-      {/* Total Revenue Metric */}
+      {/* Businesses Registered Today Metric */}
       <Card className="border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-center w-12 h-12 bg-success/10 rounded-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3M5 11h14M6 5h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2zm3 10h2v2H9v-2z" />
           </svg>
         </div>
         <div className="mt-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400">{messages.admin.totalMoneyPaid}</span>
-          <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">${data.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
-          <div className="flex items-center mt-2">
-            <span className={`px-1.5 py-0.5 text-xs ${data.paymentGrowthPercent >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'} rounded`}>
-              {data.paymentGrowthPercent >= 0 ? '+' : ''}{data.paymentGrowthPercent.toFixed(1)}%
-            </span>
-            <span className="ml-2 text-xs text-gray-500">{messages.admin.vsLastMonth}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{locale === 'sw' ? 'Biashara Zilizosajiliwa Leo' : 'Businesses Registered Today'}</span>
+          <h4 className="mt-2 text-2xl font-bold text-gray-800 dark:text-white/90">{data.businessesRegisteredToday.toLocaleString()}</h4>
+          <div className="mt-2 flex items-center">
+            <span className="rounded bg-success-100 px-1.5 py-0.5 text-xs font-semibold text-success-600">{locale === 'sw' ? 'Leo' : 'Today'}</span>
+            <span className="ml-2 text-xs text-gray-500">{locale === 'sw' ? 'Saa za Afrika Mashariki' : 'East Africa Time'}</span>
           </div>
         </div>
       </Card>

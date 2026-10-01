@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { recordAudit } from '@/lib/activityLog';
 
 declare module 'next-auth' {
   interface User {
@@ -210,6 +211,11 @@ export const authOptions: NextAuthOptions = {
     }
   },
   events: {
+    async signIn({ user }) {
+      if (user.id) {
+        await recordAudit({ actorId: user.id, action: 'USER_LOGIN', entityType: 'Session', entityId: user.id, description: 'User logged in: ' + (user.name || user.email || user.id), metadata: { role: user.role, provider: 'credentials' } });
+      }
+    },
     async signOut({ token }) {
       // Clear active session on logout
       if (token?.id) {

@@ -2,6 +2,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useSidebar } from "../context/SidebarContext";
 import {
   BoxCubeIcon,
@@ -20,6 +22,7 @@ import {
   FaListUl as AllBusinessesIcon,
   FaHourglassHalf as PendingApprovalIcon,
   FaClipboardCheck as ApprovalLogIcon,
+  FaMapMarkedAlt as AdministrativeAreasIcon,
   FaGlobeAfrica as RegionIcon,
   FaCity as DistrictIcon,
   FaMapPin as WardIcon,
@@ -29,16 +32,28 @@ import SidebarWidget from "./SidebarWidget";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/lib/useLocale";
 
+type NavSubItem = {
+  name: string;
+  path?: string;
+  pro: boolean;
+  icon?: React.ReactNode;
+  children?: NavSubItem[];
+};
+
 type NavItem = {
   icon: React.ReactNode;
   name: string;
   path?: string;
-  subItems?: { name: string; path: string; pro: boolean; icon?: React.ReactNode }[];
+  subItems?: NavSubItem[];
 };
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loadingPath, setLoadingPath] = useState<string | null>(null);
   const locale = useLocale();
   const messages = t(locale);
 
@@ -72,10 +87,17 @@ const AppSidebar: React.FC = () => {
       subItems: [
         { name: locale === 'sw' ? 'Kumbukumbu za Idhini' : 'Approval Logs', path: "/businesses/approval-logs", pro: false, icon: <ApprovalLogIcon /> },
         { name: messages.admin.categories, path: "/categories", pro: false, icon: <CategoryIcon /> },
-        { name: messages.admin.regions, path: "/regions", pro: false, icon: <RegionIcon /> },
-        { name: messages.admin.districts, path: "/districts", pro: false, icon: <DistrictIcon /> },
-        { name: messages.admin.wards, path: "/wards", pro: false, icon: <WardIcon /> },
-        { name: messages.admin.streets, path: "/streets", pro: false, icon: <StreetIcon /> },
+        {
+          name: locale === 'sw' ? 'Maeneo ya Utawala' : 'Administrative Areas',
+          pro: false,
+          icon: <AdministrativeAreasIcon />,
+          children: [
+            { name: messages.admin.regions, path: "/regions", pro: false, icon: <RegionIcon /> },
+            { name: messages.admin.districts, path: "/districts", pro: false, icon: <DistrictIcon /> },
+            { name: messages.admin.wards, path: "/wards", pro: false, icon: <WardIcon /> },
+            { name: locale === 'sw' ? 'Vijiji' : 'Villages', path: "/streets", pro: false, icon: <StreetIcon /> },
+          ],
+        },
         { name: messages.admin.payments, path: "/payments", pro: false, icon: <PaymentIcon /> },
         { name: messages.admin.users, path: "/users", pro: false, icon: <UserCircleIcon /> },
         { name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging', path: "/sms", pro: false, icon: <SmsIcon /> },
@@ -85,6 +107,27 @@ const AppSidebar: React.FC = () => {
     },
   ];
 
+  const filteredNavItems = (() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return navItems;
+    return navItems.flatMap((nav) => {
+      if (nav.name.toLowerCase().includes(term)) return [nav];
+      const matchingChildren = nav.subItems?.flatMap((item) => {
+        if (item.name.toLowerCase().includes(term)) return [item];
+        const children = item.children?.filter((child) => child.name.toLowerCase().includes(term));
+        return children?.length ? [{ ...item, children }] : [];
+      });
+      return matchingChildren?.length ? [{ ...nav, subItems: matchingChildren }] : [];
+    });
+  })();
+
+  const navigationSpinner = <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600 dark:border-brand-500/30 dark:border-t-brand-400" aria-hidden="true" />;
+
+  const startNavigation = (event: React.MouseEvent, path: string) => {
+    if (path === pathname) { event.preventDefault(); return; }
+    setLoadingPath(path);
+  };
+
   const renderMenuItems = (navItems: NavItem[]) => (
     <ul className="flex flex-col gap-4">
       {navItems.map((nav, index) => (
@@ -93,7 +136,7 @@ const AppSidebar: React.FC = () => {
             <button
               onClick={() => handleSubmenuToggle(index)}
               className={`menu-item group  ${
-                openSubmenu === index
+                (searchQuery.trim() || openSubmenu === index)
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
@@ -104,7 +147,7 @@ const AppSidebar: React.FC = () => {
             >
               <span
                 className={` ${
-                  openSubmenu === index
+                  (searchQuery.trim() || openSubmenu === index)
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                 }`}
@@ -117,7 +160,7 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu === index
+                    (searchQuery.trim() || openSubmenu === index)
                       ? "rotate-180 text-brand-500"
                       : ""
                   }`}
@@ -128,6 +171,8 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
+                onClick={(event) => startNavigation(event, nav.path!)}
+                aria-disabled={Boolean(loadingPath)}
                 className={`menu-item group ${
                   isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                 }`}
@@ -139,7 +184,7 @@ const AppSidebar: React.FC = () => {
                       : "menu-item-icon-inactive"
                   }`}
                 >
-                  {nav.icon}
+                  {loadingPath === nav.path ? navigationSpinner : nav.icon}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span className={`menu-item-text`}>{nav.name}</span>
@@ -154,43 +199,35 @@ const AppSidebar: React.FC = () => {
               }}
               className="overflow-hidden transition-all duration-300"
               style={{
-                height:
-                  openSubmenu === index
-                    ? `${subMenuHeight[index]}px`
-                    : "0px",
+                height: searchQuery.trim() ? "auto" : openSubmenu === index ? `${subMenuHeight[index]}px` : "0px",
               }}
             >
-              <ul className="mt-2 space-y-1 ml-9">
+              <ul className="mt-2 ml-9 space-y-1">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
-                    <Link
-                      href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.icon && (
-                        <span className="mr-2 text-sm">
-                          {subItem.icon}
-                        </span>
-                      )}
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
+                    {subItem.children ? (
+                      <div className="py-1">
+                        <div className="flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-400">
+                          {subItem.icon}<span>{subItem.name}</span>
+                        </div>
+                        <ul className="ml-3 space-y-1 border-l border-gray-200 pl-2 dark:border-gray-700">
+                          {subItem.children.map((child) => child.path && (
+                            <li key={child.name}>
+                              <Link href={child.path} onClick={(event) => startNavigation(event, child.path!)} aria-disabled={Boolean(loadingPath)} className={isActive(child.path) ? "menu-dropdown-item menu-dropdown-item-active" : "menu-dropdown-item menu-dropdown-item-inactive"}>
+                                <span className="mr-2 text-sm">{loadingPath === child.path ? navigationSpinner : child.icon}</span>
+                                {child.name}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : subItem.path ? (
+                      <Link href={subItem.path} onClick={(event) => startNavigation(event, subItem.path!)} aria-disabled={Boolean(loadingPath)} className={isActive(subItem.path) ? "menu-dropdown-item menu-dropdown-item-active" : "menu-dropdown-item menu-dropdown-item-inactive"}>
+                        <span className="mr-2 text-sm">{loadingPath === subItem.path ? navigationSpinner : subItem.icon}</span>
+                        {subItem.name}
+                        {subItem.pro && <span className="menu-dropdown-badge ml-auto">pro</span>}
+                      </Link>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -208,11 +245,12 @@ const AppSidebar: React.FC = () => {
   const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
   useEffect(() => {
+    setLoadingPath(null);
     let submenuMatched = false;
     navItems.forEach((nav, i) => {
       if (nav.subItems) {
         nav.subItems.forEach((subItem) => {
-          if (isActive(subItem.path)) {
+          if ((subItem.path && isActive(subItem.path)) || subItem.children?.some((child) => child.path && isActive(child.path))) {
             setOpenSubmenu(i);
             submenuMatched = true;
           }
@@ -224,6 +262,12 @@ const AppSidebar: React.FC = () => {
       setOpenSubmenu(null);
     }
   }, [pathname, isActive]);
+
+  useEffect(() => {
+    if (!loadingPath) return;
+    const timeout = window.setTimeout(() => setLoadingPath(null), 15000);
+    return () => window.clearTimeout(timeout);
+  }, [loadingPath]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -286,8 +330,22 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
+      {isAdmin && (isExpanded || isHovered || isMobileOpen) && (
+        <div className="relative mb-4">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={locale === 'sw' ? 'Tafuta menyu…' : 'Search menu…'}
+            aria-label={locale === 'sw' ? 'Tafuta kwenye menyu' : 'Search sidebar menu'}
+            className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-9 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500 dark:focus:bg-gray-900"
+          />
+          {searchQuery && <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear menu search" className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-700"><XMarkIcon className="h-4 w-4" /></button>}
+        </div>
+      )}
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
+        <nav className={loadingPath ? "mb-6 pointer-events-none opacity-70 transition-opacity" : "mb-6 transition-opacity"} aria-busy={Boolean(loadingPath)}>
           <div className="flex flex-col gap-4">
             <div>
               <h2
@@ -303,7 +361,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots />
                 )}
               </h2>
-              {renderMenuItems(navItems)}
+              {filteredNavItems.length ? renderMenuItems(filteredNavItems) : <p className="rounded-lg bg-gray-50 px-3 py-4 text-center text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-400">{locale === 'sw' ? 'Hakuna menyu iliyopatikana' : 'No menu items found'}</p>}
             </div>
           </div>
         </nav>

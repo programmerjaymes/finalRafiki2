@@ -149,6 +149,7 @@ export async function GET(request: Request) {
     const isVerified = url.searchParams.get('isVerified');
     const ownerId = url.searchParams.get('ownerId') || undefined;
     const lean = url.searchParams.get('lean') === 'true';
+    const approvalQueue = url.searchParams.get('approvalQueue');
 
     const skip = (page - 1) * limit;
 
@@ -177,6 +178,7 @@ export async function GET(request: Request) {
     } else if (isVerified === 'false') {
       where.isVerified = false;
     }
+    if (approvalQueue === 'pending') where.deactivationReason = null;
     
     if (search) {
       const textSearch = businessTextSearchWhere(search);

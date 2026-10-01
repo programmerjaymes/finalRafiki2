@@ -77,7 +77,7 @@ export default function NotificationDropdown() {
         const preference = await preferenceResponse.json();
         if (!preferenceResponse.ok || !preference.enabled) { setCanReceiveApprovals(false); setUnapprovedBusinesses([]); return; }
         setCanReceiveApprovals(true);
-        const response = await fetch('/api/businesses?isApproved=false&isVerified=false&limit=20');
+        const response = await fetch('/api/businesses?isApproved=false&isVerified=false&approvalQueue=pending&limit=20');
         if (response.ok) {
           const data = await response.json();
           const businesses = data.businesses || [];
