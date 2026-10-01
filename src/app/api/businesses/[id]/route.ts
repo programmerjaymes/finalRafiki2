@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import {
   getLocaleFromRequest,
   localizedCategoryFields,
@@ -88,10 +91,22 @@ export async function GET(
       )
     }
 
+    if (!payload.isApproved) {
+      const session = await getServerSession(authOptions);
+      const canViewUnapproved =
+        session?.user?.id === payload.ownerId ||
+        session?.user?.role === 'ADMIN' ||
+        session?.user?.role === 'BUSINESS_REGISTRAR';
+
+      if (!canViewUnapproved) {
+        return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+      }
+    }
+
     return NextResponse.json(payload, {
       headers: {
         Vary: 'Cookie',
-        'Cache-Control': `public, s-maxage=${BUSINESS_DETAIL_REVALIDATE}, stale-while-revalidate=600`,
+        'Cache-Control': payload.isApproved ? `public, s-maxage=${BUSINESS_DETAIL_REVALIDATE}, stale-while-revalidate=600` : 'private, no-store',
       },
     })
   } catch (error) {
@@ -110,6 +125,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+    const session = await getServerSession(authOptions);
     const body = await request.json()
     
     // Check if business exists
@@ -125,9 +141,18 @@ export async function PUT(
         { status: 404 }
       )
     }
+
+    const isApprovalChange = body.isApproved !== undefined;
+    const canApprove =
+      session?.user?.role === 'ADMIN' ||
+      session?.user?.role === 'BUSINESS_REGISTRAR';
+    if (isApprovalChange && !canApprove) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    const shouldLogApproval = body.isApproved === true && !businessExists.isApproved;
     
     // Build update data - only include fields that are present
-    const updateData: any = {}
+    const updateData: Prisma.BusinessUncheckedUpdateInput = {}
     if (body.name !== undefined) updateData.name = body.name
     if (body.description !== undefined) updateData.description = body.description
     if (body.phone !== undefined) updateData.phone = body.phone
@@ -159,10 +184,23 @@ export async function PUT(
     if (body.street !== undefined) updateData.street = body.street
     if (body.ownerId !== undefined) updateData.ownerId = body.ownerId
 
-    // Update business
-    const updatedBusiness = await prisma.business.update({
-      where: { id },
-      data: updateData
+    // Keep the approval and its audit record atomic.
+    const updatedBusiness = await prisma.$transaction(async (tx) => {
+      const updated = await tx.business.update({
+        where: { id },
+        data: updateData,
+      });
+
+      if (shouldLogApproval) {
+        await tx.businessApprovalLog.create({
+          data: {
+            businessId: id,
+            approvedById: session!.user.id,
+          },
+        });
+      }
+
+      return updated;
     })
 
     if (whatsappUpdate !== undefined) {

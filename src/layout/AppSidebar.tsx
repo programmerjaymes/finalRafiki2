@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import {
@@ -15,6 +14,7 @@ import {
   FaMoneyBillWave as PaymentIcon,
   FaTags as CategoryIcon,
   FaBuilding as BusinessIcon,
+  FaClipboardCheck as ApprovalLogIcon,
   FaMapMarkedAlt as LocationIcon,
   FaGlobeAfrica as RegionIcon,
   FaCity as DistrictIcon,
@@ -60,6 +60,11 @@ const AppSidebar: React.FC = () => {
           pro: false,
         },
       ],
+    },
+    {
+      icon: <ApprovalLogIcon />,
+      name: locale === 'sw' ? 'Kumbukumbu za Idhini' : 'Approval Logs',
+      path: "/businesses/approval-logs",
     },
     {
       icon: <CategoryIcon />,

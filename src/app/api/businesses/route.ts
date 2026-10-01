@@ -656,6 +656,12 @@ export async function POST(request: Request) {
           ${isAdmin}, ${isAdmin}, NOW(), NOW())
       `;
 
+      if (isAdmin) {
+        await prisma.businessApprovalLog.create({
+          data: { businessId: id, approvedById: currentUser.id },
+        });
+      }
+
       // Save product images as files and store paths
       if (images && Array.isArray(images) && images.length > 0) {
         const imagePaths = await saveProductImages(images);
@@ -715,6 +721,12 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    if (isAdmin) {
+      await prisma.businessApprovalLog.create({
+        data: { businessId: business.id, approvedById: currentUser.id },
+      });
+    }
 
     if (normalizedWhatsapp) {
       await setBusinessWhatsapp(business.id, normalizedWhatsapp);

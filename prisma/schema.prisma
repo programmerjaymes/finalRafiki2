@@ -22,6 +22,7 @@ model User {
   activeSessionToken    String?                @unique
   accounts              Account[]
   businessRegistrations BusinessRegistration[]
+  approvalLogs          BusinessApprovalLog[]  @relation("ApprovalActor")
   businesses            Business[]
   registeredBusinesses  Business[]             @relation("Registrar")
   payments              Payment[]
@@ -108,6 +109,7 @@ model Business {
   ward                Ward?                  @relation(fields: [wardId], references: [id])
   categories          CategoryOnBusiness[]
   payments            Payment[]
+  approvalLogs        BusinessApprovalLog[]
   reviews             Review[]
   searchResults       SearchResultBusiness[]
 
@@ -119,6 +121,20 @@ model Business {
   @@index([registrarId], map: "businesses_registrarId_idx")
   @@index([wardId], map: "businesses_wardId_idx")
   @@map("businesses")
+}
+
+model BusinessApprovalLog {
+  id           String   @id @default(cuid())
+  businessId   String
+  approvedById String?
+  approvedAt   DateTime @default(now())
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  approvedBy   User?    @relation("ApprovalActor", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([businessId], map: "business_approval_logs_businessId_idx")
+  @@index([approvedById], map: "business_approval_logs_approvedById_idx")
+  @@index([approvedAt], map: "business_approval_logs_approvedAt_idx")
+  @@map("business_approval_logs")
 }
 
 model BusinessRegistration {
