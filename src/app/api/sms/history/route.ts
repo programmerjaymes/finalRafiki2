@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     } : {}),
   };
 
-  const [messages, total, sentTotal, failedTotal] = await Promise.all([
+  const [messages, total, sentTotal, failedTotal, latestBalance] = await Promise.all([
     prisma.smsMessage.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -40,10 +40,11 @@ export async function GET(request: Request) {
     prisma.smsMessage.count({ where }),
     prisma.smsMessage.count({ where: { status: SmsDeliveryStatus.SENT } }),
     prisma.smsMessage.count({ where: { status: SmsDeliveryStatus.FAILED } }),
+    prisma.smsMessage.findFirst({ where: { creditsRemaining: { not: null } }, orderBy: { createdAt: 'desc' }, select: { creditsRemaining: true } }),
   ]);
 
   return NextResponse.json({
     messages,
-    meta: { page, limit, total, totalPages: Math.ceil(total / limit), sentTotal, failedTotal },
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit), sentTotal, failedTotal, creditsRemaining: latestBalance?.creditsRemaining ?? null },
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

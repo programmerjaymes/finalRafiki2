@@ -20,7 +20,6 @@ import {
   FaListUl as AllBusinessesIcon,
   FaHourglassHalf as PendingApprovalIcon,
   FaClipboardCheck as ApprovalLogIcon,
-  FaMapMarkedAlt as LocationIcon,
   FaGlobeAfrica as RegionIcon,
   FaCity as DistrictIcon,
   FaMapPin as WardIcon,
@@ -68,34 +67,16 @@ const AppSidebar: React.FC = () => {
       ],
     },
     {
-      icon: <ApprovalLogIcon />,
-      name: locale === 'sw' ? 'Kumbukumbu za Idhini' : 'Approval Logs',
-      path: "/businesses/approval-logs",
-    },
-    {
-      icon: <CategoryIcon />,
-      name: messages.admin.categories,
-      path: "/categories",
-    },
-    {
-      icon: <LocationIcon />,
-      name: messages.admin.locations,
+      icon: <UserCircleIcon />,
+      name: locale === 'sw' ? 'Utawala' : 'Administration',
       subItems: [
+        { name: locale === 'sw' ? 'Kumbukumbu za Idhini' : 'Approval Logs', path: "/businesses/approval-logs", pro: false, icon: <ApprovalLogIcon /> },
+        { name: messages.admin.categories, path: "/categories", pro: false, icon: <CategoryIcon /> },
         { name: messages.admin.regions, path: "/regions", pro: false, icon: <RegionIcon /> },
         { name: messages.admin.districts, path: "/districts", pro: false, icon: <DistrictIcon /> },
         { name: messages.admin.wards, path: "/wards", pro: false, icon: <WardIcon /> },
         { name: messages.admin.streets, path: "/streets", pro: false, icon: <StreetIcon /> },
-      ],
-    },
-    {
-      icon: <PaymentIcon />,
-      name: messages.admin.payments,
-      path: "/payments",
-    },
-    {
-      icon: <UserCircleIcon />,
-      name: locale === 'sw' ? 'Utawala' : 'Administration',
-      subItems: [
+        { name: messages.admin.payments, path: "/payments", pro: false, icon: <PaymentIcon /> },
         { name: messages.admin.users, path: "/users", pro: false, icon: <UserCircleIcon /> },
         { name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging', path: "/sms", pro: false, icon: <SmsIcon /> },
         { name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs', path: "/system-logs", pro: false, icon: <SystemLogsIcon /> },

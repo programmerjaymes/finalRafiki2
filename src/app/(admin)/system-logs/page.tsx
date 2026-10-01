@@ -1,5 +1,6 @@
 import PageBreadcrumb from '@/components/PageBreadcrumb';
 import { prisma } from '@/lib/prisma';
+import ClearLogsButton from '@/components/admin/logs/ClearLogsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,9 +25,10 @@ export default async function SystemLogsPage() {
         <p className="text-sm font-semibold uppercase tracking-wider text-white/60">Observability</p>
         <h1 className="mt-2 text-3xl font-bold">Application & Audit Logs</h1>
         <p className="mt-2 text-sm text-white/75">Review server errors, HTTP 500 failures, and administrative activity.</p>
-        <div className="mt-5 flex gap-3">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <span className="rounded-lg bg-red-500/20 px-3 py-2 text-sm">{logs.length} recent application logs</span>
           <span className="rounded-lg bg-blue-500/20 px-3 py-2 text-sm">{audits.length} recent audit entries</span>
+          <div className="sm:ml-auto"><ClearLogsButton /></div>
         </div>
       </section>
 

@@ -103,10 +103,12 @@ export async function PUT(
       );
     }
     
-    // Check if email is already in use by another user
-    if (body.email && body.email !== existingUser.email) {
+    const normalizedEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() || null : undefined;
+
+    // Check if a supplied email is already in use by another user
+    if (normalizedEmail && normalizedEmail !== existingUser.email) {
       const userWithEmail = await prisma.user.findUnique({
-        where: { email: body.email },
+        where: { email: normalizedEmail },
       });
       
       if (userWithEmail && userWithEmail.id !== id) {
@@ -131,7 +133,7 @@ export async function PUT(
     const updateData: any = {};
     
     if (body.name) updateData.name = body.name;
-    if (body.email) updateData.email = body.email;
+    if (body.email !== undefined) updateData.email = normalizedEmail;
     if (body.phone !== undefined) updateData.phone = normalizedPhone;
     if (body.role) updateData.role = body.role;
     

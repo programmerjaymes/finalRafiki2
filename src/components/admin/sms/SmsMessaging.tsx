@@ -55,6 +55,7 @@ export default function SmsMessaging() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [lastResult, setLastResult] = useState<SendResult | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [showComposer, setShowComposer] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -137,26 +138,16 @@ export default function SmsMessaging() {
     }
   };
 
+  const openComposer = () => {
+    setShowComposer(true);
+    requestAnimationFrame(() => document.getElementById('sms-composer')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-blue-500 px-6 py-7 text-white shadow-lg sm:px-8">
-        <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/10" />
-        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-white/70">Communications</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">SMS Messaging</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">
-              Send branded transactional messages to one user or a selected group.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/15 px-4 py-3 backdrop-blur-sm">
-            <PaperAirplaneIcon className="h-7 w-7" />
-            <div><p className="text-xs text-white/70">Sender ID</p><p className="font-bold">RAFIKIAPP</p></div>
-          </div>
-        </div>
-      </section>
+      <SmsHistory refreshKey={historyVersion} onCompose={openComposer} />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
+      {showComposer && <div id="sms-composer" className="scroll-mt-24 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
         <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="border-b border-gray-100 p-5 dark:border-gray-800">
             <div className="flex items-center justify-between gap-4">
@@ -263,8 +254,7 @@ export default function SmsMessaging() {
             </div>
           )}
         </section>
-      </div>
-      <SmsHistory refreshKey={historyVersion} />
+      </div>}
 
       <ConfirmDialog
         isOpen={showConfirm}

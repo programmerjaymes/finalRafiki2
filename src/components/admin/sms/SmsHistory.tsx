@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowPathIcon, CheckCircleIcon, MagnifyingGlassIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, CheckCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, WalletIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
 
 type Message = {
@@ -18,13 +18,14 @@ type Message = {
 
 type Tab = 'SENT' | 'FAILED';
 
-export default function SmsHistory({ refreshKey }: { refreshKey: number }) {
+export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: number; onCompose: () => void }) {
   const [tab, setTab] = useState<Tab>('SENT');
   const [messages, setMessages] = useState<Message[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [counts, setCounts] = useState({ sent: 0, failed: 0 });
+  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [manualRefresh, setManualRefresh] = useState(0);
 
@@ -41,6 +42,7 @@ export default function SmsHistory({ refreshKey }: { refreshKey: number }) {
         setMessages(data.messages || []);
         setTotalPages(data.meta?.totalPages || 1);
         setCounts({ sent: data.meta?.sentTotal || 0, failed: data.meta?.failedTotal || 0 });
+        setBalance(typeof data.meta?.creditsRemaining === 'number' ? data.meta.creditsRemaining : null);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === 'AbortError')) console.error(error);
       } finally {
@@ -59,7 +61,9 @@ export default function SmsHistory({ refreshKey }: { refreshKey: number }) {
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">SMS Delivery History</h2>
           <p className="mt-1 text-sm text-gray-500">Track successful and failed messages, recipients, and senders.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="mr-1 flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"><WalletIcon className="h-4 w-4" /><span>SMS Balance:</span><span className="text-base">{balance === null ? '—' : balance.toLocaleString()}</span></div>
+          <button type="button" onClick={onCompose} className="flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-600"><PencilSquareIcon className="h-4 w-4" />Write New SMS</button>
           <button onClick={() => changeTab('SENT')} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${tab === 'SENT' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
             <CheckCircleIcon className="h-4 w-4" /> Inbox <span className="rounded-full bg-white/20 px-1.5 text-xs">{counts.sent}</span>
           </button>

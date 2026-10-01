@@ -16,7 +16,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const userSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().trim().refine((value) => value === '' || z.string().email().safeParse(value).success, 'Please enter a valid email address'),
   phone: z.string().trim().optional(),
   role: z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT']),
   password: z.preprocess(
@@ -30,7 +30,7 @@ type UserFormValues = z.infer<typeof userSchema>;
 type User = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   role: UserFormValues['role'];
 };
@@ -100,6 +100,10 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
   }, [userId, form]);
 
   const saveUser = async (values: UserFormValues) => {
+    if (!isEditing && !values.email) {
+      form.setError('email', { message: 'Email is required' });
+      return;
+    }
     if (!isEditing && !values.password) {
       form.setError('password', { message: 'Password is required' });
       return;
@@ -158,7 +162,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
             {submitError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">{submitError}</div>}
 
             <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Enter name" autoComplete="off" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
-            <FormField control={form.control} name="email" render={({ field }) => <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="Enter email address" autoComplete="one-time-code" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
+            <FormField control={form.control} name="email" render={({ field }) => <FormItem><FormLabel>Email{isEditing ? ' (optional)' : ''}</FormLabel><FormControl><Input type="email" placeholder="Enter email address" autoComplete="one-time-code" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="phone" render={({ field }) => <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Enter phone number" autoComplete="off" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
 
             <FormField control={form.control} name="role" render={({ field }) => (

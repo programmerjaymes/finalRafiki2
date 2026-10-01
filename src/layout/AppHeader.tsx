@@ -6,8 +6,8 @@ import { useSidebar } from "@/context/SidebarContext";
 import Link from "next/link";
 import React, { useState ,useEffect,useRef} from "react";
 import { useSession } from "next-auth/react";
-import { t } from "@/lib/i18n";
-import { useLocale } from "@/lib/useLocale";
+import { t, type Locale } from "@/lib/i18n";
+import { useLocale, useSetLocale } from "@/lib/useLocale";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
@@ -16,6 +16,7 @@ const AppHeader: React.FC = () => {
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const locale = useLocale();
+  const setLocale = useSetLocale();
   const messages = t(locale);
 
   const handleToggle = () => {
@@ -190,6 +191,16 @@ const AppHeader: React.FC = () => {
           } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
+            <label className="relative flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+              <svg className="h-5 w-5 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+              <span className="hidden sm:inline">{locale === 'sw' ? 'Lugha' : 'Language'}</span>
+              <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)} aria-label={messages.nav.language} className="cursor-pointer appearance-none bg-transparent pr-4 text-sm font-bold text-gray-800 outline-none dark:text-white">
+                <option value="en" className="text-gray-900">EN</option>
+                <option value="sw" className="text-gray-900">SW</option>
+              </select>
+              <svg className="pointer-events-none absolute right-2 h-3 w-3 text-gray-400" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m3 4.5 3 3 3-3"/></svg>
+            </label>
+
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}

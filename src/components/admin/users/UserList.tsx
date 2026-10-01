@@ -21,6 +21,7 @@ import {
   ArrowPathRoundedSquareIcon,
   BellIcon,
   KeyIcon,
+  EllipsisVerticalIcon,
 } from '@heroicons/react/24/outline';
 import { Input } from '@/components/ui/input';
 import {
@@ -103,6 +104,7 @@ export default function UserList() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<string | null>(null);
   const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [actionMenu, setActionMenu] = useState<{ user: User; top: number; right: number } | null>(null);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -166,6 +168,14 @@ export default function UserList() {
     e.stopPropagation();
     setUserToEdit(userId);
     setShowUserModal(true);
+  };
+
+  const openActionMenu = (event: React.MouseEvent, user: User) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuHeight = user.role === 'ADMIN' ? 190 : 150;
+    const top = window.innerHeight - rect.bottom < menuHeight ? Math.max(8, rect.top - menuHeight) : rect.bottom + 6;
+    setActionMenu({ user, top, right: Math.max(8, window.innerWidth - rect.right) });
   };
 
   const handleDelete = (e: React.MouseEvent, userId: string) => {
@@ -465,24 +475,16 @@ export default function UserList() {
                         {formatDate(user.createdAt)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
-                        <div className="flex justify-end space-x-2">
-                          {user.role === 'ADMIN' && <button onClick={(event) => toggleApprovalNotifications(event, user)} className={`rounded p-1 ${user.receivesApprovalNotifications ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title={user.receivesApprovalNotifications ? 'Disable approval notifications' : 'Receive business approval notifications'}><BellIcon className="h-5 w-5" /></button>}
-                          <button onClick={(event) => { event.stopPropagation(); setUserToReset(user); }} className="rounded p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30" title="Reset password"><KeyIcon className="h-5 w-5" /></button>
-                          <button
-                            onClick={(e) => handleEdit(e, user.id)}
-                            className="p-1 rounded text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                            title="Edit user"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(e, user.id)}
-                            className="p-1 rounded text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
-                            title="Delete user"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(event) => openActionMenu(event, user)}
+                          className="dropdown-toggle inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/10 dark:hover:text-brand-400"
+                          aria-label={`Actions for ${user.name}`}
+                          aria-haspopup="menu"
+                          aria-expanded={actionMenu?.user.id === user.id}
+                        >
+                          <EllipsisVerticalIcon className="h-5 w-5" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -505,6 +507,20 @@ export default function UserList() {
             onPageChange={setPage}
           />
         </div>
+      )}
+
+      {actionMenu && (
+        <>
+          <button type="button" aria-label="Close actions menu" className="fixed inset-0 z-[80] cursor-default" onClick={(event) => { event.stopPropagation(); setActionMenu(null); }} />
+          <div role="menu" style={{ top: actionMenu.top, right: actionMenu.right }} className="fixed z-[90] w-64 overflow-hidden rounded-xl border border-gray-200 bg-white p-2 text-left shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+            <p className="truncate border-b border-gray-100 px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:border-gray-800">{actionMenu.user.name}</p>
+            <button role="menuitem" onClick={(event) => { setActionMenu(null); handleEdit(event, actionMenu.user.id); }} className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"><PencilIcon className="h-5 w-5" />Edit user</button>
+            <button role="menuitem" onClick={(event) => { event.stopPropagation(); setActionMenu(null); setUserToReset(actionMenu.user); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-amber-50 hover:text-amber-700 dark:text-gray-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"><KeyIcon className="h-5 w-5" />Reset password</button>
+            {actionMenu.user.role === 'ADMIN' && <button role="menuitem" onClick={(event) => { setActionMenu(null); toggleApprovalNotifications(event, actionMenu.user); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-brand-50 hover:text-brand-700 dark:text-gray-300 dark:hover:bg-brand-500/10 dark:hover:text-brand-300"><BellIcon className="h-5 w-5" />{actionMenu.user.receivesApprovalNotifications ? 'Disable approval alerts' : 'Receive approval alerts'}</button>}
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+            <button role="menuitem" onClick={(event) => { setActionMenu(null); handleDelete(event, actionMenu.user.id); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"><TrashIcon className="h-5 w-5" />Delete user</button>
+          </div>
+        </>
       )}
 
       <ConfirmDialog
