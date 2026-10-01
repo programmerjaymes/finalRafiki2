@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    await recordAudit({ actorId: user.id, action: 'USER_REGISTERED', entityType: 'User', entityId: user.id, description: , metadata: { role: user.role, registrationMethod: user.email ? 'email' : 'phone' }, request });
+    await recordAudit({ actorId: user.id, action: 'USER_REGISTERED', entityType: 'User', entityId: user.id, description: 'User registered: ' + user.name, metadata: { role: user.role, registrationMethod: user.email ? 'email' : 'phone' }, request });
 
     // Return user data without sensitive information
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
