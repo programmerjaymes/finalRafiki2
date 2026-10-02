@@ -13,9 +13,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
   if (user.role !== 'ADMIN') return NextResponse.json({ error: 'Only administrators can receive approval notifications' }, { status: 400 });
   const enabled = Boolean(body.enabled);
-  const updated = await prisma.$transaction(async (tx) => {
-    if (enabled) await tx.user.updateMany({ where: { role: 'ADMIN', receivesApprovalNotifications: true }, data: { receivesApprovalNotifications: false } });
-    return tx.user.update({ where: { id }, data: { receivesApprovalNotifications: enabled }, select: { id: true, receivesApprovalNotifications: true } });
+  const updated = await prisma.user.update({
+    where: { id },
+    data: { receivesApprovalNotifications: enabled },
+    select: { id: true, receivesApprovalNotifications: true },
   });
   await recordAudit({ actorId: session.user.id, action: 'APPROVAL_NOTIFICATION_SETTING_CHANGED', entityType: 'User', entityId: id, description: `${enabled ? 'Enabled' : 'Disabled'} approval notifications for ${user.name}`, request });
   return NextResponse.json({ user: updated });

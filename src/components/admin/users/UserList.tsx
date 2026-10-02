@@ -191,7 +191,7 @@ export default function UserList() {
       const response = await fetch(`/api/users/${user.id}/approval-notifications`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Unable to update notification administrator');
-      setUsers((current) => current.map((item) => ({ ...item, receivesApprovalNotifications: enabled ? item.id === user.id : item.id === user.id ? false : item.receivesApprovalNotifications })));
+      setUsers((current) => current.map((item) => item.id === user.id ? { ...item, receivesApprovalNotifications: enabled } : item));
       toast.success(enabled ? `${user.name} will receive approval notifications` : `${user.name} will no longer receive approval notifications`);
     } catch (toggleError) { toast.error(toggleError instanceof Error ? toggleError.message : 'Unable to update notification administrator'); }
   };

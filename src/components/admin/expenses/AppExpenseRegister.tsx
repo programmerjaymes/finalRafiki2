@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownTrayIcon,
   BanknotesIcon,
@@ -66,6 +66,57 @@ const groupedMoney = (items: Expense[]) => {
   }, {} as Record<string, number>);
   return Object.entries(totals).map(([currency, amount]) => money(amount, currency)).join(' · ') || 'TZS 0';
 };
+
+type DateInputProps = {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  min?: string;
+};
+
+function DateInput({ id, label, value, onChange, required, min }: DateInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const openCalendar = () => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const dateInput = input as HTMLInputElement & { showPicker?: () => void };
+    if (dateInput.showPicker) dateInput.showPicker();
+    else input.focus();
+  };
+
+  return (
+    <label htmlFor={id}>
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label}{required ? ' *' : ''}
+      </span>
+      <span className="relative mt-1 block">
+        <input
+          ref={inputRef}
+          id={id}
+          required={required}
+          type="date"
+          min={min}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 pr-12 text-sm text-gray-800 focus:border-brand-400 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white"
+        />
+        <button
+          type="button"
+          onClick={openCalendar}
+          aria-label={`Open calendar for ${label}`}
+          title="Choose from calendar"
+          className="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+        >
+          <CalendarDaysIcon className="h-5 w-5" />
+        </button>
+      </span>
+    </label>
+  );
+}
 
 const emptyForm = {
   title: '',
@@ -310,11 +361,11 @@ export default function AppExpenseRegister() {
           </label>
           {!form.hasNoTimeRange && (
             <>
-              <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable from *</span><input required type="date" value={form.applicableFrom} onChange={(event) => setForm({ ...form, applicableFrom: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
-              <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Applicable to *</span><input required type="date" min={form.applicableFrom} value={form.applicableTo} onChange={(event) => setForm({ ...form, applicableTo: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
+              <DateInput id="expense-applicable-from" label="Applicable from" required value={form.applicableFrom} onChange={(value) => setForm({ ...form, applicableFrom: value })} />
+              <DateInput id="expense-applicable-to" label="Applicable to" required min={form.applicableFrom} value={form.applicableTo} onChange={(value) => setForm({ ...form, applicableTo: value })} />
             </>
           )}
-          <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment date</span><input type="date" value={form.paidAt} onChange={(event) => setForm({ ...form, paidAt: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
+          <DateInput id="expense-payment-date" label="Payment date" value={form.paidAt} onChange={(value) => setForm({ ...form, paidAt: value })} />
           <label><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Invoice / transaction reference</span><input value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })} className="mt-1 h-11 w-full rounded-xl border border-gray-300 bg-transparent px-4 text-sm dark:border-gray-700 dark:text-white" /></label>
           <label className="sm:col-span-2"><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes</span><textarea rows={3} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} className="mt-1 w-full rounded-xl border border-gray-300 bg-transparent p-4 text-sm dark:border-gray-700 dark:text-white" /></label>
           <label className="sm:col-span-2"><span className="text-sm font-medium text-gray-700 dark:text-gray-300">Invoice or payment evidence *</span><span className="mt-1 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center hover:border-brand-400 dark:border-gray-700 dark:bg-gray-800/50"><DocumentArrowUpIcon className="h-9 w-9 text-brand-500" /><span className="mt-2 text-sm font-semibold text-gray-800 dark:text-white">{evidence?.name || 'Choose a PDF or image'}</span><span className="mt-1 text-xs text-gray-500">PDF, JPG, PNG or WebP · maximum 10 MB</span><input required type="file" accept=".pdf,image/jpeg,image/png,image/webp" onChange={(event) => setEvidence(event.target.files?.[0] || null)} className="sr-only" /></span></label>

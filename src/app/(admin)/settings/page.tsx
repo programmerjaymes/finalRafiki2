@@ -5,7 +5,7 @@ import { BellAlertIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroic
 import PageBreadcrumb from '@/components/PageBreadcrumb';
 import toast from '@/utils/toast';
 
-type NotificationSettings = { enabled: boolean; administrator: { id: string; name: string; phone: string | null } | null };
+type NotificationSettings = { enabled: boolean; administrators: Array<{ id: string; name: string; phone: string | null }> };
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -45,12 +45,12 @@ export default function SettingsPage() {
         <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"><BellAlertIcon className="h-6 w-6" /></div>
-            <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">New business approval SMS</h2><p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">Send an SMS to the designated administrator whenever a business owner submits a new business requiring approval.</p></div>
+            <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">New business approval SMS</h2><p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">Send an SMS to all selected administrators whenever a business owner submits a new business requiring approval.</p></div>
           </div>
           <button type="button" role="switch" aria-checked={settings?.enabled || false} disabled={loading || saving} onClick={() => settings && setEnabled(!settings.enabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-50 ${settings?.enabled ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-700'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${settings?.enabled ? 'left-6' : 'left-1'}`} /></button>
         </div>
         <div className="border-t border-gray-100 bg-gray-50/70 px-6 py-4 dark:border-gray-800 dark:bg-gray-800/40">
-          {loading ? <p className="text-sm text-gray-500">Loading configuration…</p> : settings?.administrator ? <div className="flex items-center gap-3"><CheckCircleIcon className="h-5 w-5 text-green-500" /><div><p className="text-sm font-medium text-gray-800 dark:text-gray-200">Recipient: {settings.administrator.name}</p><p className="text-xs text-gray-500">{settings.administrator.phone || 'No phone number configured'}</p></div></div> : <div className="flex items-center gap-3 text-amber-700 dark:text-amber-300"><ExclamationTriangleIcon className="h-5 w-5" /><p className="text-sm">No notification administrator selected. Select one using the bell action on the Users page.</p></div>}
+          {loading ? <p className="text-sm text-gray-500">Loading configuration…</p> : settings?.administrators.length ? <div className="flex items-start gap-3"><CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-green-500" /><div><p className="text-sm font-medium text-gray-800 dark:text-gray-200">Recipients ({settings.administrators.length})</p><div className="mt-2 flex flex-wrap gap-2">{settings.administrators.map((administrator) => <span key={administrator.id} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"><span className="font-semibold">{administrator.name}</span><span className="ml-1 text-gray-400">· {administrator.phone || 'No phone number'}</span></span>)}</div></div></div> : <div className="flex items-center gap-3 text-amber-700 dark:text-amber-300"><ExclamationTriangleIcon className="h-5 w-5" /><p className="text-sm">No notification administrators selected. Select one or more using the bell action on the Users page.</p></div>}
         </div>
       </section>
     </div>
