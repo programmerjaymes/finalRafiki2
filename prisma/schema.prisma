@@ -35,6 +35,7 @@ model User {
   sessions                      Session[]
   privacyRequests               PrivacyRequest[]
   appExpenses                   AppExpense[]
+  businessEvents                business_events[]
 
   @@map("users")
 }
@@ -174,6 +175,7 @@ model Business {
   searchResults       SearchResultBusiness[]
   bundleHistory       BusinessBundleHistory[]
   renewalRequests     BusinessRenewalRequest[]
+  events              business_events[]
 
   @@index([bundleId], map: "businesses_bundleId_idx")
   @@index([categoryId], map: "businesses_categoryId_idx")
@@ -513,13 +515,19 @@ model LocationSearch {
 }
 
 model business_events {
-  id         String   @id
+  id         String   @id @default(cuid())
   businessId String
+  userId     String?
   eventType  String   @db.VarChar(50)
+  action     String?  @db.VarChar(50)
   createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([businessId], map: "business_events_businessId_idx")
   @@index([eventType], map: "idx_type")
+  @@index([userId], map: "business_events_userId_idx")
+  @@index([createdAt], map: "business_events_createdAt_idx")
 }
 
 model business_images {

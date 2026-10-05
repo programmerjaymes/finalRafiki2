@@ -56,7 +56,7 @@ const globalForPrisma = globalThis as unknown as {
   prismaSchemaGeneration?: string;
 };
 
-const PRISMA_SCHEMA_GENERATION = '20260531-whatsapp';
+const PRISMA_SCHEMA_GENERATION = '20261005-business-visitors';
 
 const needsNewClient =
   !globalForPrisma.prisma ||

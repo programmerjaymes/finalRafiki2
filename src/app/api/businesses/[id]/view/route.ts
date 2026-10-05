@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { randomUUID } from 'crypto';
 
 // POST - Track a business view
 
@@ -26,16 +29,17 @@ export async function POST(
       );
     }
     
-    // Increment view count
-    const updatedBusiness = await prisma.business.update({
-      where: {
-        id: id
-      },
-      data: {
-        viewCount: {
-          increment: 1
-        }
-      }
+    const session = await getServerSession(authOptions);
+    const updatedBusiness = await prisma.$transaction(async (tx) => {
+      const updated = await tx.business.update({
+        where: { id },
+        data: { viewCount: { increment: 1 } },
+      });
+      await tx.$executeRaw`
+        INSERT INTO "business_events" ("id", "businessId", "userId", "eventType", "createdAt")
+        VALUES (${randomUUID()}, ${id}, ${session?.user?.id || null}, 'VIEW', NOW())
+      `;
+      return updated;
     });
     
     return NextResponse.json({ success: true, viewCount: updatedBusiness.viewCount });

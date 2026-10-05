@@ -76,6 +76,15 @@ export default function BusinessDetails({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const trackClick = (action: string) => {
+    void fetch(`/api/businesses/${id}/call`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+      keepalive: true,
+    }).catch(() => undefined);
+  };
+
   const labels =
     locale === 'sw'
       ? {
@@ -279,6 +288,7 @@ export default function BusinessDetails({
           {business.phone && (
             <a
               href={`tel:${business.phone}`}
+              onClick={() => trackClick('PHONE')}
               className="inline-flex justify-center items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-md hover:opacity-90 transition"
               style={{ backgroundColor: brandColors.accent }}
             >
@@ -289,6 +299,7 @@ export default function BusinessDetails({
           {whatsappChatUrl(business.whatsapp) && (
             <a
               href={whatsappChatUrl(business.whatsapp)!}
+              onClick={() => trackClick('WHATSAPP')}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex justify-center items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white shadow-md hover:opacity-90 transition bg-[#25D366]"
@@ -300,6 +311,7 @@ export default function BusinessDetails({
           {business.allowsOnlineBooking && (
             <button
               type="button"
+              onClick={() => trackClick('BOOKING')}
               className="inline-flex justify-center items-center rounded-xl border-2 px-6 py-3 text-sm font-bold transition hover:opacity-90"
               style={{ borderColor: brandColors.accent, color: brandColors.accent }}
             >
@@ -351,7 +363,7 @@ export default function BusinessDetails({
                 </span>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{labels.phone}</p>
-                  <a href={`tel:${business.phone}`} className="font-semibold text-gray-900 dark:text-white">
+                  <a href={`tel:${business.phone}`} onClick={() => trackClick('PHONE')} className="font-semibold text-gray-900 dark:text-white">
                     {business.phone}
                   </a>
                 </div>
@@ -366,6 +378,7 @@ export default function BusinessDetails({
                   <p className="text-xs text-gray-500 dark:text-gray-400">{labels.whatsapp}</p>
                   <a
                     href={whatsappChatUrl(business.whatsapp)!}
+                    onClick={() => trackClick('WHATSAPP')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
@@ -382,7 +395,7 @@ export default function BusinessDetails({
                 </span>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{labels.email}</p>
-                  <a href={`mailto:${business.email}`} className="font-semibold text-gray-900 dark:text-white break-all">
+                  <a href={`mailto:${business.email}`} onClick={() => trackClick('EMAIL')} className="font-semibold text-gray-900 dark:text-white break-all">
                     {business.email}
                   </a>
                 </div>
@@ -397,6 +410,7 @@ export default function BusinessDetails({
                   <p className="text-xs text-gray-500 dark:text-gray-400">{labels.website}</p>
                   <a
                     href={business.website}
+                    onClick={() => trackClick('WEBSITE')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-gray-900 dark:text-white break-all hover:underline"
@@ -412,17 +426,17 @@ export default function BusinessDetails({
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">{labels.social}</p>
               <div className="flex gap-3">
                 {business.facebook && (
-                  <a href={business.facebook} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-600">
+                  <a href={business.facebook} onClick={() => trackClick('FACEBOOK')} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-blue-600">
                     <FaFacebook className="h-6 w-6" />
                   </a>
                 )}
                 {business.instagram && (
-                  <a href={business.instagram} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-pink-600">
+                  <a href={business.instagram} onClick={() => trackClick('INSTAGRAM')} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-pink-600">
                     <FaInstagram className="h-6 w-6" />
                   </a>
                 )}
                 {business.twitter && (
-                  <a href={business.twitter} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-sky-500">
+                  <a href={business.twitter} onClick={() => trackClick('TWITTER')} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-sky-500">
                     <FaTwitter className="h-6 w-6" />
                   </a>
                 )}

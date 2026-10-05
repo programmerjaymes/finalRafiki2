@@ -27,6 +27,7 @@ import {
   FaCity as DistrictIcon,
   FaMapPin as WardIcon,
   FaRoad as StreetIcon,
+  FaChartLine as CustomerActivityIcon,
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
 import { t } from "@/lib/i18n";
@@ -101,6 +102,7 @@ const AppSidebar: React.FC = () => {
         { name: messages.admin.payments, path: "/payments", pro: false, icon: <PaymentIcon /> },
         { name: locale === 'sw' ? 'Gharama za Programu' : 'App Expenses', path: "/app-expenses", pro: false, icon: <PaymentIcon /> },
         { name: messages.admin.users, path: "/users", pro: false, icon: <UserCircleIcon /> },
+        { name: locale === 'sw' ? 'Ziara na Mibofyo' : 'Customer Activity', path: "/customer-activity", pro: false, icon: <CustomerActivityIcon /> },
         { name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging', path: "/sms", pro: false, icon: <SmsIcon /> },
         { name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs', path: "/system-logs", pro: false, icon: <SystemLogsIcon /> },
         { name: locale === 'sw' ? 'Mipangilio' : 'Settings', path: "/settings", pro: false, icon: <SettingsIcon /> },
