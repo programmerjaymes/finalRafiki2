@@ -46,15 +46,7 @@ export default function Navbar() {
   const registerBusinessLink = registerBusinessHref(session);
 
   const handleSignOut = async () => {
-    const result = await toast.confirm(
-      locale === 'sw' ? 'Unataka kutoka?' : 'Sign out?',
-      locale === 'sw'
-        ? 'Je, una uhakika unataka kutoka kwenye akaunti yako?'
-        : 'Are you sure you want to sign out of your account?',
-      'question',
-      locale === 'sw' ? 'Ndiyo, toka' : 'Sign out',
-      locale === 'sw' ? 'Ghairi' : 'Cancel',
-    );
+    const result = await toast.confirmSignOut(locale === 'sw');
     if (result.isConfirmed) await signOut({ callbackUrl: '/' });
   };
 

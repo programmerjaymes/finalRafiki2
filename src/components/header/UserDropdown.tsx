@@ -27,15 +27,7 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
 
   async function handleSignOut() {
     closeDropdown();
-    const result = await toast.confirm(
-      sw ? "Unataka kutoka?" : "Sign out?",
-      sw
-        ? "Je, una uhakika unataka kutoka kwenye akaunti yako?"
-        : "Are you sure you want to sign out of your account?",
-      "question",
-      sw ? "Ndiyo, toka" : "Sign out",
-      sw ? "Ghairi" : "Cancel",
-    );
+    const result = await toast.confirmSignOut(sw);
     if (result.isConfirmed) await signOut({ callbackUrl: "/" });
   }
   return (

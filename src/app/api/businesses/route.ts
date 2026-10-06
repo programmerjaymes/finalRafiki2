@@ -580,6 +580,7 @@ export async function POST(request: Request) {
       images,
       referralAgentId,
       referralCode,
+      requestLocale,
     } = body as {
       name?: string;
       description?: string;
@@ -608,7 +609,9 @@ export async function POST(request: Request) {
       images?: string[];
       referralAgentId?: string;
       referralCode?: string;
+      requestLocale?: 'en' | 'sw';
     };
+    const localized = (english: string, swahili: string) => requestLocale === 'sw' ? swahili : english;
 
     // Admin creation: ownerId required, transactionId optional
     if (isAdmin) {
@@ -651,12 +654,12 @@ export async function POST(request: Request) {
     let commissionAmount: number | null = null;
     if (referralAgentId || referralCode) {
       if (!referralAgentId || !referralCode) {
-        return NextResponse.json({ error: 'Select an agent and enter their referral code' }, { status: 400 });
+        return NextResponse.json({ error: localized('Select an agent and enter their referral code', 'Chagua wakala na uandike msimbo wake wa rufaa') }, { status: 400 });
       }
       [referral] = await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM users u WHERE id = ${referralAgentId} AND (role::text = 'AGENT' OR EXISTS (SELECT 1 FROM user_role_assignments r WHERE r."userId" = u.id AND r.role = 'AGENT')) AND "referralCode" = ${referralCode.trim().toUpperCase()} LIMIT 1
       `;
-      if (!referral) return NextResponse.json({ error: 'The selected agent and referral code do not match' }, { status: 400 });
+      if (!referral) return NextResponse.json({ error: localized('The selected agent and referral code do not match', 'Wakala aliyechaguliwa na msimbo wa rufaa havilingani') }, { status: 400 });
       const [settings] = await prisma.$queryRaw<Array<{ agentCommissionAmount: number }>>`SELECT "agentCommissionAmount" FROM system_settings WHERE id = 'global' LIMIT 1`;
       commissionAmount = settings?.agentCommissionAmount || 0;
     }

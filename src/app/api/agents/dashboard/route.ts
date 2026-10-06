@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import bcrypt from 'bcryptjs';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getMobileUser } from '@/lib/mobileAuth';
 
 async function payload(agentId: string) {
   const [agent] = await prisma.$queryRaw<Array<{ id: string; name: string; referralCode: string }>>`
@@ -18,10 +19,14 @@ async function payload(agentId: string) {
   return { agent, businesses, totals: { totalEarned, totalPaid, amountClaimable: totalEarned - totalPaid } };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !(session.user.roles?.includes('AGENT') || session.user.role === 'AGENT')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  return NextResponse.json(await payload(session.user.id));
+  const mobileUser = session?.user?.id ? null : await getMobileUser(request);
+  const userId = session?.user?.id || mobileUser?.id;
+  if (!userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const result = await payload(userId);
+  if (!result) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  return NextResponse.json(result);
 }
 
 // Mobile authentication until the app adopts cookie sessions.

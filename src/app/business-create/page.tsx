@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import type { Bundle, Category, Region, District, Ward } from "@prisma/client";
 import { useLocale } from "@/lib/useLocale";
 import { parseBundleAllowedFields } from "@/lib/bundleFields";
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
 
 // Step interface to track progress
 interface Step {
@@ -72,6 +73,8 @@ export default function CreateBusinessPage() {
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
+  const [wasInvitedByAgent, setWasInvitedByAgent] = useState(false);
+  const [agentSearch, setAgentSearch] = useState("");
   const [referralAgentId, setReferralAgentId] = useState("");
   const [referralCode, setReferralCode] = useState("");
 
@@ -279,6 +282,7 @@ export default function CreateBusinessPage() {
       street: formData.street,
       bundleId: selectedBundle.id,
       transactionId,
+      requestLocale: locale,
     };
 
     const optionalKeys: (keyof BusinessFormData)[] = [
@@ -312,6 +316,11 @@ export default function CreateBusinessPage() {
   };
 
   const submitBusiness = async () => {
+    if (wasInvitedByAgent && (!referralAgentId || !referralCode.trim())) {
+      toast.error(text('Select the agent who invited you and enter the agent code they gave you.', 'Chagua wakala aliyekualika na uandike msimbo wa wakala aliokupa.'));
+      setCurrentStep(3);
+      return;
+    }
     const finalData = buildSubmitPayload();
     if (!finalData) return;
 
@@ -398,11 +407,14 @@ export default function CreateBusinessPage() {
         return <div className="space-y-6"><BusinessCreateFormFields step={3} {...formFieldsProps} />
           <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">{text('Were you invited by an agent?', 'Umealikwa na wakala?')}</h3>
-            <p className="mt-1 text-sm text-gray-500">{text('Optional. Select the agent and enter the code they shared.', 'Si lazima. Chagua wakala na uweke msimbo aliokupa.')}</p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <select value={referralAgentId} onChange={(e) => { setReferralAgentId(e.target.value); if (!e.target.value) setReferralCode(''); }} className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700 dark:text-white"><option value="">{text('No agent', 'Hakuna wakala')}</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select>
-              <input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} disabled={!referralAgentId} placeholder={text('Agent referral code', 'Msimbo wa wakala')} className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 uppercase disabled:opacity-50 dark:border-gray-700 dark:text-white" />
+            <p className="mt-1 text-sm text-gray-500">{text('Choose Yes only if a Rafiki agent invited you to register this business.', 'Chagua Ndiyo ikiwa tu wakala wa Rafiki alikualika kusajili biashara hii.')}</p>
+            <div className="mt-4 flex gap-2">
+              {[false, true].map((value) => <button key={String(value)} type="button" onClick={() => { setWasInvitedByAgent(value); if (!value) { setReferralAgentId(''); setReferralCode(''); setAgentSearch(''); } }} className={`rounded-full border px-5 py-2 text-sm font-semibold transition ${wasInvitedByAgent === value ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-300 text-gray-600 hover:border-brand-300 dark:border-gray-700 dark:text-gray-300'}`}>{value ? text('Yes', 'Ndiyo') : text('No', 'Hapana')}</button>)}
             </div>
+            {wasInvitedByAgent && <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <SearchableDropdown id="referralAgent" label={text('Agent name', 'Jina la wakala')} required value={referralAgentId} options={agents.map((agent) => ({ value: agent.id, label: agent.name }))} search={agentSearch} onSearchChange={setAgentSearch} onValueChange={(value) => { setReferralAgentId(value); setReferralCode(''); }} placeholder={text('Select the agent who invited you', 'Chagua wakala aliyekualika')} searchPlaceholder={text('Search agent by name...', 'Tafuta wakala kwa jina...')} emptyMessage={text('No agent found', 'Hakuna wakala aliyepatikana')} />
+              <label className="block"><span className="text-sm font-medium text-gray-700 dark:text-gray-300">{text('Agent code', 'Msimbo wa wakala')} <span className="text-red-500">*</span></span><input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/\s/g, ''))} disabled={!referralAgentId} placeholder="AG-XXXXXXXX" className="mt-1 h-11 w-full rounded-lg border border-gray-300 bg-white px-3 uppercase shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:disabled:bg-gray-800" /><span className="mt-1.5 block text-xs leading-5 text-gray-500">{text('Ask the agent for their code and type it exactly as they gave it to you. The agent name and code must match.', 'Muombe wakala msimbo wake na uuandike kama alivyokupa. Jina la wakala na msimbo lazima vilingane.')}</span></label>
+            </div>}
           </section>
         </div>;
       case 4:

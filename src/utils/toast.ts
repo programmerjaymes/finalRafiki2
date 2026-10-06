@@ -153,6 +153,51 @@ const toast = {
     });
   },
 
+  /** Show the branded account sign-out confirmation. */
+  confirmSignOut: (swahili: boolean = false) => {
+    return Swal.fire({
+      title: swahili ? 'Unataka kutoka?' : 'Sign out?',
+      html: `
+        <div class="mx-auto max-w-sm text-center">
+          <p class="text-sm leading-6 text-gray-500 dark:text-gray-400">
+            ${swahili
+              ? 'Je, una uhakika unataka kutoka kwenye akaunti yako? Utahitaji kuingia tena ili kufikia dashibodi yako.'
+              : 'Are you sure you want to sign out of your account? You’ll need to sign in again to access your dashboard.'}
+          </p>
+          <div class="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 text-xs font-medium text-gray-500 dark:bg-white/5 dark:text-gray-400">
+            <svg class="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            ${swahili ? 'Mabadiliko yako yote yamehifadhiwa' : 'All your changes have been saved'}
+          </div>
+        </div>
+      `,
+      iconHtml: `
+        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-red-50 to-orange-100 text-red-500 shadow-sm dark:from-red-500/20 dark:to-orange-500/10 dark:text-red-400">
+          <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: swahili ? 'Ndiyo, toka' : 'Yes, sign out',
+      cancelButtonText: swahili ? 'Endelea kutumia' : 'Stay signed in',
+      reverseButtons: true,
+      focusCancel: true,
+      buttonsStyling: false,
+      width: '28rem',
+      padding: '1.5rem',
+      background: '#fff',
+      showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+      hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
+      customClass: {
+        popup: 'swal2-modal overflow-hidden rounded-3xl border border-gray-100 dark:border-gray-800 dark:bg-boxdark dark:text-white',
+        icon: 'border-0 mt-2 mb-0',
+        title: 'mt-3 text-xl font-bold text-gray-900 dark:text-white',
+        htmlContainer: 'mt-2',
+        actions: 'mt-6 flex w-full gap-3 swal2-actions-compact',
+        confirmButton: 'flex-1 rounded-xl bg-red-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-red-500/20',
+        cancelButton: 'flex-1 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200/60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700',
+      },
+    });
+  },
+
   /**
    * Show a loading indicator
    * @param title Title to display
