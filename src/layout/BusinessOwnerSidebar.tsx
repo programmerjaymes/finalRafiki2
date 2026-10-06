@@ -15,6 +15,8 @@ import {
 } from 'react-icons/fa';
 import SidebarWidget from "./SidebarWidget";
 import { useLocale } from "@/lib/useLocale";
+import { useSession } from "next-auth/react";
+import AgentSidebar from "./AgentSidebar";
 
 type NavItem = {
   icon: React.ReactNode;
@@ -53,10 +55,13 @@ const getNavItems = (sw: boolean): NavItem[] => [
 ];
 
 const BusinessOwnerSidebar: React.FC = () => {
+  const { data: session } = useSession();
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const locale = useLocale();
   const navItems = useMemo(() => getNavItems(locale === "sw"), [locale]);
+  const roles = session?.user?.roles || (session?.user?.role ? [session.user.role] : []);
+  const useCombinedSidebar = roles.includes("AGENT") && roles.includes("BUSINESS_OWNER");
 
   const renderMenuItems = (navItems: NavItem[]) => (
     <ul className="flex flex-col gap-4">
@@ -212,6 +217,8 @@ const BusinessOwnerSidebar: React.FC = () => {
       return index;
     });
   };
+
+  if (useCombinedSidebar) return <AgentSidebar />;
 
   return (
     <aside

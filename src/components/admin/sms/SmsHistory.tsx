@@ -57,7 +57,14 @@ export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: numb
   const changeTab = (next: Tab) => { setTab(next); setPage(1); };
 
   const resend = async (item: Message) => {
-    if (!window.confirm(`Resend this message to ${item.recipientName} (${item.phone})?`)) return;
+    const confirmation = await toast.confirm(
+      'Resend SMS?',
+      `Send this message again to ${item.recipientName} (${item.phone})?`,
+      'question',
+      'Resend Message',
+      'Cancel',
+    );
+    if (!confirmation.isConfirmed) return;
 
     setResendingId(item.id);
     try {

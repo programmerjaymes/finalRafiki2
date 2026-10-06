@@ -1,203 +1,54 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useSidebar } from "../context/SidebarContext";
-import { GridIcon, ChevronDownIcon } from "../icons/index";
-import {
-  FaClipboardList as AssignmentsIcon,
-  FaMapMarkedAlt as NearbyIcon,
-  FaUser as ProfileIcon,
-  FaQuestionCircle as HelpIcon,
-} from "react-icons/fa";
+import { GridIcon } from "../icons/index";
+import { FaBuilding, FaChartLine, FaClipboardList, FaInfoCircle, FaPlus, FaShieldAlt } from "react-icons/fa";
 import SidebarWidget from "./SidebarWidget";
 import { useLocale } from "@/lib/useLocale";
 
-type NavItem = {
-  icon: React.ReactNode;
-  name: string;
-  path?: string;
-  subItems?: { name: string; path: string; pro: boolean }[];
-};
+type NavItem = { icon: React.ReactNode; name: string; path: string };
 
-const getNavItems = (sw: boolean): NavItem[] => [
-  {
-    icon: <GridIcon />,
-    name: sw ? "Dashibodi" : "Dashboard",
-    path: "/agent-dashboard",
-  },
-  {
-    icon: <AssignmentsIcon />,
-    name: sw ? "Kazi" : "Assignments",
-    path: "/agents",
-  },
-  {
-    icon: <NearbyIcon />,
-    name: sw ? "Karibu" : "Nearby",
-    path: "/nearby",
-  },
-  {
-    icon: <ProfileIcon />,
-    name: sw ? "Wasifu" : "Profile",
-    path: "/profile",
-  },
-  {
-    icon: <HelpIcon />,
-    name: sw ? "Msaada" : "Help",
-    path: "/help",
-  },
-];
-
-const AgentSidebar: React.FC = () => {
+export default function AgentSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { data: session } = useSession();
   const pathname = usePathname();
-  const locale = useLocale();
-  const navItems = useMemo(() => getNavItems(locale === "sw"), [locale]);
+  const sw = useLocale() === "sw";
+  const visible = isExpanded || isHovered || isMobileOpen;
+  const roles = session?.user?.roles || (session?.user?.role ? [session.user.role] : []);
+  const isBusinessOwner = roles.includes("BUSINESS_OWNER");
 
-  const [openSubmenu, setOpenSubmenu] = useState<number | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<number, number>>({});
-  const subMenuRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const agentItems: NavItem[] = [
+    { icon: <GridIcon />, name: sw ? "Muhtasari" : "Overview", path: "/agent-dashboard" },
+    { icon: <FaClipboardList />, name: sw ? "Biashara Nilizoleta" : "My Referrals", path: "/agent-dashboard#referrals" },
+    { icon: <FaChartLine />, name: sw ? "Mapato" : "Earnings", path: "/agent-dashboard#earnings" },
+  ];
+  const businessItems: NavItem[] = [
+    { icon: <GridIcon />, name: sw ? "Dashibodi" : "Dashboard", path: "/business-dashboard" },
+    { icon: <FaBuilding />, name: sw ? "Biashara Zangu" : "My Businesses", path: "/business-my-businesses" },
+    { icon: <FaPlus />, name: sw ? "Sajili Biashara" : "Create Business", path: "/business-create" },
+    { icon: <FaInfoCircle />, name: sw ? "Maelekezo" : "Instructions", path: "/business-instructions" },
+    { icon: <FaShieldAlt />, name: sw ? "Faragha na data" : "Privacy & data", path: "/account/privacy" },
+  ];
 
-  const isActive = useCallback((path: string) => path === pathname, [pathname]);
-
-  useEffect(() => {
-    let submenuMatched = false;
-    navItems.forEach((nav, i) => {
-      if (nav.subItems) {
-        nav.subItems.forEach((subItem) => {
-          if (isActive(subItem.path)) {
-            setOpenSubmenu(i);
-            submenuMatched = true;
-          }
-        });
-      }
-    });
-
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [pathname, isActive, navItems]);
-
-  useEffect(() => {
-    if (openSubmenu !== null) {
-      if (subMenuRefs.current[openSubmenu]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [openSubmenu]: subMenuRefs.current[openSubmenu]?.scrollHeight || 0,
-        }));
-      }
-    }
-  }, [openSubmenu]);
-
-  const handleSubmenuToggle = (index: number) => {
-    setOpenSubmenu((prevOpenSubmenu) => (prevOpenSubmenu === index ? null : index));
-  };
-
-  const renderMenuItems = (navItems: NavItem[]) => (
-    <ul className="flex flex-col gap-4">
-      {navItems.map((nav, index) => (
-        <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index)}
-              className={`menu-item group  ${
-                openSubmenu === index ? "menu-item-active" : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"
-              }`}
-            >
-              <span className={` ${openSubmenu === index ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && <span className={`menu-item-text`}>{nav.name}</span>}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${openSubmenu === index ? "rotate-180 text-brand-500" : ""}`}
-                />
-              )}
-            </button>
-          ) : (
-            nav.path && (
-              <Link href={nav.path} className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}`}>
-                <span className={`${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{nav.icon}</span>
-                {(isExpanded || isHovered || isMobileOpen) && <span className={`menu-item-text`}>{nav.name}</span>}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            <div
-              ref={(el) => {
-                subMenuRefs.current[index] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height: openSubmenu === index ? `${subMenuHeight[index]}px` : "0px",
-              }}
-            >
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link href={subItem.path} className={`menu-dropdown-item ${isActive(subItem.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}>
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.pro && (
-                          <span className={`ml-auto ${isActive(subItem.path) ? "menu-dropdown-badge-active" : "menu-dropdown-badge-inactive"} menu-dropdown-badge `}>
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
+  const renderGroup = (label: string, items: NavItem[]) => (
+    <div className="mb-6">
+      {visible ? <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">{label}</p> : <div className="mx-auto mb-3 h-px w-8 bg-gray-200 dark:bg-gray-800" />}
+      <ul className="flex flex-col gap-1.5">
+        {items.map((item) => {
+          const active = !item.path.includes("#") && pathname === item.path;
+          return <li key={item.path}><Link href={item.path} title={!visible ? item.name : undefined} className={`menu-item group ${active ? "menu-item-active" : "menu-item-inactive"} ${!visible ? "lg:justify-center" : "lg:justify-start"}`}><span className={active ? "menu-item-icon-active" : "menu-item-icon-inactive"}>{item.icon}</span>{visible && <span className="menu-item-text">{item.name}</span>}</Link></li>;
+        })}
+      </ul>
+    </div>
   );
 
-  return (
-    <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${isExpanded || isMobileOpen ? "w-[290px]" : isHovered ? "w-[290px]" : "w-[90px]"}
-        ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className={`py-8 flex  ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
-        <Link href="/agent-dashboard">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <div className="flex items-center space-x-3 px-4">
-              <div className="flex items-center justify-center w-9 h-9 rounded-full bg-brand-600 text-white">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M17 3.33782C15.5291 2.48697 13.8214 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22C17.5228 22 22 17.5228 22 12C22 10.1786 21.513 8.47087 20.6622 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M8 12H8.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-gray-800 font-medium dark:text-white/90">Agent Portal</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Manage assignments</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center">
-              <div className="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M17 3.33782C15.5291 2.48697 13.8214 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22C17.5228 22 22 17.5228 22 12C22 10.1786 21.513 8.47087 20.6622 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-            </div>
-          )}
-        </Link>
-      </div>
-      <div className="mt-2 px-3">{renderMenuItems(navItems)}</div>
-      <div className="mt-auto">
-        <SidebarWidget expanded={isExpanded || isHovered || isMobileOpen} />
-      </div>
-    </aside>
-  );
-};
-
-export default AgentSidebar;
+  return <aside className={`fixed left-0 top-0 z-50 mt-16 flex h-screen flex-col border-r border-gray-200 bg-white px-5 text-gray-900 transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-900 lg:mt-0 ${isExpanded || isMobileOpen || isHovered ? "w-[290px]" : "w-[90px]"} ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`} onMouseEnter={() => !isExpanded && setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+    <Link href="/agent-dashboard" className={`flex items-center py-7 ${visible ? "px-3" : "justify-center"}`}><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-600 text-lg font-black text-white shadow-lg shadow-brand-500/20">R</span>{visible && <span className="ml-3 min-w-0"><span className="block font-bold text-gray-900 dark:text-white">Rafiki Agent</span><span className="block truncate text-xs text-gray-500">{sw ? "Kituo cha wakala" : "Agent workspace"}</span></span>}</Link>
+    <nav className="min-h-0 flex-1 overflow-y-auto py-2">{renderGroup(sw ? "WAKALA" : "AGENT", agentItems)}{isBusinessOwner && renderGroup(sw ? "MMILIKI WA BIASHARA" : "BUSINESS OWNER", businessItems)}</nav>
+    <div className="mt-auto border-t border-gray-100 py-3 dark:border-gray-800"><SidebarWidget expanded={visible} /></div>
+  </aside>;
+}

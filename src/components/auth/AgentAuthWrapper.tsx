@@ -15,7 +15,9 @@ export const AgentAuthWrapper: React.FC<AgentAuthWrapperProps> = ({ children }) 
   const pathname = usePathname();
   const wasAuthorizedRef = useRef(false);
 
-  const isAgent = status === "authenticated" && session?.user?.role === "AGENT";
+  const isAgent = status === "authenticated" && Boolean(
+    session?.user?.role === "AGENT" || session?.user?.roles?.includes("AGENT"),
+  );
 
   if (isAgent) {
     wasAuthorizedRef.current = true;
@@ -31,10 +33,10 @@ export const AgentAuthWrapper: React.FC<AgentAuthWrapperProps> = ({ children }) 
       return;
     }
 
-    if (status === "authenticated" && session?.user?.role !== "AGENT") {
+    if (status === "authenticated" && !isAgent) {
       router.push("/");
     }
-  }, [session, status, router, pathname]);
+  }, [isAgent, status, router, pathname]);
 
   if (status === "loading" && !wasAuthorizedRef.current) {
     return (
@@ -57,7 +59,7 @@ export const AgentAuthWrapper: React.FC<AgentAuthWrapperProps> = ({ children }) 
     );
   }
 
-  if (status === "authenticated" && session?.user?.role !== "AGENT") {
+  if (status === "authenticated" && !isAgent) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <span className="text-lg font-medium">You must be an agent to access this page</span>
