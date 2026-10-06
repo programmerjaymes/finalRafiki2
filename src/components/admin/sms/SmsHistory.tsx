@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowPathIcon, CheckCircleIcon, MagnifyingGlassIcon, PencilSquareIcon, WalletIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, CheckCircleIcon, MagnifyingGlassIcon, PaperAirplaneIcon, PencilSquareIcon, WalletIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import Pagination from '@/components/Pagination';
+import toast from '@/utils/toast';
 
 type Message = {
   id: string;
@@ -28,6 +29,7 @@ export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: numb
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [manualRefresh, setManualRefresh] = useState(0);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,6 +55,24 @@ export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: numb
   }, [tab, page, search, refreshKey, manualRefresh]);
 
   const changeTab = (next: Tab) => { setTab(next); setPage(1); };
+
+  const resend = async (item: Message) => {
+    if (!window.confirm(`Resend this message to ${item.recipientName} (${item.phone})?`)) return;
+
+    setResendingId(item.id);
+    try {
+      const response = await fetch(`/api/sms/history/${item.id}/resend`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      setManualRefresh((value) => value + 1);
+      if (!response.ok) throw new Error(data.error || 'Failed to resend SMS');
+
+      toast.success(`SMS resent to ${item.recipientName}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to resend SMS');
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   return (
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -86,16 +106,27 @@ export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: numb
       <div className="max-h-[55vh] overflow-auto">
         <table className="w-full min-w-[980px] text-sm">
           <thead className="sticky top-0 z-10 bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-800">
-            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Recipient</th><th className="px-4 py-3">Message</th><th className="px-4 py-3">Sent by</th><th className="px-4 py-3">Status</th></tr>
+            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Recipient</th><th className="px-4 py-3">Message</th><th className="px-4 py-3">Sent by</th><th className="px-4 py-3">Status</th>{tab === 'FAILED' && <th className="px-4 py-3 text-right">Action</th>}</tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {loading ? <tr><td colSpan={5} className="px-5 py-12 text-center text-gray-500">Loading SMS history...</td></tr> : messages.length === 0 ? <tr><td colSpan={5} className="px-5 py-12 text-center text-gray-500">No {tab === 'SENT' ? 'successful' : 'failed'} messages recorded yet.</td></tr> : messages.map((item) => (
+            {loading ? <tr><td colSpan={tab === 'FAILED' ? 6 : 5} className="px-5 py-12 text-center text-gray-500">Loading SMS history...</td></tr> : messages.length === 0 ? <tr><td colSpan={tab === 'FAILED' ? 6 : 5} className="px-5 py-12 text-center text-gray-500">No {tab === 'SENT' ? 'successful' : 'failed'} messages recorded yet.</td></tr> : messages.map((item) => (
               <tr key={item.id} className="align-top hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
                 <td className="whitespace-nowrap px-4 py-4 text-gray-500">{new Date(item.createdAt).toLocaleString('en-TZ', { timeZone: 'Africa/Dar_es_Salaam', dateStyle: 'medium', timeStyle: 'short' })}</td>
                 <td className="px-4 py-4"><p className="font-semibold text-gray-900 dark:text-white">{item.recipientName}</p><p className="mt-1 text-xs text-gray-500">{item.phone}</p></td>
                 <td className="max-w-md px-4 py-4"><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{item.message}</p>{item.errorMessage && <p className="mt-2 text-xs font-medium text-red-600">{item.errorMessage}</p>}</td>
                 <td className="px-4 py-4"><p className="font-medium text-gray-800 dark:text-gray-200">{item.sentBy?.name || 'System'}</p><p className="mt-1 text-xs text-gray-500">{item.sentBy?.email}</p></td>
                 <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'SENT' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{item.status === 'SENT' ? 'Delivered' : 'Failed'}</span></td>
+                {tab === 'FAILED' && <td className="px-4 py-4 text-right">
+                  <button
+                    type="button"
+                    onClick={() => resend(item)}
+                    disabled={resendingId !== null}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {resendingId === item.id ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : <PaperAirplaneIcon className="h-4 w-4" />}
+                    {resendingId === item.id ? 'Resending...' : 'Resend'}
+                  </button>
+                </td>}
               </tr>
             ))}
           </tbody>
