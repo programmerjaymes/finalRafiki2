@@ -39,8 +39,19 @@ model User {
   businessEvents                business_events[]
   referralCode                  String?                @unique
   referredBusinesses            Business[]             @relation("ReferralAgent")
+  roleAssignments               UserRoleAssignment[]
 
   @@map("users")
+}
+
+model UserRoleAssignment {
+  userId String
+  role   UserRole
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@index([role])
+  @@map("user_role_assignments")
 }
 
 enum PrivacyRequestType {

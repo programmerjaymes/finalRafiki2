@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Validate required fields
-    if (!body.name || !body.email || !body.role) {
+    if (!body.name || !body.email || (!body.role && !(Array.isArray(body.roles) && body.roles.length))) {
       return NextResponse.json(
         { error: 'Missing required fields: name, email, role' },
         { status: 400 }
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         email: body.email,
         phone: body.phone?.trim() || null,
-        role: body.role,
+        role: Array.isArray(body.roles) && body.roles.length ? body.roles[0] : body.role,
         hashedPassword,
       },
       select: {
@@ -227,7 +227,9 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
       },
     })
-    if (body.role === 'AGENT') {
+    const roles: string[] = Array.isArray(body.roles) && body.roles.length ? [...new Set(body.roles)] : [body.role];
+    await prisma.$transaction(roles.map(role => prisma.$executeRaw`INSERT INTO user_role_assignments ("userId", role) VALUES (${user.id}, ${role}::"UserRole")`));
+    if (roles.includes('AGENT')) {
       const code = `AG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
       await prisma.$executeRaw`UPDATE users SET "referralCode" = ${code} WHERE id = ${user.id}`;
     }

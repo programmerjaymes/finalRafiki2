@@ -9,6 +9,7 @@ declare module 'next-auth' {
   interface User {
     id: string;
     role: string;
+    roles?: string[];
     sessionToken?: string;
   }
 
@@ -18,6 +19,7 @@ declare module 'next-auth' {
       name?: string | null;
       email?: string | null;
       role: string;
+      roles?: string[];
     }
     sessionToken?: string;
   }
@@ -27,6 +29,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
     role?: string;
+    roles?: string[];
     sessionToken?: string;
   }
 }
@@ -116,11 +119,14 @@ async function authenticateCredentials(
 
   const newSessionToken = generateSessionToken();
   await setActiveSession(user.id, newSessionToken);
+  const roleRows = await prisma.$queryRaw<Array<{ role: string }>>`SELECT role::text AS role FROM user_role_assignments WHERE "userId" = ${user.id}`;
+  const roles = [...new Set([user.role, ...roleRows.map((row) => row.role)])];
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    roles,
     sessionToken: newSessionToken,
   };
 }
@@ -197,6 +203,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.roles = user.roles || [user.role];
         token.sessionToken = (user as any).sessionToken;
       }
       return token;
@@ -205,6 +212,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.roles = (token.roles as string[] | undefined) || [token.role as string];
         (session as any).sessionToken = token.sessionToken;
 
         // Validate that this is still the active session

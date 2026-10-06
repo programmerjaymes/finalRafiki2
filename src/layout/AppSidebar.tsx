@@ -102,6 +102,7 @@ const AppSidebar: React.FC = () => {
         { name: messages.admin.payments, path: "/payments", pro: false, icon: <PaymentIcon /> },
         { name: locale === 'sw' ? 'Gharama za Programu' : 'App Expenses', path: "/app-expenses", pro: false, icon: <PaymentIcon /> },
         { name: messages.admin.users, path: "/users", pro: false, icon: <UserCircleIcon /> },
+        { name: locale === 'sw' ? 'Mawakala' : 'Agents', path: "/agents", pro: false, icon: <UserCircleIcon /> },
         { name: locale === 'sw' ? 'Ziara na Mibofyo' : 'Customer Activity', path: "/customer-activity", pro: false, icon: <CustomerActivityIcon /> },
         { name: locale === 'sw' ? 'Ujumbe wa SMS' : 'SMS Messaging', path: "/sms", pro: false, icon: <SmsIcon /> },
         { name: locale === 'sw' ? 'Kumbukumbu za Mfumo' : 'System Logs', path: "/system-logs", pro: false, icon: <SystemLogsIcon /> },

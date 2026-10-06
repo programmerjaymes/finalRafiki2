@@ -65,7 +65,8 @@ export async function GET(
       );
     }
     
-    return NextResponse.json({ user });
+    const roleRows = await prisma.$queryRaw<Array<{ role: string }>>`SELECT role::text AS role FROM user_role_assignments WHERE "userId" = ${id}`;
+    return NextResponse.json({ user: { ...user, roles: roleRows.length ? roleRows.map(r => r.role) : [user.role] } });
   } catch (error: any) {
     console.error('Error fetching user details:', error);
     return NextResponse.json(
@@ -85,7 +86,7 @@ export async function PUT(
     const body = await request.json();
     
     // Validate that at least one field to update is provided
-    if (!body.name && !body.email && body.phone === undefined && !body.role && !body.password) {
+    if (!body.name && !body.email && body.phone === undefined && !body.role && !body.roles && !body.password) {
       return NextResponse.json(
         { error: 'No update data provided' },
         { status: 400 }
@@ -136,9 +137,10 @@ export async function PUT(
     if (body.name) updateData.name = body.name;
     if (body.email !== undefined) updateData.email = normalizedEmail;
     if (body.phone !== undefined) updateData.phone = normalizedPhone;
-    if (body.role) updateData.role = body.role;
+    const roles: string[] = Array.isArray(body.roles) && body.roles.length ? [...new Set(body.roles)] : body.role ? [body.role] : [];
+    if (roles.length) updateData.role = roles[0];
     const [agentCode] = await prisma.$queryRaw<Array<{ referralCode: string | null }>>`SELECT "referralCode" FROM users WHERE id = ${id}`;
-    const newReferralCode = body.role === 'AGENT' && !agentCode?.referralCode
+    const newReferralCode = roles.includes('AGENT') && !agentCode?.referralCode
       ? `AG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
       : null;
     
@@ -165,6 +167,12 @@ export async function PUT(
       },
     });
     if (newReferralCode) await prisma.$executeRaw`UPDATE users SET "referralCode" = ${newReferralCode} WHERE id = ${id}`;
+    if (roles.length) {
+      await prisma.$transaction([
+        prisma.$executeRaw`DELETE FROM user_role_assignments WHERE "userId" = ${id}`,
+        ...roles.map(role => prisma.$executeRaw`INSERT INTO user_role_assignments ("userId", role) VALUES (${id}, ${role}::"UserRole")`),
+      ]);
+    }
     
     const session = await getServerSession(authOptions);
     await recordAudit({ actorId: session?.user.id, action: 'USER_UPDATED', entityType: 'User', entityId: id, description: `Updated user ${updatedUser.name}`, request });

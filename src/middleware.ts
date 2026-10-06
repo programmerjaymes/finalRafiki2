@@ -24,6 +24,8 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
+  const roles = Array.isArray(token?.roles) ? token.roles as string[] : token?.role ? [token.role as string] : [];
+  const hasRole = (role: string) => roles.includes(role);
 
   const isPublicBusinessDetails =
     /^\/businesses\/[^/]+$/.test(pathname) &&
@@ -54,7 +56,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (token && token.role === 'BUSINESS_OWNER') {
+  if (token && hasRole('BUSINESS_OWNER') && !hasRole('AGENT') && !hasRole('ADMIN')) {
     const isAlreadyOnBusinessRoute =
       pathname.startsWith('/business-dashboard') ||
       pathname.startsWith('/business-instructions') ||
@@ -80,13 +82,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (token?.role === 'AGENT' && pathname !== '/agent-dashboard' && !pathname.startsWith('/api/')) {
-    return NextResponse.redirect(new URL('/agent-dashboard', request.url));
-  }
-
   const isAdminRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/users') ||
+    pathname.startsWith('/agents') ||
     pathname === '/businesses' ||
     pathname === '/businesses/pending' ||
     pathname === '/businesses/approval-logs' ||
@@ -108,12 +107,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/business-create') ||
     pathname.startsWith('/business-my-businesses');
 
-  if (pathname.startsWith('/agent-dashboard') && token?.role !== 'AGENT') {
+  if (pathname.startsWith('/agent-dashboard') && !hasRole('AGENT')) {
     return NextResponse.redirect(new URL('/signin', request.url));
   }
 
   if (isAdminRoute) {
-    if (!token || token.role !== 'ADMIN') {
+    if (!token || !hasRole('ADMIN')) {
       const url = new URL('/signin', request.url);
       url.searchParams.set('callbackUrl', encodeURI(request.url));
       return NextResponse.redirect(url);
@@ -121,7 +120,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isBusinessOwnerRoute) {
-    if (!token || token.role !== 'BUSINESS_OWNER') {
+    if (!token || !hasRole('BUSINESS_OWNER')) {
       if (!token && pathname.startsWith('/business-create')) {
         const url = new URL('/signup', request.url);
         url.searchParams.set('callbackUrl', BUSINESS_CREATE_PATH);
@@ -133,7 +132,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === '/' && token && token.role === 'ADMIN') {
+  if (pathname === '/' && token && hasRole('ADMIN')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 

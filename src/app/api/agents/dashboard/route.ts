@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 
 async function payload(agentId: string) {
   const [agent] = await prisma.$queryRaw<Array<{ id: string; name: string; referralCode: string }>>`
-    SELECT id, name, "referralCode" FROM users WHERE id = ${agentId} AND role::text = 'AGENT' LIMIT 1
+    SELECT id, name, "referralCode" FROM users u WHERE id = ${agentId} AND (role::text = 'AGENT' OR EXISTS (SELECT 1 FROM user_role_assignments r WHERE r."userId" = u.id AND r.role = 'AGENT')) LIMIT 1
   `;
   if (!agent) return null;
   const businesses = await prisma.$queryRaw<Array<{ id: string; name: string; createdAt: Date; isApproved: boolean; agentCommissionAmount: number | null; agentCommissionPaid: boolean; agentCommissionPaidAt: Date | null }>>`
@@ -20,7 +20,7 @@ async function payload(agentId: string) {
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== 'AGENT') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!session?.user?.id || !(session.user.roles?.includes('AGENT') || session.user.role === 'AGENT')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   return NextResponse.json(await payload(session.user.id));
 }
 
@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
   const { email, phone, password } = await request.json();
   if ((!email && !phone) || !password) return NextResponse.json({ error: 'Credentials are required' }, { status: 400 });
   const [user] = email
-    ? await prisma.$queryRaw<Array<{ id: string; hashedPassword: string | null }>>`SELECT id, "hashedPassword" FROM users WHERE email = ${email} AND role::text = 'AGENT' LIMIT 1`
-    : await prisma.$queryRaw<Array<{ id: string; hashedPassword: string | null }>>`SELECT id, "hashedPassword" FROM users WHERE phone = ${phone} AND role::text = 'AGENT' LIMIT 1`;
+    ? await prisma.$queryRaw<Array<{ id: string; hashedPassword: string | null }>>`SELECT id, "hashedPassword" FROM users u WHERE email = ${email} AND (role::text = 'AGENT' OR EXISTS (SELECT 1 FROM user_role_assignments r WHERE r."userId" = u.id AND r.role = 'AGENT')) LIMIT 1`
+    : await prisma.$queryRaw<Array<{ id: string; hashedPassword: string | null }>>`SELECT id, "hashedPassword" FROM users u WHERE phone = ${phone} AND (role::text = 'AGENT' OR EXISTS (SELECT 1 FROM user_role_assignments r WHERE r."userId" = u.id AND r.role = 'AGENT')) LIMIT 1`;
   if (!user?.hashedPassword || !(await bcrypt.compare(password, user.hashedPassword))) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   return NextResponse.json(await payload(user.id));
 }

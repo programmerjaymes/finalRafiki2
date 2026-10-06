@@ -18,7 +18,7 @@ const userSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().trim().refine((value) => value === '' || z.string().email().safeParse(value).success, 'Please enter a valid email address'),
   phone: z.string().trim().optional(),
-  role: z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT', 'AGENT']),
+  roles: z.array(z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT', 'AGENT'])).min(1, 'Select at least one role'),
   password: z.preprocess(
     (value) => value === '' ? undefined : value,
     z.string().min(6, 'Password must be at least 6 characters').optional(),
@@ -32,7 +32,8 @@ type User = {
   name: string;
   email: string | null;
   phone: string | null;
-  role: UserFormValues['role'];
+  role: UserFormValues['roles'][number];
+  roles?: UserFormValues['roles'];
 };
 
 type UserFormProps = {
@@ -51,12 +52,12 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', phone: '', role: 'BUSINESS_OWNER', password: '', confirmPassword: '' },
+    defaultValues: { name: '', email: '', phone: '', roles: ['BUSINESS_OWNER'], password: '', confirmPassword: '' },
   });
 
   useEffect(() => {
     if (!userId) {
-      form.reset({ name: '', email: '', phone: '', role: 'BUSINESS_OWNER', password: '', confirmPassword: '' });
+      form.reset({ name: '', email: '', phone: '', roles: ['BUSINESS_OWNER'], password: '', confirmPassword: '' });
       setIsFetching(false);
       return;
     }
@@ -65,7 +66,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
     const selectedId = userId;
     setIsFetching(true);
     setSubmitError(null);
-    form.reset({ name: '', email: '', phone: '', role: 'BUSINESS_OWNER', password: '', confirmPassword: '' });
+    form.reset({ name: '', email: '', phone: '', roles: ['BUSINESS_OWNER'], password: '', confirmPassword: '' });
 
     const fetchUser = async () => {
       try {
@@ -82,7 +83,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
           name: user.name || '',
           email: user.email || '',
           phone: user.phone || '',
-          role: user.role,
+          roles: user.roles || [user.role],
           password: '',
           confirmPassword: '',
         });
@@ -165,13 +166,11 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
             <FormField control={form.control} name="email" render={({ field }) => <FormItem><FormLabel>Email{isEditing ? ' (optional)' : ''}</FormLabel><FormControl><Input type="email" placeholder="Enter email address" autoComplete="one-time-code" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
             <FormField control={form.control} name="phone" render={({ field }) => <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Enter phone number" autoComplete="off" data-lpignore="true" data-1p-ignore="true" {...field} disabled={isLoading} /></FormControl><FormMessage /></FormItem>} />
 
-            <FormField control={form.control} name="role" render={({ field }) => (
+            <FormField control={form.control} name="roles" render={({ field }) => (
               <FormItem>
-                <FormLabel>Role</FormLabel>
+                <FormLabel>Roles</FormLabel>
                 <FormControl>
-                  <select {...field} disabled={isLoading} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                    <option value="ADMIN">Admin</option><option value="BUSINESS_OWNER">Business Owner</option><option value="BUSINESS_REGISTRAR">Business Registrar</option><option value="ACCOUNTANT">Accountant</option><option value="AGENT">Agent</option>
-                  </select>
+                  <div className="grid gap-2 sm:grid-cols-2">{([['ADMIN','Admin'],['BUSINESS_OWNER','Business Owner'],['BUSINESS_REGISTRAR','Business Registrar'],['ACCOUNTANT','Accountant'],['AGENT','Agent']] as const).map(([value,label]) => <label key={value} className="flex items-center gap-2 rounded-lg border p-3 text-sm dark:border-gray-700"><input type="checkbox" checked={field.value.includes(value)} onChange={e => field.onChange(e.target.checked ? [...field.value, value] : field.value.filter(r => r !== value))} disabled={isLoading} />{label}</label>)}</div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

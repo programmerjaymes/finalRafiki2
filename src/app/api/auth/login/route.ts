@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
 
     const mobileSessionToken = crypto.randomUUID();
     await prisma.$executeRaw`UPDATE users SET "mobileSessionToken" = ${mobileSessionToken} WHERE id = ${user.id}`;
+    const roleRows = await prisma.$queryRaw<Array<{ role: string }>>`SELECT role::text AS role FROM user_role_assignments WHERE "userId" = ${user.id}`;
+    const roles = roleRows.length ? roleRows.map(row => row.role) : [user.role];
 
     await recordAudit({ actorId: user.id, action: 'USER_LOGIN', entityType: 'Session', entityId: user.id, description: 'User logged in through the mobile app: ' + user.name, metadata: { role: user.role, provider: 'mobile-api' }, source: 'APP', request });
 
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       status: 'success',
-      user: { ...userWithoutPassword, sessionToken: mobileSessionToken },
+      user: { ...userWithoutPassword, roles, sessionToken: mobileSessionToken },
       message: 'Login successful',
     });
 

@@ -654,7 +654,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Select an agent and enter their referral code' }, { status: 400 });
       }
       [referral] = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM users WHERE id = ${referralAgentId} AND role::text = 'AGENT' AND "referralCode" = ${referralCode.trim().toUpperCase()} LIMIT 1
+        SELECT id FROM users u WHERE id = ${referralAgentId} AND (role::text = 'AGENT' OR EXISTS (SELECT 1 FROM user_role_assignments r WHERE r."userId" = u.id AND r.role = 'AGENT')) AND "referralCode" = ${referralCode.trim().toUpperCase()} LIMIT 1
       `;
       if (!referral) return NextResponse.json({ error: 'The selected agent and referral code do not match' }, { status: 400 });
       const [settings] = await prisma.$queryRaw<Array<{ agentCommissionAmount: number }>>`SELECT "agentCommissionAmount" FROM system_settings WHERE id = 'global' LIMIT 1`;
