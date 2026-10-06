@@ -4,7 +4,7 @@ type SmsGatewayResponse = {
   senderIdUsed?: string;
   creditsRemaining?: number;
   message?: string;
-  error?: string;
+  error?: string | { error?: string; message?: string };
 };
 
 export type SmsSendResult = {
@@ -21,6 +21,19 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function gatewayError(payload: SmsGatewayResponse, status: number) {
+  const nested = typeof payload.error === 'object' ? payload.error : null;
+  const detail = typeof payload.error === 'string'
+    ? payload.error
+    : nested?.message || nested?.error || payload.message;
+  if (status === 401) {
+    return detail
+      ? `SMS gateway rejected the API credentials: ${detail}`
+      : 'SMS gateway rejected the API credentials. Check the API key and business ID.';
+  }
+  return detail || `SMS gateway returned HTTP ${status}`;
+}
+
 export async function sendSms(phone: string, message: string): Promise<SmsSendResult> {
 
   try {
@@ -33,6 +46,7 @@ export async function sendSms(phone: string, message: string): Promise<SmsSendRe
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         to: phone,
@@ -49,7 +63,7 @@ export async function sendSms(phone: string, message: string): Promise<SmsSendRe
       return {
         success: false,
         phone,
-        error: payload.error || payload.message || `Gateway returned HTTP ${response.status}`,
+        error: gatewayError(payload, response.status),
       };
     }
 

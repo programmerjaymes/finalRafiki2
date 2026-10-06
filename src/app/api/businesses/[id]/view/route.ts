@@ -30,14 +30,15 @@ export async function POST(
     }
     
     const session = await getServerSession(authOptions);
+    const source = request.headers.get('x-client-source')?.toUpperCase() === 'APP' ? 'APP' : 'WEB';
     const updatedBusiness = await prisma.$transaction(async (tx) => {
       const updated = await tx.business.update({
         where: { id },
         data: { viewCount: { increment: 1 } },
       });
       await tx.$executeRaw`
-        INSERT INTO "business_events" ("id", "businessId", "userId", "eventType", "createdAt")
-        VALUES (${randomUUID()}, ${id}, ${session?.user?.id || null}, 'VIEW', NOW())
+        INSERT INTO "business_events" ("id", "businessId", "userId", "eventType", "source", "createdAt")
+        VALUES (${randomUUID()}, ${id}, ${session?.user?.id || null}, 'VIEW', ${source}, NOW())
       `;
       return updated;
     });

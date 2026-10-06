@@ -19,6 +19,7 @@ export async function POST(
     }
 
     const session = await getServerSession(authOptions);
+    const source = request.headers.get('x-client-source')?.toUpperCase() === 'APP' ? 'APP' : 'WEB';
     const body = await request.json().catch(() => ({})) as { action?: string };
     const allowedActions = new Set(['PHONE', 'WHATSAPP', 'EMAIL', 'WEBSITE', 'FACEBOOK', 'INSTAGRAM', 'TWITTER', 'BOOKING']);
     const action = allowedActions.has(body.action || '') ? body.action : 'CONTACT';
@@ -28,8 +29,8 @@ export async function POST(
         data: { clickCount: { increment: 1 } },
       });
       await tx.$executeRaw`
-        INSERT INTO "business_events" ("id", "businessId", "userId", "eventType", "action", "createdAt")
-        VALUES (${randomUUID()}, ${id}, ${session?.user?.id || null}, 'CLICK', ${action}, NOW())
+        INSERT INTO "business_events" ("id", "businessId", "userId", "eventType", "action", "source", "createdAt")
+        VALUES (${randomUUID()}, ${id}, ${session?.user?.id || null}, 'CLICK', ${action}, ${source}, NOW())
       `;
       return changed;
     });

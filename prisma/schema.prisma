@@ -541,12 +541,14 @@ model business_events {
   userId     String?
   eventType  String   @db.VarChar(50)
   action     String?  @db.VarChar(50)
+  source     String   @default("WEB") @db.VarChar(10)
   createdAt  DateTime @default(now())
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([businessId], map: "business_events_businessId_idx")
   @@index([eventType], map: "idx_type")
+  @@index([source], map: "business_events_source_idx")
   @@index([userId], map: "business_events_userId_idx")
   @@index([createdAt], map: "business_events_createdAt_idx")
 }
