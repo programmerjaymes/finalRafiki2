@@ -5,7 +5,7 @@ import BusinessOwnerSidebar from "@/layout/BusinessOwnerSidebar";
 import AppHeader from "@/layout/AppHeader";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { BusinessOwnerAuthWrapper } from "@/components/auth/BusinessOwnerAuthWrapper";
+import { AgentAuthWrapper } from "@/components/auth/AgentAuthWrapper";
 
 function MainContent({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered } = useSidebar();
@@ -35,7 +35,7 @@ export default function AgentDashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <BusinessOwnerAuthWrapper>
+    <AgentAuthWrapper>
       <SidebarProvider>
         <ThemeProvider>
           <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -44,6 +44,6 @@ export default function AgentDashboardLayout({
           </div>
         </ThemeProvider>
       </SidebarProvider>
-    </BusinessOwnerAuthWrapper>
+    </AgentAuthWrapper>
   );
 }
