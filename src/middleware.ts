@@ -80,6 +80,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (token?.role === 'AGENT' && pathname !== '/agent-dashboard' && !pathname.startsWith('/api/')) {
+    return NextResponse.redirect(new URL('/agent-dashboard', request.url));
+  }
+
   const isAdminRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/users') ||
@@ -103,6 +107,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/business-instructions') ||
     pathname.startsWith('/business-create') ||
     pathname.startsWith('/business-my-businesses');
+
+  if (pathname.startsWith('/agent-dashboard') && token?.role !== 'AGENT') {
+    return NextResponse.redirect(new URL('/signin', request.url));
+  }
 
   if (isAdminRoute) {
     if (!token || token.role !== 'ADMIN') {

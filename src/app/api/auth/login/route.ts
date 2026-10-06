@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { recordAudit } from '@/lib/activityLog';
+import crypto from 'crypto';
 
 // POST: Handle user login
 
@@ -69,7 +70,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await recordAudit({ actorId: user.id, action: 'USER_LOGIN', entityType: 'Session', entityId: user.id, description: 'User logged in through the application API: ' + user.name, metadata: { role: user.role, provider: 'mobile-api' }, request });
+    const mobileSessionToken = crypto.randomUUID();
+    await prisma.$executeRaw`UPDATE users SET "mobileSessionToken" = ${mobileSessionToken} WHERE id = ${user.id}`;
+
+    await recordAudit({ actorId: user.id, action: 'USER_LOGIN', entityType: 'Session', entityId: user.id, description: 'User logged in through the mobile app: ' + user.name, metadata: { role: user.role, provider: 'mobile-api' }, source: 'APP', request });
 
     // Remove hashedPassword from response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -77,7 +81,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       status: 'success',
-      user: userWithoutPassword,
+      user: { ...userWithoutPassword, sessionToken: mobileSessionToken },
       message: 'Login successful',
     });
 

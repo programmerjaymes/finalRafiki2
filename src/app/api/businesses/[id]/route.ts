@@ -98,7 +98,8 @@ export async function GET(
       const canViewUnapproved =
         session?.user?.id === payload.ownerId ||
         session?.user?.role === 'ADMIN' ||
-        session?.user?.role === 'BUSINESS_REGISTRAR';
+        session?.user?.role === 'BUSINESS_REGISTRAR' ||
+        (session?.user?.role === 'AGENT' && session.user.id === (payload as typeof payload & { referralAgentId?: string }).referralAgentId);
 
       if (!canViewUnapproved) {
         return NextResponse.json({ error: 'Business not found' }, { status: 404 });
@@ -142,6 +143,10 @@ export async function PUT(
         { error: 'Business not found' },
         { status: 404 }
       )
+    }
+
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'BUSINESS_REGISTRAR' && session.user.id !== businessExists.ownerId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const isApprovalChange = body.isApproved !== undefined;
@@ -276,6 +281,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const session = await getServerSession(authOptions);
     
     // Check if business exists
     const businessExists = await prisma.business.findUnique({
@@ -289,6 +295,9 @@ export async function DELETE(
         { error: 'Business not found' },
         { status: 404 }
       )
+    }
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.id !== businessExists.ownerId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
     // Delete business

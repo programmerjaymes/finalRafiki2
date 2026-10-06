@@ -9,6 +9,7 @@ type ApplicationLogInput = {
   statusCode?: number;
   stack?: string;
   metadata?: Prisma.InputJsonValue;
+  source?: 'APP' | 'WEB' | 'SYSTEM';
 };
 
 type AuditInput = {
@@ -19,11 +20,14 @@ type AuditInput = {
   description?: string;
   metadata?: Prisma.InputJsonValue;
   request?: Request;
+  source?: 'APP' | 'WEB' | 'SYSTEM';
 };
 
 export async function logApplicationError(input: ApplicationLogInput) {
   try {
-    await prisma.applicationLog.create({ data: { level: input.level || 'ERROR', ...input } });
+    const { source = 'WEB', ...data } = input;
+    const row = await prisma.applicationLog.create({ data: { level: data.level || 'ERROR', ...data } });
+    await prisma.$executeRaw`UPDATE application_logs SET source = ${source} WHERE id = ${row.id}`;
   } catch (loggingError) {
     console.error('Unable to persist application log:', loggingError);
   }
@@ -32,7 +36,8 @@ export async function logApplicationError(input: ApplicationLogInput) {
 export async function recordAudit(input: AuditInput) {
   try {
     const forwarded = input.request?.headers.get('x-forwarded-for');
-    await prisma.auditTrail.create({
+    const source = input.source || (input.request?.headers.get('x-client-source')?.toUpperCase() === 'APP' ? 'APP' : 'WEB');
+    const row = await prisma.auditTrail.create({
       data: {
         actorId: input.actorId || null,
         action: input.action,
@@ -44,6 +49,7 @@ export async function recordAudit(input: AuditInput) {
         userAgent: input.request?.headers.get('user-agent') || null,
       },
     });
+    await prisma.$executeRaw`UPDATE audit_trail SET source = ${source} WHERE id = ${row.id}`;
   } catch (loggingError) {
     console.error('Unable to persist audit trail:', loggingError);
   }

@@ -104,6 +104,8 @@ export default function SignInForm() {
         window.location.assign('/dashboard');
       } else if (session?.user?.role === 'BUSINESS_OWNER') {
         window.location.assign('/business-dashboard');
+      } else if (session?.user?.role === 'AGENT') {
+        window.location.assign('/agent-dashboard');
       } else {
         window.location.assign('/');
       }
@@ -128,6 +130,8 @@ export default function SignInForm() {
         window.location.assign('/dashboard');
       } else if (session?.user?.role === 'BUSINESS_OWNER') {
         window.location.assign('/business-dashboard');
+      } else if (session?.user?.role === 'AGENT') {
+        window.location.assign('/agent-dashboard');
       } else {
         window.location.assign('/');
       }

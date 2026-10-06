@@ -20,6 +20,7 @@ model User {
   updatedAt                     DateTime               @updatedAt @map("updated_at")
   phone                         String?                @unique
   activeSessionToken            String?                @unique
+  mobileSessionToken            String?                @unique
   receivesApprovalNotifications Boolean                @default(false)
   accounts                      Account[]
   businessRegistrations         BusinessRegistration[]
@@ -36,6 +37,8 @@ model User {
   privacyRequests               PrivacyRequest[]
   appExpenses                   AppExpense[]
   businessEvents                business_events[]
+  referralCode                  String?                @unique
+  referredBusinesses            Business[]             @relation("ReferralAgent")
 
   @@map("users")
 }
@@ -72,6 +75,7 @@ model PrivacyRequest {
 model SystemSetting {
   id                              String   @id @default("global")
   approvalSmsNotificationsEnabled Boolean  @default(true)
+  agentCommissionAmount           Float    @default(0)
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
@@ -125,57 +129,62 @@ model AppExpense {
 }
 
 model Business {
-  id                  String                   @id @default(cuid())
-  name                String
-  description         String?                  @db.Text
-  phone               String?
-  whatsapp            String?
-  email               String?
-  website             String?
-  logo                String?                  @db.Text
-  coverImage          String?
-  facebook            String?
-  instagram           String?
-  twitter             String?
-  allowsOnlineBooking Boolean                  @default(false)
-  allowsDelivery      Boolean                  @default(false)
-  isVerified          Boolean                  @default(false)
-  isApproved          Boolean                  @default(false)
-  bundleId            String
-  bundleExpiresAt     DateTime
-  categoryId          String
-  latitude            Float?
-  longitude           Float?
-  regionId            BigInt?
-  districtId          BigInt?
-  wardId              BigInt?
-  street              String?
-  avgRating           Float                    @default(0)
-  numReviews          Int                      @default(0)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  ownerId             String
-  registrarId         String?
-  viewCount           Int                      @default(0)
-  clickCount          Int                      @default(0)
-  inquiryCount        Int                      @default(0)
-  categoryId2         String?                  @db.VarChar(255)
-  deactivationReason  String?                  @db.Text
-  bundle              Bundle                   @relation(fields: [bundleId], references: [id])
-  category            Category                 @relation("PrimaryCategory", fields: [categoryId], references: [id])
-  district            District?                @relation(fields: [districtId], references: [id])
-  owner               User                     @relation(fields: [ownerId], references: [id])
-  region              Region?                  @relation(fields: [regionId], references: [id])
-  registrar           User?                    @relation("Registrar", fields: [registrarId], references: [id])
-  ward                Ward?                    @relation(fields: [wardId], references: [id])
-  categories          CategoryOnBusiness[]
-  payments            Payment[]
-  approvalLogs        BusinessApprovalLog[]
-  reviews             Review[]
-  searchResults       SearchResultBusiness[]
-  bundleHistory       BusinessBundleHistory[]
-  renewalRequests     BusinessRenewalRequest[]
-  events              business_events[]
+  id                    String                   @id @default(cuid())
+  name                  String
+  description           String?                  @db.Text
+  phone                 String?
+  whatsapp              String?
+  email                 String?
+  website               String?
+  logo                  String?                  @db.Text
+  coverImage            String?
+  facebook              String?
+  instagram             String?
+  twitter               String?
+  allowsOnlineBooking   Boolean                  @default(false)
+  allowsDelivery        Boolean                  @default(false)
+  isVerified            Boolean                  @default(false)
+  isApproved            Boolean                  @default(false)
+  bundleId              String
+  bundleExpiresAt       DateTime
+  categoryId            String
+  latitude              Float?
+  longitude             Float?
+  regionId              BigInt?
+  districtId            BigInt?
+  wardId                BigInt?
+  street                String?
+  avgRating             Float                    @default(0)
+  numReviews            Int                      @default(0)
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  ownerId               String
+  registrarId           String?
+  referralAgentId       String?
+  agentCommissionAmount Float?
+  agentCommissionPaid   Boolean                  @default(false)
+  agentCommissionPaidAt DateTime?
+  viewCount             Int                      @default(0)
+  clickCount            Int                      @default(0)
+  inquiryCount          Int                      @default(0)
+  categoryId2           String?                  @db.VarChar(255)
+  deactivationReason    String?                  @db.Text
+  bundle                Bundle                   @relation(fields: [bundleId], references: [id])
+  category              Category                 @relation("PrimaryCategory", fields: [categoryId], references: [id])
+  district              District?                @relation(fields: [districtId], references: [id])
+  owner                 User                     @relation(fields: [ownerId], references: [id])
+  region                Region?                  @relation(fields: [regionId], references: [id])
+  registrar             User?                    @relation("Registrar", fields: [registrarId], references: [id])
+  referralAgent         User?                    @relation("ReferralAgent", fields: [referralAgentId], references: [id], onDelete: SetNull)
+  ward                  Ward?                    @relation(fields: [wardId], references: [id])
+  categories            CategoryOnBusiness[]
+  payments              Payment[]
+  approvalLogs          BusinessApprovalLog[]
+  reviews               Review[]
+  searchResults         SearchResultBusiness[]
+  bundleHistory         BusinessBundleHistory[]
+  renewalRequests       BusinessRenewalRequest[]
+  events                business_events[]
 
   @@index([bundleId], map: "businesses_bundleId_idx")
   @@index([categoryId], map: "businesses_categoryId_idx")
@@ -183,6 +192,7 @@ model Business {
   @@index([ownerId], map: "businesses_ownerId_idx")
   @@index([regionId], map: "businesses_regionId_idx")
   @@index([registrarId], map: "businesses_registrarId_idx")
+  @@index([referralAgentId], map: "businesses_referralAgentId_idx")
   @@index([wardId], map: "businesses_wardId_idx")
   @@map("businesses")
 }
@@ -571,6 +581,7 @@ model ApplicationLog {
   statusCode Int?
   stack      String?  @db.Text
   metadata   Json?
+  source     String   @default("WEB") @db.VarChar(10)
   createdAt  DateTime @default(now())
 
   @@index([level], map: "application_logs_level_idx")
@@ -589,6 +600,7 @@ model AuditTrail {
   metadata    Json?
   ipAddress   String?
   userAgent   String?  @db.Text
+  source      String   @default("WEB") @db.VarChar(10)
   createdAt   DateTime @default(now())
   actor       User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
@@ -597,6 +609,22 @@ model AuditTrail {
   @@index([entityType, entityId], map: "audit_trail_entity_idx")
   @@index([createdAt], map: "audit_trail_created_at_idx")
   @@map("audit_trail")
+}
+
+model UsageSession {
+  id             String   @id @default(cuid())
+  installationId String
+  source         String   @db.VarChar(10)
+  userId         String?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  lastActivity   String?
+  appVersion     String?
+
+  @@unique([source, installationId])
+  @@index([source, lastSeenAt])
+  @@index([userId])
+  @@map("usage_sessions")
 }
 
 enum SmsDeliveryStatus {
@@ -609,6 +637,7 @@ enum UserRole {
   BUSINESS_OWNER
   BUSINESS_REGISTRAR
   ACCOUNTANT
+  AGENT
 }
 
 enum PaymentStatus {

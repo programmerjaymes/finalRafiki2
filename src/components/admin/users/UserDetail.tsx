@@ -20,7 +20,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT';
+  role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT' | 'AGENT';
   emailVerified?: string | null;
   image?: string | null;
   createdAt: string;
@@ -330,4 +330,4 @@ export default function UserDetail({ userId, onBack }: UserDetailProps) {
       </Card>
     </div>
   );
-} 
+}

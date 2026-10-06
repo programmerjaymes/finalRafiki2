@@ -41,7 +41,7 @@ interface User {
   name: string;
   email: string;
   phone: string | null;
-  role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT';
+  role: 'ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_REGISTRAR' | 'ACCOUNTANT' | 'AGENT';
   emailVerified?: string | null;
   image?: string | null;
   createdAt: string;
@@ -311,6 +311,7 @@ export default function UserList() {
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="BUSINESS_OWNER">Business Owner</SelectItem>
                     <SelectItem value="BUSINESS_REGISTRAR">Business Registrar</SelectItem>
+                    <SelectItem value="AGENT">Agent</SelectItem>
                     <SelectItem value="ACCOUNTANT">Accountant</SelectItem>
                   </SelectGroup>
                 </SelectContent>

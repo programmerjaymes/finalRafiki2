@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { recordAudit } from '@/lib/activityLog'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 // GET: Fetch users with filtering and pagination
 
@@ -200,7 +202,7 @@ export async function POST(request: NextRequest) {
     if (body.password) {
       // In a real app, you would use bcrypt to hash passwords
       // For example: hashedPassword = await bcrypt.hash(body.password, 10)
-      hashedPassword = body.password // This is just a placeholder
+      hashedPassword = await bcrypt.hash(body.password, 12)
     }
     
     // Create new user
@@ -225,6 +227,10 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
       },
     })
+    if (body.role === 'AGENT') {
+      const code = `AG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      await prisma.$executeRaw`UPDATE users SET "referralCode" = ${code} WHERE id = ${user.id}`;
+    }
     
     const session = await getServerSession(authOptions)
     await recordAudit({ actorId: session?.user.id, action: 'USER_CREATED', entityType: 'User', entityId: user.id, description: `Created user ${user.name}`, request })

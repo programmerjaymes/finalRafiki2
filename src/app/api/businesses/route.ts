@@ -248,6 +248,8 @@ export async function GET(request: Request) {
     if (role === 'BUSINESS_OWNER') {
       // Force ownerId to be the current user's ID
       where.ownerId = session!.user!.id;
+    } else if (role === 'AGENT') {
+      (where as Prisma.BusinessWhereInput & { referralAgentId: string }).referralAgentId = session!.user!.id;
     } else if (ownerId) {
       // Admin/Registrar can filter by any ownerId
       where.ownerId = ownerId;
@@ -576,6 +578,8 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       images,
+      referralAgentId,
+      referralCode,
     } = body as {
       name?: string;
       description?: string;
@@ -602,6 +606,8 @@ export async function POST(request: Request) {
       latitude?: string;
       longitude?: string;
       images?: string[];
+      referralAgentId?: string;
+      referralCode?: string;
     };
 
     // Admin creation: ownerId required, transactionId optional
@@ -640,6 +646,20 @@ export async function POST(request: Request) {
 
     // Determine the owner
     const finalOwnerId = isAdmin && ownerId ? ownerId : currentUser.id;
+
+    let referral: { id: string } | null = null;
+    let commissionAmount: number | null = null;
+    if (referralAgentId || referralCode) {
+      if (!referralAgentId || !referralCode) {
+        return NextResponse.json({ error: 'Select an agent and enter their referral code' }, { status: 400 });
+      }
+      [referral] = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM users WHERE id = ${referralAgentId} AND role::text = 'AGENT' AND "referralCode" = ${referralCode.trim().toUpperCase()} LIMIT 1
+      `;
+      if (!referral) return NextResponse.json({ error: 'The selected agent and referral code do not match' }, { status: 400 });
+      const [settings] = await prisma.$queryRaw<Array<{ agentCommissionAmount: number }>>`SELECT "agentCommissionAmount" FROM system_settings WHERE id = 'global' LIMIT 1`;
+      commissionAmount = settings?.agentCommissionAmount || 0;
+    }
 
     // Build business data
     const savedLogo = logo ? await saveLogoImage(logo) : null;
@@ -687,6 +707,9 @@ export async function POST(request: Request) {
           ${bundleExpiresAt}, ${finalOwnerId}, ${latitude ? parseFloat(latitude) : null}, ${longitude ? parseFloat(longitude) : null}, 
           ${isAdmin}, ${isAdmin}, NOW(), NOW())
       `;
+      if (referral) {
+        await prisma.$executeRaw`UPDATE businesses SET "referralAgentId" = ${referral.id}, "agentCommissionAmount" = ${commissionAmount} WHERE id = ${id}`;
+      }
 
       if (isAdmin) {
         await prisma.businessApprovalLog.create({
@@ -769,6 +792,9 @@ export async function POST(request: Request) {
         }
       }
     });
+    if (referral) {
+      await prisma.$executeRaw`UPDATE businesses SET "referralAgentId" = ${referral.id}, "agentCommissionAmount" = ${commissionAmount} WHERE id = ${business.id}`;
+    }
 
     await prisma.businessBundleHistory.create({
       data: {

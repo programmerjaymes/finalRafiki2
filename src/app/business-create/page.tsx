@@ -71,6 +71,9 @@ export default function CreateBusinessPage() {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [agents, setAgents] = useState<Array<{ id: string; name: string }>>([]);
+  const [referralAgentId, setReferralAgentId] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const [formData, setFormData] = useState<BusinessFormData>({
     name: "",
@@ -117,6 +120,8 @@ export default function CreateBusinessPage() {
         if (!regionsResponse.ok) throw new Error('Failed to fetch regions');
         const regionsData = await regionsResponse.json();
         setRegions(regionsData);
+        const agentsResponse = await fetch('/api/agents');
+        if (agentsResponse.ok) setAgents((await agentsResponse.json()).agents || []);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
         toast.error(errorMessage);
@@ -298,6 +303,10 @@ export default function CreateBusinessPage() {
     if (productImages.length > 0) {
       payload.images = productImages;
     }
+    if (referralAgentId) {
+      payload.referralAgentId = referralAgentId;
+      payload.referralCode = referralCode.trim();
+    }
 
     return payload;
   };
@@ -386,7 +395,16 @@ export default function CreateBusinessPage() {
           />
         ) : null;
       case 3:
-        return <BusinessCreateFormFields step={3} {...formFieldsProps} />;
+        return <div className="space-y-6"><BusinessCreateFormFields step={3} {...formFieldsProps} />
+          <section className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+            <h3 className="font-semibold text-gray-900 dark:text-white">{text('Were you invited by an agent?', 'Umealikwa na wakala?')}</h3>
+            <p className="mt-1 text-sm text-gray-500">{text('Optional. Select the agent and enter the code they shared.', 'Si lazima. Chagua wakala na uweke msimbo aliokupa.')}</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <select value={referralAgentId} onChange={(e) => { setReferralAgentId(e.target.value); if (!e.target.value) setReferralCode(''); }} className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700 dark:text-white"><option value="">{text('No agent', 'Hakuna wakala')}</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select>
+              <input value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} disabled={!referralAgentId} placeholder={text('Agent referral code', 'Msimbo wa wakala')} className="h-11 rounded-lg border border-gray-300 bg-transparent px-3 uppercase disabled:opacity-50 dark:border-gray-700 dark:text-white" />
+            </div>
+          </section>
+        </div>;
       case 4:
         return <BusinessCreateFormFields step={4} {...formFieldsProps} />;
       default:

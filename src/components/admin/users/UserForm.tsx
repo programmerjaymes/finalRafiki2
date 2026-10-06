@@ -18,7 +18,7 @@ const userSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().trim().refine((value) => value === '' || z.string().email().safeParse(value).success, 'Please enter a valid email address'),
   phone: z.string().trim().optional(),
-  role: z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT']),
+  role: z.enum(['ADMIN', 'BUSINESS_OWNER', 'BUSINESS_REGISTRAR', 'ACCOUNTANT', 'AGENT']),
   password: z.preprocess(
     (value) => value === '' ? undefined : value,
     z.string().min(6, 'Password must be at least 6 characters').optional(),
@@ -170,7 +170,7 @@ export default function UserForm({ userId, onBack, onSuccess }: UserFormProps) {
                 <FormLabel>Role</FormLabel>
                 <FormControl>
                   <select {...field} disabled={isLoading} className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
-                    <option value="ADMIN">Admin</option><option value="BUSINESS_OWNER">Business Owner</option><option value="BUSINESS_REGISTRAR">Business Registrar</option><option value="ACCOUNTANT">Accountant</option>
+                    <option value="ADMIN">Admin</option><option value="BUSINESS_OWNER">Business Owner</option><option value="BUSINESS_REGISTRAR">Business Registrar</option><option value="ACCOUNTANT">Accountant</option><option value="AGENT">Agent</option>
                   </select>
                 </FormControl>
                 <FormMessage />

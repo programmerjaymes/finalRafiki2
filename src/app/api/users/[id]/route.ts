@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logApplicationError, recordAudit } from '@/lib/activityLog';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // GET: Fetch a specific user
 
@@ -136,6 +137,10 @@ export async function PUT(
     if (body.email !== undefined) updateData.email = normalizedEmail;
     if (body.phone !== undefined) updateData.phone = normalizedPhone;
     if (body.role) updateData.role = body.role;
+    const [agentCode] = await prisma.$queryRaw<Array<{ referralCode: string | null }>>`SELECT "referralCode" FROM users WHERE id = ${id}`;
+    const newReferralCode = body.role === 'AGENT' && !agentCode?.referralCode
+      ? `AG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
+      : null;
     
     // Hash password if provided
     if (body.password) {
@@ -159,6 +164,7 @@ export async function PUT(
         updatedAt: true,
       },
     });
+    if (newReferralCode) await prisma.$executeRaw`UPDATE users SET "referralCode" = ${newReferralCode} WHERE id = ${id}`;
     
     const session = await getServerSession(authOptions);
     await recordAudit({ actorId: session?.user.id, action: 'USER_UPDATED', entityType: 'User', entityId: id, description: `Updated user ${updatedUser.name}`, request });
