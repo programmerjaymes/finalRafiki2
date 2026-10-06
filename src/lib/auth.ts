@@ -77,6 +77,54 @@ export async function getUserFromSession(session: Session | null) {
   return null;
 }
 
+async function authenticateCredentials(
+  identifierValue: string | undefined,
+  password: string | undefined,
+  allowSessionSwitch: boolean,
+) {
+  if (!identifierValue || !password) return null;
+
+  const identifier = identifierValue.trim();
+  const selectFields = {
+    id: true,
+    name: true,
+    email: true,
+    phone: true,
+    role: true,
+    hashedPassword: true,
+    activeSessionToken: true,
+  } as const;
+
+  let user = await prisma.user.findUnique({
+    where: { email: identifier },
+    select: selectFields,
+  });
+  if (!user) {
+    user = await prisma.user.findUnique({
+      where: { phone: identifier },
+      select: selectFields,
+    });
+  }
+  if (!user?.hashedPassword ||
+      !await bcrypt.compare(password, user.hashedPassword)) {
+    return null;
+  }
+
+  if (user.activeSessionToken && !allowSessionSwitch) {
+    throw new Error('ExistingSession');
+  }
+
+  const newSessionToken = generateSessionToken();
+  await setActiveSession(user.id, newSessionToken);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    sessionToken: newSessionToken,
+  };
+}
+
 export const authOptions: NextAuthOptions = {
   // Required for JWT sessions in production (Vercel, etc.); without it cookies/session break.
   secret: process.env.NEXTAUTH_SECRET,
@@ -86,69 +134,30 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email or Phone", type: "text" },
         password: { label: "Password", type: "password" },
-        switchSession: { label: "Switch Session", type: "hidden" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const identifier = credentials.email.trim();
-
-        const selectFields = {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          role: true,
-          hashedPassword: true,
-          activeSessionToken: true,
-        };
-
-        // Try email lookup first, then phone
-        let user = await prisma.user.findUnique({
-          where: { email: identifier },
-          select: selectFields,
-        });
-
-        if (!user) {
-          user = await prisma.user.findUnique({
-            where: { phone: identifier },
-            select: selectFields,
-          });
-        }
-
-        if (!user || !user.hashedPassword) {
-          return null;
-        }
-
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.hashedPassword);
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        // Generate new session token
-        const newSessionToken = generateSessionToken();
-
-        // Check if user has an active session elsewhere
-        if (user.activeSessionToken && !credentials.switchSession) {
-          // Throw error to indicate existing session - will be caught and trigger modal
-          throw new Error('ExistingSession');
-        }
-
-        // Set this as the active session (invalidates others)
-        await setActiveSession(user.id, newSessionToken);
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          sessionToken: newSessionToken,
-        };
+        return authenticateCredentials(
+          credentials?.email,
+          credentials?.password,
+          false,
+        );
       }
-    })
+    }),
+    CredentialsProvider({
+      id: 'credentials-switch',
+      name: 'Switch active session',
+      credentials: {
+        email: { label: 'Email or Phone', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        return authenticateCredentials(
+          credentials?.email,
+          credentials?.password,
+          true,
+        );
+      },
+    }),
   ],
   session: {
     strategy: 'jwt',

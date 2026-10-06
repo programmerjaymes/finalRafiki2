@@ -29,18 +29,21 @@ export default function SessionConflictModal({
     setError('');
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn('credentials-switch', {
         email,
         password,
-        switchSession: 'true',
         redirect: false,
         callbackUrl: window.location.pathname,
       });
 
       if (result?.error) {
-        setError('Failed to switch session. Please try again.');
+        setError(result.error === 'CredentialsSignin'
+          ? 'The email, phone number, or password is incorrect.'
+          : 'Failed to switch session. Please try again.');
       } else if (result?.ok) {
         onSwitchSuccess();
+      } else {
+        setError('Failed to switch session. Please try again.');
       }
     } catch (err) {
       setError('An unexpected error occurred.');
