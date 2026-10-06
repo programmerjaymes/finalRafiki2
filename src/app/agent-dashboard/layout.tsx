@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import BusinessOwnerSidebar from "@/layout/BusinessOwnerSidebar";
+import AgentSidebar from "@/layout/AgentSidebar";
 import AppHeader from "@/layout/AppHeader";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -39,7 +39,7 @@ export default function AgentDashboardLayout({
       <SidebarProvider>
         <ThemeProvider>
           <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
-            <BusinessOwnerSidebar />
+            <AgentSidebar />
             <MainContent>{children}</MainContent>
           </div>
         </ThemeProvider>
