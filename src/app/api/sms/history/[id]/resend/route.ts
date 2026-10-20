@@ -23,13 +23,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const result = await sendSms(original.phone, original.message);
-  const attempt = await prisma.smsMessage.create({
+  const attempt = await prisma.smsMessage.update({
+    where: { id: original.id },
     data: {
-      recipientId: original.recipientId,
       sentById: session.user.id,
-      recipientName: original.recipientName,
       phone: result.phone,
-      message: original.message,
       status: result.success ? 'SENT' : 'FAILED',
       errorMessage: result.error || null,
       gatewaySenderId: result.senderIdUsed || null,

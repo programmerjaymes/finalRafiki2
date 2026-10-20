@@ -5,8 +5,55 @@ import { BUSINESS_CREATE_PATH } from './lib/registerBusiness';
 
 const LOCALE_COOKIE = 'rafiki_locale';
 
+function allowedBrowserOrigins(request: NextRequest) {
+  const origins = new Set([request.nextUrl.origin]);
+
+  for (const value of [process.env.NEXTAUTH_URL, process.env.CORS_ALLOWED_ORIGINS]) {
+    for (const candidate of value?.split(',') ?? []) {
+      try {
+        origins.add(new URL(candidate.trim()).origin);
+      } catch {
+        // Ignore empty or malformed optional configuration values.
+      }
+    }
+  }
+
+  return origins;
+}
+
+function withCors(response: NextResponse, origin: string | null) {
+  if (origin) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Vary', 'Origin');
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  if (pathname.startsWith('/api/')) {
+    const origin = request.headers.get('origin');
+    if (origin && !allowedBrowserOrigins(request).has(origin)) {
+      return NextResponse.json(
+        { error: 'Requests from this origin are not allowed.' },
+        { status: 403 },
+      );
+    }
+
+    if (request.method === 'OPTIONS') {
+      const response = new NextResponse(null, { status: 204 });
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-Client-Source, X-Session-Token');
+      response.headers.set('Access-Control-Max-Age', '86400');
+      return withCors(response, origin);
+    }
+
+    // Native Flutter requests do not carry a browser Origin. Protected app
+    // routes authenticate with X-Session-Token; web routes use the session cookie.
+    return withCors(NextResponse.next(), origin);
+  }
 
   // Old bookmarks: /en/... or /sw/... -> same path without prefix, locale saved in cookie
   const seg = pathname.split('/')[1];
@@ -141,6 +188,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };
