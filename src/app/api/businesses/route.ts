@@ -152,6 +152,7 @@ export async function GET(request: Request) {
     const approvalQueue = url.searchParams.get('approvalQueue');
     const expiryStatus = url.searchParams.get('expiryStatus');
     const adminView = url.searchParams.get('adminView') === 'true';
+    const duplicateName = url.searchParams.get('duplicateName') === 'true';
 
     const skip = (page - 1) * limit;
 
@@ -236,6 +237,9 @@ export async function GET(request: Request) {
     if (adminView && role !== 'ADMIN' && role !== 'BUSINESS_REGISTRAR') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    if (duplicateName && role !== 'ADMIN' && role !== 'BUSINESS_REGISTRAR') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Pending-approval lists are admin-only (used by notification bell)
     if (isApproved !== null || isVerified !== null) {
@@ -260,6 +264,22 @@ export async function GET(request: Request) {
     ) {
       // Public search: only approved listings (matches cached public list)
       where.isApproved = true;
+    }
+
+    if (duplicateName) {
+      const repeatedBusinesses = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT business.id
+        FROM businesses AS business
+        INNER JOIN (
+          SELECT LOWER(REGEXP_REPLACE(TRIM(name), '[[:space:]]+', ' ', 'g')) AS normalized_name
+          FROM businesses
+          WHERE TRIM(name) <> ''
+          GROUP BY LOWER(REGEXP_REPLACE(TRIM(name), '[[:space:]]+', ' ', 'g'))
+          HAVING COUNT(*) > 1
+        ) AS repeated
+          ON LOWER(REGEXP_REPLACE(TRIM(business.name), '[[:space:]]+', ' ', 'g')) = repeated.normalized_name
+      `;
+      where.id = { in: repeatedBusinesses.map((business) => business.id) };
     }
 
     const businessListArgs = {

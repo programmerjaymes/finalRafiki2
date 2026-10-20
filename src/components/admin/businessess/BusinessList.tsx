@@ -231,6 +231,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
   const [filterDistrictId, setFilterDistrictId] = useState('');
   const [filterWardId, setFilterWardId] = useState('');
   const [expiryStatus, setExpiryStatus] = useState('');
+  const [duplicateNameFilter, setDuplicateNameFilter] = useState(false);
   const [renewalBusiness, setRenewalBusiness] = useState<Business | null>(null);
   const [renewalBundleId, setRenewalBundleId] = useState('');
   const [renewalPaymentReference, setRenewalPaymentReference] = useState('');
@@ -345,6 +346,9 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
       }
       if (expiryStatus) {
         queryParams.append('expiryStatus', expiryStatus);
+      }
+      if (duplicateNameFilter) {
+        queryParams.append('duplicateName', 'true');
       }
 
       // Owner portal / business owners: only their businesses
@@ -485,6 +489,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
     filterDistrictId,
     filterWardId,
     expiryStatus,
+    duplicateNameFilter,
     userRole,
     userId,
     isOwnerPortal,
@@ -1416,7 +1421,7 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
             </div>
           </form>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="min-w-0">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {messages.admin.categories}
@@ -1513,6 +1518,25 @@ const BusinessList = ({ variant = 'admin', ownerIdFilter }: BusinessListProps) =
                 <option value="active">{locale === 'sw' ? 'Bado zinaendelea' : 'Active'}</option>
               </select>
             </div>
+
+            {!isOwnerPortal && (
+              <div className="min-w-0">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {locale === 'sw' ? 'Majina yanayojirudia' : 'Repeated names'}
+                </label>
+                <select
+                  className="h-11 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                  value={duplicateNameFilter ? 'repeated' : ''}
+                  onChange={(event) => {
+                    setDuplicateNameFilter(event.target.value === 'repeated');
+                    setPaginationMeta((prev) => ({ ...prev, page: 1 }));
+                  }}
+                >
+                  <option value="">{locale === 'sw' ? 'Biashara zote' : 'All businesses'}</option>
+                  <option value="repeated">{locale === 'sw' ? 'Majina yanayofanana tu' : 'Potential repeated names'}</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>

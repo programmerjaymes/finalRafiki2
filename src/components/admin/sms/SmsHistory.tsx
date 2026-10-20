@@ -73,6 +73,9 @@ export default function SmsHistory({ refreshKey, onCompose }: { refreshKey: numb
       setManualRefresh((value) => value + 1);
       if (!response.ok) throw new Error(data.error || 'Failed to resend SMS');
 
+      setSearch('');
+      setPage(1);
+      setTab('SENT');
       toast.success(`SMS resent to ${item.recipientName}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to resend SMS');

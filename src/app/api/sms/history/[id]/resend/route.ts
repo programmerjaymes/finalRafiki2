@@ -32,6 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       errorMessage: result.error || null,
       gatewaySenderId: result.senderIdUsed || null,
       creditsRemaining: result.creditsRemaining ?? null,
+      ...(result.success ? { createdAt: new Date() } : {}),
     },
   });
 
